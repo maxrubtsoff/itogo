@@ -9,6 +9,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
 import ru.maxrubtsoff.bankagg.domain.repository.DepositRepository
 import ru.maxrubtsoff.bankagg.domain.repository.CashbackRepository
+import ru.maxrubtsoff.bankagg.domain.repository.SubscriptionRepository
 import ru.maxrubtsoff.bankagg.domain.repository.Today
 import ru.maxrubtsoff.bankagg.ui.common.UndoCenter
 import ru.maxrubtsoff.bankagg.domain.model.BankCandidate
@@ -42,6 +43,7 @@ class BanksViewModel(
     private val ledger: LedgerRepository,
     private val deposits: DepositRepository,
     private val cashback: CashbackRepository,
+    private val subscriptions: SubscriptionRepository,
     private val today: Today,
     private val undo: UndoCenter
 ) : ViewModel() {
@@ -106,8 +108,8 @@ class BanksViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun summary(bankKey: String): Flow<BankSummary> {
         val month = today.date.flatMapLatest { cashback.observeMonth(CashbackMonth.keyOf(it)) }
-        return combine(ledger.observeAccounts(), deposits.observeAll(), month, today.date) { a, d, c, day ->
-            BankSummary.of(bankKey, a, d, c, day)
+        return combine(ledger.observeAccounts(), deposits.observeAll(), month, subscriptions.observeAll(), today.date) { a, d, c, s, day ->
+            BankSummary.of(bankKey, a, d, c, s, day)
         }
     }
 

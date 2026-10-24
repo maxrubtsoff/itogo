@@ -35,7 +35,7 @@ class ViewModelFactory(
         modelClass.isAssignableFrom(BanksViewModel::class.java) ->
             BanksViewModel(
                 container.banks, container.settings, container.bankIcons.icons, container.logoMaker, container.bankCandidates, container.newBankAnswers,
-                container.ledgerRepository, container.depositRepository, container.cashbackRepository, container.today, container.undo
+                container.ledgerRepository, container.depositRepository, container.cashbackRepository, container.subscriptionRepository, container.today, container.undo
             ) as T
         modelClass.isAssignableFrom(SettingsViewModel::class.java) ->
             SettingsViewModel(container.settings) { container.checkPin.setNew(it) } as T

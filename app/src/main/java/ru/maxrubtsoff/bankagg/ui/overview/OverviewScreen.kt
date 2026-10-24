@@ -160,8 +160,8 @@ fun OverviewScreen(
         val collecting = remember(myBanks, selectedPackages) { myBanks.filter { b -> b.packages.any { it in selectedPackages } } }
         val emptyCapital = snapshot?.parts?.none { it.hasData } == true
         // An empty card already asks for access itself.
-        if (features.collectsNotifications && banksSelected && !notifAccess && !emptyCapital) NotificationAccessBanner()
-        if (features.collectsNotifications && newBanks.isNotEmpty()) NewBanksBanner(newBanks, onOpenNewBanks)
+        if (features.showNotifAccessOnOverview && banksSelected && !notifAccess && !emptyCapital) NotificationAccessBanner()
+        if (features.showNewBanksPrompt && newBanks.isNotEmpty()) NewBanksBanner(newBanks, onOpenNewBanks)
 
         val snap = snapshot
         if (features.showCapital) when {

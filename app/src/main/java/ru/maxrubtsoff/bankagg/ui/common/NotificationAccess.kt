@@ -53,7 +53,10 @@ fun rememberNotificationAccess(): State<Boolean> {
 
 /** Balances stopped updating: say so, and open the setting in one tap. */
 @Composable
-fun NotificationAccessBanner(modifier: Modifier = Modifier) {
+fun NotificationAccessBanner(
+    modifier: Modifier = Modifier,
+    text: String = "Балансы не обновляются — нет доступа к уведомлениям"
+) {
     val context = LocalContext.current
     val shape = RoundedCornerShape(18.dp)
     Column(
@@ -69,7 +72,7 @@ fun NotificationAccessBanner(modifier: Modifier = Modifier) {
             Icon(Icons.Filled.NotificationsOff, contentDescription = null, tint = Slitok.Brass2, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))
             Text(
-                "Балансы не обновляются — нет доступа к уведомлениям",
+                text,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Slitok.Fg
             )

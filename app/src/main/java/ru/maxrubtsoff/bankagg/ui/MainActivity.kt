@@ -693,7 +693,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         startSection = entry.arguments?.getInt("section") ?: 0,
                         initialOffset = entry.arguments?.getInt("offset") ?: 0,
                         showCashback = features.showCashback,
-                        showSubscriptions = features.showSubscriptions
+                        showSubscriptions = features.showSubscriptions,
+                        showNotifAccess = features.showNotifAccessOnPayments
                     )
                 }
             }
@@ -839,7 +840,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                     onEdit = { nav.navigate(Routes.bankEdit(it.key)) },
                     // B-37: on top of the bank card, so «Назад» comes back to it.
                     onOpenCapital = { nav.navigate(Routes.capital(it)) },
-                    onOpenCashback = { nav.navigate(Routes.CASHBACK_BASE) }
+                    onOpenCashback = { nav.navigate(Routes.CASHBACK_BASE) },
+                    onOpenSubscriptions = { nav.navigate(Routes.CASHBACK_BASE + "?section=1") }
                 )
             }
             composable(Routes.SETTINGS_NOTIFICATIONS) {

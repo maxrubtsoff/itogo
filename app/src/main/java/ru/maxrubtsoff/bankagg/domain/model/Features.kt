@@ -66,6 +66,15 @@ data class Features(val enabled: Set<Feature>) {
     /** Banks are needed by anything tied to a bank: accounts, deposits, cashback. */
     val needsBanks: Boolean get() = has(Feature.ACCOUNTS) || has(Feature.DEPOSITS) || has(Feature.CASHBACK)
 
+    /** «Новые банки» on the «Обзор»: only where the user curates banks, and the tab exists (U-52). */
+    val showNewBanksPrompt: Boolean get() = collectsNotifications && needsBanks
+
+    /** The notification-access banner sits on «Обзор» while accounts keep that tab (U-52). */
+    val showNotifAccessOnOverview: Boolean get() = collectsNotifications && has(Feature.ACCOUNTS)
+
+    /** Without accounts «Обзор» may be hidden: the banner moves to «Платежи» (U-52). */
+    val showNotifAccessOnPayments: Boolean get() = collectsNotifications && !has(Feature.ACCOUNTS)
+
     /** A tap switches a section; the last one can't be switched off. */
     fun toggle(f: Feature): Features = when {
         f !in enabled -> Features(enabled + f)

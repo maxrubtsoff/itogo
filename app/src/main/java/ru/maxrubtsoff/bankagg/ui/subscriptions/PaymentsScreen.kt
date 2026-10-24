@@ -41,7 +41,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
 import ru.maxrubtsoff.bankagg.ui.common.AddButton
+import ru.maxrubtsoff.bankagg.ui.common.NotificationAccessBanner
 import ru.maxrubtsoff.bankagg.ui.common.PagerTabs
+import ru.maxrubtsoff.bankagg.ui.common.rememberNotificationAccess
 import ru.maxrubtsoff.bankagg.ui.common.SectionPager
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
@@ -60,8 +62,10 @@ fun PaymentsScreen(
     startSection: Int = 0,
     initialOffset: Int = 0,
     showCashback: Boolean = true,
-    showSubscriptions: Boolean = true
+    showSubscriptions: Boolean = true,
+    showNotifAccess: Boolean = false
 ) {
+    val notifAccess by rememberNotificationAccess()
     // F-30: only the kept sections; with one of them there is no switch at all.
     val sections = listOfNotNull(0.takeIf { showCashback }, 1.takeIf { showSubscriptions }).ifEmpty { listOf(0) }
     val pager = rememberPagerState(initialPage = sections.indexOf(startSection).coerceAtLeast(0)) { sections.size }
@@ -85,6 +89,11 @@ fun PaymentsScreen(
             }
         }
         Box(Modifier.height(ScreenHeaderGap))
+        // Without accounts the Overview may be gone; the access banner lives here then (U-52).
+        if (showNotifAccess && !notifAccess) {
+            NotificationAccessBanner(text = "Подписки не находятся — нет доступа к уведомлениям")
+            Box(Modifier.height(12.dp))
+        }
         if (sections.size > 1) {
             PagerTabs(sections.map { if (it == 0) "Кэшбэк" else "Подписки" }, pager) { scope.launch { pager.animateScrollToPage(it) } }
             Box(Modifier.height(12.dp))
