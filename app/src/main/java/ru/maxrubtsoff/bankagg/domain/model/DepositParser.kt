@@ -41,6 +41,32 @@ object DepositParser {
     // "1 154 076,38 ₽ +154 076,38 ₽": the balance and what it has grown by.
     private val BALANCE_GAIN = Regex("""\+\s*(\d{1,3}(?:[   ]\d{3})+|\d{4,})(?:[.,](\d{1,2}))?""")
 
+    /**
+     * Words that name a deposit or a digital asset bought like one — a ЦФА
+     * application is one of the screens the user adds (B-47).
+     */
+    private val DEPOSIT_WORDS = listOf(
+        "вклад", "депозит", "накопительн", "сбережен",
+        "цфа", "цифровых финансовых актив", "цифровой актив", "цифровые актив",
+        "сумма погашения", "дата погашения"
+    )
+
+    /**
+     * Captions only a deposit's screen has. The second screenshot of a deposit
+     * often names no deposit at all («Зачисленные проценты… Вы заработаете…»),
+     * so these let it in — while a balance line alone («Баланс 1 983,15 ₽» in
+     * the capture log) does not (B-47).
+     */
+    private val DEPOSIT_CAPTIONS = listOf(
+        "в конце срок", "конца срок", "доход за весь срок", "доход за срок",
+        "зачисленные процент", "вы заработаете", "заработает", "сумма погашени",
+        "дата погашени", "сумма при открыт", "сумма заявк", "срок вклад",
+        "к выдаче", "к получению", "первоначальный взнос"
+    )
+
+    /** "19% годовых", "18 % в год" — a deposit's rate, not a cashback percent. */
+    private val ANNUAL_RATE = Regex("""\d\s{0,2}%\s{0,3}(годов|в год)""", RegexOption.IGNORE_CASE)
+
     private val MONTHS = mapOf(
         "января" to 1, "январь" to 1,
         "февраля" to 2, "февраль" to 2,
@@ -87,7 +113,21 @@ object DepositParser {
     // A day and month with no year counts as the end only next to these.
     private val END_HINTS = listOf("до ", "закрыт", "погашен", "окончан")
 
+    /**
+     * Is there a deposit on this screen at all (B-47)? A word naming one, or an
+     * annual rate — otherwise the screen is somebody else's (the capture log, a
+     * payment, a chat) and nothing is read from it: no bank, no amount guessed
+     * from a number that happened to be there.
+     */
+    fun looksLikeDeposit(rawText: String): Boolean {
+        val norm = CategoryMatcher.normalize(rawText)
+        return DEPOSIT_WORDS.any { norm.contains(it) } ||
+            DEPOSIT_CAPTIONS.any { norm.contains(it) } ||
+            ANNUAL_RATE.containsMatchIn(rawText)
+    }
+
     fun parse(rawText: String, brandHint: BankBrand? = null, today: LocalDate = LocalDate.now()): Result {
+        if (!looksLikeDeposit(rawText)) return Result(brandHint, DepositDraft())
         val lines = rawText.lines()
         val brand = brandHint ?: CashbackParser.guessBank(
             lines.filter { !PERCENT.containsMatchIn(it) }.joinToString("\n")

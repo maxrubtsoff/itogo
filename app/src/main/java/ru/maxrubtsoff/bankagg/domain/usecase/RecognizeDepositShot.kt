@@ -31,6 +31,9 @@ class RecognizeDepositShot(
 
         val text = ocr.recognizeThorough(shot.imagePath)
         if (text.isNullOrBlank()) return Draft(ShotStatus.FAILED, fileBank, DepositDraft())
+        // Someone else's screen (the capture log, a payment): nothing is guessed
+        // from it, not even the bank (B-47).
+        if (!DepositParser.looksLikeDeposit(text)) return Draft(ShotStatus.FAILED, null, DepositDraft())
 
         val parsed = DepositParser.parse(text, brandHint = fileBank)
         val d = parsed.draft
