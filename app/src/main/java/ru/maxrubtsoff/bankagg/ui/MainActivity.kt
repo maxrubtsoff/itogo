@@ -37,7 +37,9 @@ import ru.maxrubtsoff.bankagg.data.notify.AppNotifier
 import ru.maxrubtsoff.bankagg.data.notify.checkReminders
 import ru.maxrubtsoff.bankagg.ui.settings.NotificationsScreen
 import ru.maxrubtsoff.bankagg.ui.settings.NewBanksScreen
+import ru.maxrubtsoff.bankagg.ui.common.LocalBankImages
 import ru.maxrubtsoff.bankagg.ui.common.LocalMyBanks
+import ru.maxrubtsoff.bankagg.ui.common.rememberBankImages
 import ru.maxrubtsoff.bankagg.ui.common.LocalAddBank
 import ru.maxrubtsoff.bankagg.ui.settings.BanksViewModel
 import ru.maxrubtsoff.bankagg.ui.settings.AddBankScreen
@@ -618,7 +620,11 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     val myBanks by container.banks.myBanks.collectAsStateWithLifecycle(initialValue = emptyList())
     val newBanks by container.bankCandidates.candidates.collectAsStateWithLifecycle(initialValue = emptyList())
     ProvideDustClock(running = hidden) {
-    CompositionLocalProvider(LocalMyBanks provides myBanks, LocalAddBank provides { nav.navigate(Routes.BANKS_ADD) }) {
+    // One subscription to the icon cache for the whole tree; an icon reads only its own entry (U-55/P3).
+    val bankImages = rememberBankImages()
+    CompositionLocalProvider(
+        LocalMyBanks provides myBanks, LocalAddBank provides { nav.navigate(Routes.BANKS_ADD) }, LocalBankImages provides bankImages
+    ) {
     CompositionLocalProvider(LocalAmountsHidden provides hidden, LocalRevealAmounts provides reveal) {
     Scaffold(
         modifier = Modifier.twoFingerSwipeDown(swipeOn, swipeDistance, toggleHidden),
