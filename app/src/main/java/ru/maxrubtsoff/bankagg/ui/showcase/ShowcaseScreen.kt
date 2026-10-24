@@ -40,6 +40,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
+import ru.maxrubtsoff.bankagg.ui.common.FingerPointer
+import ru.maxrubtsoff.bankagg.ui.common.ScanReveal
+import ru.maxrubtsoff.bankagg.ui.common.ScanningThumb
+import ru.maxrubtsoff.bankagg.ui.common.cascade
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -139,6 +148,12 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                 }
             }
 
+            Caption("Распознавание (скан)")
+            ScanDemo()
+
+            Caption("Обучение")
+            TourDemo()
+
             Caption("Кнопки")
             BrassButton(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Сохранить") }
             ButtonRow {
@@ -219,6 +234,64 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                 }
             }
             Caption("")
+        }
+    }
+}
+
+/** F-34: the scan line over a screenshot, then the fields rising one after another. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ScanDemo() {
+    var status by remember { mutableStateOf(ShotStatus.PROCESSING) }
+    Panel(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            ScanningThumb(status, Modifier.size(width = 130.dp, height = 220.dp), foundText = "Нашли банк и 3 категории") {
+                Column(Modifier.fillMaxSize().background(Slitok.Inset).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Ozon Банк", style = MaterialTheme.typography.labelMedium, color = Slitok.Fg)
+                    listOf("Искусство · 25%", "Отели · 5%", "Рестораны · 5%").forEach {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+            ScanReveal(status, skeletonHeight = 96.dp) { play ->
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Искусство" to "25%", "Отели" to "5%", "Рестораны" to "5%").forEachIndexed { i, (name, percent) ->
+                        ValueChip(name, percent, Modifier.cascade(i, play))
+                    }
+                }
+            }
+            GhostButton(
+                if (status == ShotStatus.PROCESSING) "Показать результат" else "Ещё раз",
+                onClick = { status = if (status == ShotStatus.PROCESSING) ShotStatus.RECOGNIZED else ShotStatus.PROCESSING }
+            )
+        }
+    }
+}
+
+/** F-32: the finger of a tour moves to a button and presses it. */
+@Composable
+private fun TourDemo() {
+    var step by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    Panel(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            BoxWithConstraints(Modifier.fillMaxWidth().height(96.dp)) {
+                val w = with(density) { maxWidth.toPx() }
+                val h = with(density) { 96.dp.toPx() }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TileButton(Icons.Filled.AddPhotoAlternate, "Со скринов", Modifier.weight(1f)) {}
+                    TileButton(Icons.Filled.Edit, "Вручную", Modifier.weight(1f)) {}
+                }
+                FingerPointer(
+                    target = when (step) {
+                        0 -> null
+                        1 -> Offset(w * 0.25f, h * 0.5f)
+                        else -> Offset(w * 0.75f, h * 0.5f)
+                    },
+                    pressed = step == 2
+                )
+            }
+            GhostButton(if (step == 2) "Ещё раз" else "Дальше", onClick = { step = (step + 1) % 3 })
         }
     }
 }

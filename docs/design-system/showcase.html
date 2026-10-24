@@ -296,6 +296,37 @@ table.tt td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-
 table.tt td:first-child { color: var(--fg); white-space: nowrap; }
 .scroll-x { overflow-x: auto; }
 footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+
+/* Распознавание (скан) и обучение: F-34, F-32 */
+.scanrow { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.shot { position: relative; width: 130px; height: 220px; border-radius: 18px; border: 1px solid var(--line); background: linear-gradient(180deg, #1f2723, #101614); overflow: hidden; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.shot .tx { font: 500 11px/14px var(--text); color: rgba(238,243,240,.62); white-space: nowrap; }
+.shot .tx b { color: rgba(238,243,240,.85); }
+.scanline { position: absolute; left: 0; right: 0; top: 0; height: 64px; background: linear-gradient(180deg, transparent, rgba(240,200,120,.22) 85%, rgba(240,200,120,.9) 100%); pointer-events: none; animation: scan .45s linear infinite; }
+.scanline::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--brass2); box-shadow: 0 0 14px 2px rgba(240,200,120,.7); }
+@keyframes scan { from { transform: translateY(-64px); } to { transform: translateY(220px); } }
+.scandemo.done .scanline { animation: none; opacity: 0; transition: opacity .2s; }
+.scandemo .skel { height: 96px; border-radius: 20px; background: var(--inset); border: 1px solid var(--line); }
+.scandemo .fields { display: none; flex-wrap: wrap; gap: 8px; }
+.scandemo.done .skel { display: none; }
+.scandemo.done .fields { display: flex; }
+.scandemo.done .fields .vchip { animation: rise .3s cubic-bezier(.2,0,0,1) both; }
+.scandemo.done .fields .vchip:nth-child(2) { animation-delay: .03s; }
+.scandemo.done .fields .vchip:nth-child(3) { animation-delay: .06s; }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.scandemo .st-read, .scandemo .st-done { display: none; }
+.scandemo:not(.done) .st-read { display: inline-flex; color: var(--brass2); }
+.scandemo.done .st-done { display: inline-flex; color: var(--mint); }
+.tourstage { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 96px; }
+.finger { position: absolute; left: 25%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(238,243,240,.22); border: 2px solid var(--brass2); opacity: 0; transition: left .3s cubic-bezier(.4,0,.2,1), opacity .2s, transform .2s; }
+.tourstage[data-step="1"] .finger { opacity: 1; left: 25%; }
+.tourstage[data-step="2"] .finger { opacity: 1; left: 75%; transform: scale(.82); background: rgba(238,243,240,.42); }
+.dimdemo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dimdemo .win { position: relative; height: 110px; border-radius: 14px; background: var(--bg); overflow: hidden; }
+.dimdemo .veil { position: absolute; inset: 0; background: rgba(5,8,7,.55); }
+.dimdemo .hole { position: absolute; background: var(--inset); border-radius: 14px; }
+.dimdemo .hole.framed { left: 14px; right: 14px; top: 30px; height: 40px; outline: 2px solid var(--brass2); }
+.dimdemo .hole.full { left: 0; right: 0; bottom: 0; height: 52px; border-radius: 14px 14px 0 0; }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -343,6 +374,8 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
   <a href="#nav">Навигация</a>
   <div class="grp">Механика</div>
   <a href="#motion">Переходы и поведение</a>
+  <a href="#scan">Распознавание (скан)</a>
+  <a href="#tour">Обучение</a>
   <a href="#words">Тексты</a>
   <a href="#map">Компоненты в коде</a>
 </nav>
@@ -941,6 +974,69 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
   </div>
 </section>
 
+<!-- ============ РАСПОЗНАВАНИЕ ============ -->
+<section id="scan">
+  <h2>Распознавание (скан) <span class="st new">новое</span> <code>ScanningThumb · ScanReveal</code></h2>
+  <p class="lead">Один компонент на кэшбэк, вклад, одиночный скрин, пакет и обучение. Вариант «Распознавание 1» (F-34).</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Скан и появление полей <span class="tag n">F-34</span></h3>
+      <div class="stage">
+        <div class="scandemo" id="scanDemo">
+          <div class="scanrow">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+              <div class="shot"><div class="tx"><b>Ozon Банк</b></div><div class="tx">Искусство · <b>25%</b></div><div class="tx">Отели · <b>5%</b></div><div class="tx">Рестораны · <b>5%</b></div><div class="scanline"></div></div>
+              <span class="status st-read">Читаем скрин</span><span class="status st-done">Нашли банк и 3 категории</span>
+            </div>
+            <div style="flex:1;min-width:160px">
+              <div class="skel"></div>
+              <div class="fields"><span class="vchip">Искусство <b>25%</b></span><span class="vchip">Отели <b>5%</b></span><span class="vchip">Рестораны <b>5%</b></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="row"><button class="btn ghost" id="scanRun" type="button">Показать результат</button></div>
+      </div>
+      <p class="note">По миниатюре идёт полоса сканирования (<span class="code">Motion.SLOW</span>, по кругу) со статусом «Читаем скрин». По окончании полоса гаснет (<span class="code">Motion.FAST</span>), поля плавно встают снизу каскадом через <span class="code">Motion.STAGGER_MS</span> — <span class="code">Modifier.cascade(index, play)</span>. Значения стоят на месте, не «вылетают». В пакете — то же по каждому скрину. Пока читается — вместо полей скелет.</p>
+      <p class="note"><b>Не задерживает результат.</b> Скрин, уже прочитанный при открытии экрана, показывается сразу (<span class="code">play = false</span>); результат сразу правится. С «Убрать анимации» — без полосы и подъёма, поля просто есть.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ОБУЧЕНИЕ ============ -->
+<section id="tour">
+  <h2>Обучение <span class="st new">новое</span> <code>FingerPointer · TourHighlight</code></h2>
+  <p class="lead">Обучение идёт на настоящих экранах с примерными данными (U-54), действия показывает «палец» и сами экраны (F-32).</p>
+  <div class="grid">
+    <div class="card">
+      <h3>«Палец» <span class="tag n">F-32</span></h3>
+      <div class="stage">
+        <div class="tourstage" id="tourStage" data-step="0">
+          <button class="tile" type="button"><span class="ic"><svg class="i"><use href="#i-photo"/></svg></span><span class="t">Со скринов</span></button>
+          <button class="tile" type="button"><span class="ic"><svg class="i"><use href="#i-edit"/></svg></span><span class="t">Вручную</span></button>
+          <span class="finger"></span>
+        </div>
+        <div class="row"><button class="btn ghost" id="tourRun" type="button">Дальше</button></div>
+      </div>
+      <p class="note"><span class="code">FingerPointer(target, pressed)</span> — круглый курсор: идёт к точке за <span class="code">Motion.NORMAL</span> (кривая <span class="code">Motion.Standard</span>), нажимает за <span class="code">Motion.FAST</span> — слегка садится. Без точки гаснет на месте. С «Убрать анимации» просто стоит, где сказано.</p>
+    </div>
+    <div class="card">
+      <h3>Подсветка цели <span class="tag n">B-48</span></h3>
+      <div class="stage">
+        <div class="dimdemo">
+          <div><div class="win"><div class="veil"></div><div class="hole framed"></div></div><p class="note" style="margin-top:8px"><span class="code">FRAMED</span> — окно в затемнении и латунная рамка.</p></div>
+          <div><div class="win"><div class="veil"></div><div class="hole full"></div></div><p class="note" style="margin-top:8px"><span class="code">DIM_ONLY</span> — только затемнение, без рамки.</p></div>
+        </div>
+      </div>
+      <p class="note">Цели во всю ширину — шторка и нижняя панель — подсвечиваются <b>только затемнением</b>: рамка по краю экрана обрезалась бы (B-48). Остальные цели — с рамкой. Это поле шага сценария (<span class="code">TourStep.highlight</span>), а не решение экрана.</p>
+    </div>
+    <div class="card">
+      <h3>Сценарий и пауза <span class="tag n">F-32</span></h3>
+      <p class="note">Шаг сценария (<span class="code">TourStep</span>) знает, что играет на экране (<span class="code">anim</span>): касание «+», шторка, выбор скринов, скан, поля по очереди, отметка категории, смена баланса. После каждого действия — пауза с коротким комментарием: следующее действие само не начнётся, пока человек не нажмёт «Далее» (<span class="code">waitForRead</span>). Есть «Ещё раз» и «Пропустить».</p>
+      <p class="note"><b>Песочница.</b> Обучение читает примерные данные из памяти (<span class="code">TourSample</span>) через те же ViewModel; в базу, настройки и копию ничего не пишется, по выходу — снова настоящие данные.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ============ ТЕКСТЫ ============ -->
 <section id="words">
   <h2>Тексты</h2>
@@ -990,6 +1086,8 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
         <tr><td>MoneyText, AmountText — пыль на месте цифр</td><td><span class="st chg">цикл 8</span></td><td>Crossfade с пылью «символы × 0,58 em» (B-44)</td></tr>
         <tr><td>ScreenHeader — шапка экрана</td><td><span class="st new">цикл 8</span></td><td>TopAppBar ×19 и 8 своих шапок с разными отступами (U-57)</td></tr>
         <tr><td>Motion — шкала движения</td><td><span class="st new">цикл 8</span></td><td>вся шкала из Motion: длительности, кривые, тряска ошибки, «Убрать анимации» (U-55)</td></tr>
+        <tr><td>ScanningThumb, ScanReveal — скан скрина и появление полей</td><td><span class="st new">цикл 9</span></td><td>вспышка «распознаётся → результат» (F-34, B-51)</td></tr>
+        <tr><td>FingerPointer — «палец» обучения</td><td><span class="st new">цикл 9</span></td><td>— (обучение F-32)</td></tr>
         <tr><td>titleSmall, headlineMedium, labelSmall</td><td><span class="st chg">задать</span></td><td>системный шрифт Android</td></tr>
         <tr><td>Цвета рисунков частей</td><td><span class="st chg">в палитру</span></td><td>19 hex в PartArt.kt</td></tr>
       </tbody>
@@ -1029,6 +1127,18 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
   shake.addEventListener('click', function () {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     shake.animate([{ transform: 'translateX(10px)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(0)' }], { duration: 225 });
+  });
+  var scanBtn = document.getElementById('scanRun');
+  scanBtn.addEventListener('click', function () {
+    var done = document.getElementById('scanDemo').classList.toggle('done');
+    scanBtn.textContent = done ? 'Ещё раз' : 'Показать результат';
+  });
+  var tourBtn = document.getElementById('tourRun');
+  tourBtn.addEventListener('click', function () {
+    var st = document.getElementById('tourStage');
+    var n = (parseInt(st.dataset.step, 10) + 1) % 3;
+    st.dataset.step = String(n);
+    tourBtn.textContent = n === 2 ? 'Ещё раз' : 'Дальше';
   });
   var run = document.getElementById('motionRun');
   run.addEventListener('click', function () {
