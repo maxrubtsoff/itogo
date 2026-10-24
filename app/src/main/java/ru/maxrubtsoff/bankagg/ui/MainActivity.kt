@@ -78,7 +78,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -625,13 +624,13 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             },
             exitTransition = {
                 when (val dir = tabDirection(initialState.destination, targetState.destination)) {
-                    0 -> slideOutHorizontally(tabTween()) { -it / 4 } + fadeOut(tween(260))
+                    0 -> slideOutHorizontally(tabTween()) { -it / 4 } + fadeOut(Motion.tween(Motion.FAST))
                     else -> slideOutHorizontally(tabTween()) { -dir * it }
                 }
             },
             popEnterTransition = {
                 when (val dir = tabDirection(initialState.destination, targetState.destination)) {
-                    0 -> slideInHorizontally(tabTween()) { -it / 4 } + fadeIn(tween(260))
+                    0 -> slideInHorizontally(tabTween()) { -it / 4 } + fadeIn(Motion.tween(Motion.NORMAL))
                     else -> slideInHorizontally(tabTween()) { dir * it }
                 }
             },

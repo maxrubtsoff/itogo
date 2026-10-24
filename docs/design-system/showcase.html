@@ -921,13 +921,14 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
   <h2>Переходы и поведение</h2>
   <div class="grid">
     <div class="card">
-      <div class="row" style="justify-content:space-between"><h3>Шкала движения <span class="st new">новое</span> <span class="tag n">U-55</span></h3><button class="btn ghost" id="motionRun" type="button">Запустить</button></div>
+      <div class="row" style="justify-content:space-between"><h3>Шкала движения <span class="tag n">U-55</span></h3><button class="btn ghost" id="motionRun" type="button">Запустить</button></div>
       <div class="stage mscale" id="motionDemo">
         <div class="mrow"><div class="mn"><b>Быстро</b>FAST · 200</div><div class="mtrack"><span class="dot" style="transition-duration:.2s"></span></div></div>
         <div class="mrow"><div class="mn"><b>Обычно</b>NORMAL · 300</div><div class="mtrack"><span class="dot" style="transition-duration:.3s"></span></div></div>
         <div class="mrow"><div class="mn"><b>Медленно</b>SLOW · 450</div><div class="mtrack"><span class="dot" style="transition-duration:.45s"></span></div></div>
       </div>
-      <p class="note"><b>FAST</b> — меню, метка, скрытие сумм, уход. <b>NORMAL</b> — экран, карточка, строка, показ сумм. <b>SLOW</b> — рост графика, скан по скрину. Кривая прихода — <span class="code">Motion.Calm</span>, без отскока. Уход — на ступень быстрее прихода. Своих чисел в <span class="code">tween(…)</span> нет: только <span class="code">Motion</span>.</p>
+      <p class="note"><b>FAST</b> — меню, метка, скрытие сумм, уход. <b>NORMAL</b> — экран, карточка, строка, показ сумм. <b>SLOW</b> — рост графика, скан по скрину. Кривая прихода — <span class="code">Motion.Calm</span>, без отскока. Уход — на ступень быстрее прихода. Своих чисел в <span class="code">tween(…)</span> нет: только <span class="code">Motion</span>. Ошибка («нельзя», неверный код) трясёт элемент одинаково везде — <span class="code">errorShake</span>; без анимаций стоит на месте.</p>
+      <div class="row" style="margin-top:12px"><button class="btn ghost" id="shakeRun" type="button">Ошибка: встряхнуть</button></div>
     </div>
   </div>
   <div class="motion">
@@ -936,7 +937,7 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
     <div class="mcell"><h3>Вкладка — сверху <span class="tag n">B-36</span></h3><p style="margin:0;color:var(--muted);font-size:13px">С нижней панели вкладка открывается с начала. Повторное касание — сразу сверху, без прокрутки. «Назад» с деталей сохраняет место.</p></div>
     <div class="mcell"><h3>Листание разделов <span class="tag n">B-43</span></h3><p style="margin:0;color:var(--muted);font-size:13px">Пейджер во всю ширину, отступы внутри страницы, между страницами зазор 24–32. Страницы не «склеены».</p></div>
     <div class="mcell"><h3>Долгое нажатие <span class="tag n">U-45</span></h3><p style="margin:0;color:var(--muted);font-size:13px">Только быстрое действие, которого нет на поверхности: «учитывать в капитале», «удалить пополнение». Не дублирует карандаш или касание.</p></div>
-    <div class="mcell"><h3>«Убрать анимации» <span class="st chg">изменено</span></h3><p style="margin:0;color:var(--muted);font-size:13px">Системная настройка Android, учитывается в одном месте — <span class="code">Motion</span>. Включена — переходы мгновенные, пыль неподвижна. Касание всегда срабатывает сразу, анимация не задерживает действие.</p></div>
+    <div class="mcell"><h3>«Убрать анимации»</h3><p style="margin:0;color:var(--muted);font-size:13px">Системная настройка Android, учитывается в одном месте — <span class="code">Motion</span>. Включена — переходы мгновенные, пыль неподвижна. Касание всегда срабатывает сразу, анимация не задерживает действие.</p></div>
   </div>
 </section>
 
@@ -988,7 +989,7 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
         <tr><td>KopeckLook — копейки по ступени</td><td><span class="st chg">цикл 8</span></td><td>одно правило 70% / 55% на все размеры (U-56)</td></tr>
         <tr><td>MoneyText, AmountText — пыль на месте цифр</td><td><span class="st chg">цикл 8</span></td><td>Crossfade с пылью «символы × 0,58 em» (B-44)</td></tr>
         <tr><td>ScreenHeader — шапка экрана</td><td><span class="st new">цикл 8</span></td><td>TopAppBar ×19 и 8 своих шапок с разными отступами (U-57)</td></tr>
-        <tr><td>Motion — шкала движения</td><td><span class="st new">цикл 8</span></td><td>45…500 мс в каждом месте, свои проверки «Убрать анимации» (U-55)</td></tr>
+        <tr><td>Motion — шкала движения</td><td><span class="st new">цикл 8</span></td><td>вся шкала из Motion: длительности, кривые, тряска ошибки, «Убрать анимации» (U-55)</td></tr>
         <tr><td>titleSmall, headlineMedium, labelSmall</td><td><span class="st chg">задать</span></td><td>системный шрифт Android</td></tr>
         <tr><td>Цвета рисунков частей</td><td><span class="st chg">в палитру</span></td><td>19 hex в PartArt.kt</td></tr>
       </tbody>
@@ -1023,6 +1024,11 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
     var on = hide.getAttribute('aria-checked') !== 'true';
     hide.setAttribute('aria-checked', on ? 'true' : 'false');
     document.querySelectorAll('#hideDemo .money').forEach(function (m) { m.classList.toggle('dust', on); });
+  });
+  var shake = document.getElementById('shakeRun');
+  shake.addEventListener('click', function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    shake.animate([{ transform: 'translateX(10px)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(0)' }], { duration: 225 });
   });
   var run = document.getElementById('motionRun');
   run.addEventListener('click', function () {

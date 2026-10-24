@@ -26,7 +26,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.mutableIntStateOf
 import ru.maxrubtsoff.bankagg.ui.common.PagerTabs
 import androidx.compose.animation.core.animateFloatAsState
@@ -37,6 +36,7 @@ import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.domain.model.SortOrder
 import ru.maxrubtsoff.bankagg.ui.common.SortControl
 import ru.maxrubtsoff.bankagg.ui.common.SortSheet
+import ru.maxrubtsoff.bankagg.ui.common.Motion
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
 import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import androidx.compose.foundation.combinedClickable
@@ -171,8 +171,8 @@ fun CashbackScreen(
             targetState = currentKey,
             transitionSpec = {
                 val dir = if (targetState > initialState) 1 else -1
-                (slideInHorizontally(tween(260)) { w -> dir * w / 5 } + fadeIn(tween(200))) togetherWith
-                    (slideOutHorizontally(tween(260)) { w -> -dir * w / 8 } + fadeOut(tween(160)))
+                (slideInHorizontally(Motion.tween(Motion.NORMAL, Motion.Standard)) { w -> dir * w / 5 } + fadeIn(Motion.tween(Motion.NORMAL))) togetherWith
+                    (slideOutHorizontally(Motion.tween(Motion.FAST, Motion.Standard)) { w -> -dir * w / 8 } + fadeOut(Motion.tween(Motion.FAST)))
             },
             modifier = Modifier.fillMaxWidth().weight(1f),
             label = "month"

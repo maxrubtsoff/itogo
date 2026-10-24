@@ -3,7 +3,6 @@ package ru.maxrubtsoff.bankagg.ui.deposits
 import androidx.compose.ui.text.style.TextOverflow
 import ru.maxrubtsoff.bankagg.ui.theme.Amounts
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -75,7 +74,7 @@ fun MonthsChart(deposit: Deposit, asOf: LocalDate) {
     val sizes = remember(bars) { DepositMath.barSizes(bars, BAR_AREA.value) }
     // Bars grow up from zero when the chart first shows (U-19).
     val grow = remember { Animatable(if (Motion.enabled) 0f else 1f) }
-    LaunchedEffect(Unit) { grow.animateTo(1f, tween(420)) }
+    LaunchedEffect(Unit) { grow.animateTo(1f, Motion.tween(Motion.SLOW)) }
     val nowIdx = bars.indexOfFirst { it.state == DepositMath.MonthState.CURRENT }.let { i ->
         when {
             i >= 0 -> i

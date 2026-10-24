@@ -37,6 +37,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,8 @@ import ru.maxrubtsoff.bankagg.ui.common.GhostButton
 import ru.maxrubtsoff.bankagg.ui.common.ListRow
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.Motion
+import ru.maxrubtsoff.bankagg.ui.common.errorShake
+import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import ru.maxrubtsoff.bankagg.ui.common.MoreAction
 import ru.maxrubtsoff.bankagg.ui.common.MoreMenu
 import ru.maxrubtsoff.bankagg.ui.common.Panel
@@ -126,6 +130,12 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                         MotionTrack(name, ms, moved)
                     }
                     GhostButton("Запустить", onClick = { moved = !moved })
+                    // The «no» shake: one implementation for every refusal, still with animations off.
+                    val shake = rememberErrorShake()
+                    val scope = rememberCoroutineScope()
+                    Box(Modifier.errorShake(shake)) {
+                        PlateButton(onClick = { scope.launch { shake.play() } }, modifier = Modifier.fillMaxWidth()) { Text("Ошибка: встряхнуть") }
+                    }
                 }
             }
 
