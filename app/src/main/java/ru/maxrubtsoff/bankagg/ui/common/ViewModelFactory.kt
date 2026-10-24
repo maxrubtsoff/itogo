@@ -52,7 +52,7 @@ class ViewModelFactory(
                 container.settings
             ) as T
         modelClass.isAssignableFrom(SubscriptionsViewModel::class.java) ->
-            SubscriptionsViewModel(container.subscriptionRepository, container.ledgerRepository, container.banks, container.today) as T
+            SubscriptionsViewModel(container.subscriptionRepository, container.ledgerRepository, container.banks, container.today, container.logoMaker) as T
         modelClass.isAssignableFrom(DepositsViewModel::class.java) ->
             DepositsViewModel(
                 container.depositRepository,

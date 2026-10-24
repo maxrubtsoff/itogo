@@ -53,6 +53,8 @@ class AppNotifier(context: Context) {
             .setContentTitle(r.title)
             .setContentText(r.text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(r.text))
+            // A subscription's own icon is the big one (F-33).
+            .apply { r.decor?.let { setLargeIcon(DecorBitmap.of(it)) } }
             .setContentIntent(openApp(open, r.id.hashCode()))
             .setAutoCancel(true)
             .private(channel, when (r.kind) {

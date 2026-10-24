@@ -45,6 +45,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
+import androidx.compose.foundation.shape.CircleShape
+import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.BrandDecor
+import ru.maxrubtsoff.bankagg.ui.common.BrandAvatar
+import ru.maxrubtsoff.bankagg.ui.common.BrandDecorEditor
+import ru.maxrubtsoff.bankagg.ui.common.rememberBrandDecorState
+import ru.maxrubtsoff.bankagg.ui.common.squircle
 import ru.maxrubtsoff.bankagg.ui.common.FingerPointer
 import ru.maxrubtsoff.bankagg.ui.common.ScanReveal
 import ru.maxrubtsoff.bankagg.ui.common.ScanningThumb
@@ -149,6 +156,9 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                 }
             }
 
+            Caption("Оформление и аватар бренда")
+            BrandDemo()
+
             Caption("Распознавание (скан)")
             ScanDemo()
 
@@ -239,6 +249,20 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             }
             Caption("")
         }
+    }
+}
+
+/** F-33: the avatar of a bank and of a subscription, and the editor of a look. */
+@Composable
+private fun BrandDemo() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            BrandAvatar(BrandDecor.defaultFor("Совкомбанк"), CircleShape, 48.dp)
+            BrandAvatar(BrandDecor.defaultFor("Яндекс Плюс"), squircle(48.dp), 48.dp, overlay = BankBrand.TBANK)
+            BrandAvatar(BrandDecor.defaultFor("Netflix"), squircle(36.dp), 36.dp)
+        }
+        val state = rememberBrandDecorState("Яндекс Плюс", BrandDecor.defaultFor("Яндекс Плюс"))
+        BrandDecorEditor(state, squircle(64.dp))
     }
 }
 

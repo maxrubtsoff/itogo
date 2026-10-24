@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.data.icons.LogoMaker
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.BrandDecor
 import ru.maxrubtsoff.bankagg.domain.model.CbrBanks
 import ru.maxrubtsoff.bankagg.domain.repository.BankRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
@@ -120,7 +121,7 @@ class BanksViewModel(
     }
 
     /** A new own bank or changes to one; [picture] — a gallery image to cut into the logo. */
-    fun saveOwn(existing: BankBrand?, title: String, letters: String, color: Long, textColor: Long, picture: Uri?, usePicture: Boolean, onDone: (BankBrand) -> Unit) =
+    fun saveOwn(existing: BankBrand?, title: String, look: BrandDecor, picture: Uri?, usePicture: Boolean, onDone: (BankBrand) -> Unit) =
         viewModelScope.launch {
             val key = existing?.key ?: (BankBrand.USER_PREFIX + UUID.randomUUID())
             val logo = when {
@@ -128,13 +129,8 @@ class BanksViewModel(
                 picture != null -> logos.make(picture, key)
                 else -> existing?.logoFile
             }
-            val bank = (existing ?: BankBrand(key, title.trim(), color)).copy(
-                title = title.trim(),
-                primaryColor = color,
-                letters = letters.trim().uppercase().take(3).ifEmpty { BankBrand.lettersOf(title) },
-                textColor = textColor,
-                logoFile = logo
-            )
+            val base = existing ?: BankBrand(key, title.trim(), look.colorArgb)
+            val bank = base.withDecor(title.trim(), look.copy(logoFile = logo))
             if (existing == null) banks.add(bank) else banks.update(bank)
             onDone(bank)
         }

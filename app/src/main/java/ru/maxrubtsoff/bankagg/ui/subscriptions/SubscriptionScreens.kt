@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,12 @@ import ru.maxrubtsoff.bankagg.ui.capital.ModeChip
 import ru.maxrubtsoff.bankagg.ui.capital.amountInput
 import ru.maxrubtsoff.bankagg.ui.capital.parseAmountMinor
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
+import ru.maxrubtsoff.bankagg.ui.common.BankPickSheet
+import ru.maxrubtsoff.bankagg.ui.common.BrandAvatar
+import ru.maxrubtsoff.bankagg.ui.common.BrandDecorEditor
+import ru.maxrubtsoff.bankagg.ui.common.SelectRow
+import ru.maxrubtsoff.bankagg.ui.common.rememberBrandDecorState
+import ru.maxrubtsoff.bankagg.ui.common.squircle
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.DangerButton
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
@@ -94,7 +101,7 @@ fun SubscriptionFormScreen(vm: SubscriptionsViewModel, onBack: () -> Unit) {
     val start = draft ?: run { LaunchedEffect(Unit) { onBack() }; return }
     val banks by vm.myBanks.collectAsStateWithLifecycle()
 
-    var title by remember(start.id) { mutableStateOf(start.title) }
+    val look = rememberBrandDecorState(start.title, start.look, touched = start.decor != null, key = start.id)
     val price0 = if (start.priceMinor > 0) amountInput(start.priceMinor) else ""
     var price by remember(start.id) { mutableStateOf(TextFieldValue(price0, TextRange(price0.length))) }
     var unit by remember(start.id) { mutableStateOf(start.period.unit) }
@@ -103,10 +110,11 @@ fun SubscriptionFormScreen(vm: SubscriptionsViewModel, onBack: () -> Unit) {
     var brand by remember(start.id) { mutableStateOf(start.brand) }
     var remind by remember(start.id) { mutableStateOf(start.remind) }
     var picking by remember { mutableStateOf(false) }
+    var pickingBank by remember { mutableStateOf(false) }
 
     val priceMinor = parseAmountMinor(price.text)
     val period = Period(unit, if (unit == PeriodUnit.DAYS) days.toIntOrNull() ?: 0 else 0)
-    val ready = title.isNotBlank() && priceMinor != null && priceMinor > 0 && (unit != PeriodUnit.DAYS || period.days > 0)
+    val ready = look.title.isNotBlank() && priceMinor != null && priceMinor > 0 && (unit != PeriodUnit.DAYS || period.days > 0)
     val isNew = listState.active.none { it.id == start.id }
 
     Scaffold(
@@ -118,7 +126,7 @@ fun SubscriptionFormScreen(vm: SubscriptionsViewModel, onBack: () -> Unit) {
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Field("Название") { TextLine(title) { title = it } }
+            BrandDecorEditor(look, squircle(64.dp))
             Field("Цена") { AmountField(price, { price = it }, "₽") }
             Field("Период") {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -142,23 +150,13 @@ fun SubscriptionFormScreen(vm: SubscriptionsViewModel, onBack: () -> Unit) {
                     contentAlignment = Alignment.CenterStart
                 ) { Text(RuDays.relative(next, LocalDate.now()).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyLarge) }
             }
-            if (banks.isNotEmpty()) Field("Банк") {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    banks.forEach { b ->
-                        val on = brand?.key == b.key
-                        Row(
-                            Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
-                                .background(if (on) Slitok.BrassPill else Slitok.Inset)
-                                .border(1.dp, if (on) Slitok.BrassLine else Slitok.Line, RoundedCornerShape(12.dp))
-                                .clickable { brand = if (on) null else b }.padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            BankIcon(b, size = 22.dp)
-                            Text(b.title, style = MaterialTheme.typography.labelLarge, color = if (on) Slitok.Brass2 else Slitok.Muted)
-                        }
-                    }
-                }
+            if (banks.isNotEmpty() || brand != null) Field("Списывается с") {
+                SelectRow(
+                    value = brand?.title,
+                    placeholder = "Не указан",
+                    onClick = { pickingBank = true },
+                    leading = brand?.let { b -> { BankIcon(b, size = 36.dp) } }
+                )
             }
             Panel(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -168,9 +166,12 @@ fun SubscriptionFormScreen(vm: SubscriptionsViewModel, onBack: () -> Unit) {
             }
             BrassButton(
                 onClick = {
-                    vm.save(
-                        start.copy(title = title.trim(), priceMinor = priceMinor ?: 0, period = period, nextDate = next, brand = brand, remind = remind),
-                        onBack
+                    vm.saveWithPicture(
+                        start.copy(
+                            title = look.title.trim(), priceMinor = priceMinor ?: 0, period = period, nextDate = next,
+                            brand = brand, remind = remind, decor = look.decor()
+                        ),
+                        look.picked, look.usePicture, onBack
                     )
                 },
                 Modifier.fillMaxWidth(), enabled = ready
@@ -182,6 +183,7 @@ fun SubscriptionFormScreen(vm: SubscriptionsViewModel, onBack: () -> Unit) {
     if (picking) {
         SlitokDatePicker(next, onPick = { next = it }, onDismiss = { picking = false })
     }
+    if (pickingBank) BankPickSheet(brand, onPick = { brand = it }, onDismiss = { pickingBank = false })
 }
 
 @Composable
@@ -220,7 +222,7 @@ fun SubscriptionCardScreen(vm: SubscriptionsViewModel, id: String, onEdit: () ->
             Panel(Modifier.fillMaxWidth(), radius = 20.dp) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        SubscriptionAvatar(s.title, s.brand, size = 48.dp)
+                        BrandAvatar(s.look, squircle(48.dp), 48.dp, overlay = s.brand)
                         Column {
                             MoneyText(Money.ofMinor(s.priceMinor).format(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                             Text(s.period.label(), style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
@@ -229,7 +231,7 @@ fun SubscriptionCardScreen(vm: SubscriptionsViewModel, id: String, onEdit: () ->
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Fact("Следующее", Subscriptions.whenText(Subscriptions.upcoming(s, today), today), Modifier.weight(1f))
-                        Fact("Банк", s.brand?.title ?: "—", Modifier.weight(1f))
+                        Fact("Списывается с", s.brand?.title ?: "—", Modifier.weight(1f), quiet = true)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Fact("В год", Money.ofMinor(s.period.perMonth(s.priceMinor) * 12).format(), Modifier.weight(1f))
@@ -259,9 +261,9 @@ fun SubscriptionCardScreen(vm: SubscriptionsViewModel, id: String, onEdit: () ->
 }
 
 @Composable
-private fun Fact(label: String, value: String, modifier: Modifier = Modifier) {
+private fun Fact(label: String, value: String, modifier: Modifier = Modifier, quiet: Boolean = false) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
-        MoneyText(value.nbsp(), style = MaterialTheme.typography.bodyLarge, maxLines = 2)
+        MoneyText(value.nbsp(), style = MaterialTheme.typography.bodyLarge, color = if (quiet) Slitok.Muted else Color.Unspecified, maxLines = 2)
     }
 }
