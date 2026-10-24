@@ -110,7 +110,7 @@ fun CashbackLinesEditor(
                                 ?: (0 until i).firstOrNull { lines[it].percentText.isBlank() }
                             if (next != null) focusRow = lines[next].id else focusManager.clearFocus()
                         },
-                        modifier = Modifier.tourTarget(TourTarget.MISSING_PERCENT, active = state == PercentState.Asked)
+                        modifier = Modifier.tourTarget(TourTarget.MISSING_PERCENT, active = state == PercentState.Asked, radius = 12.dp)
                     )
                 }
             }

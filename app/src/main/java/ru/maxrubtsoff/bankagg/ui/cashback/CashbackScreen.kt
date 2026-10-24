@@ -2,6 +2,9 @@
 
 package ru.maxrubtsoff.bankagg.ui.cashback
 
+import ru.maxrubtsoff.bankagg.domain.model.TourSample
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.TagTone
 import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
 import androidx.compose.material.icons.filled.Lightbulb
@@ -605,7 +608,7 @@ private fun BankCashbackPanel(
     items: List<CashbackItem>,
     onEditBank: () -> Unit
 ) {
-    Panel(Modifier.fillMaxWidth()) {
+    Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.BANK_PANEL, active = brand == TourSample.BANK)) {
         Column(
             Modifier.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)

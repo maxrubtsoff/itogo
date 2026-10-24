@@ -1,5 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.capital
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
 import ru.maxrubtsoff.bankagg.ui.common.sharedCard
 import ru.maxrubtsoff.bankagg.ui.common.cascade
@@ -100,7 +102,7 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
                     cashPositions.forEachIndexed { i, p ->
                         if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = Slitok.Line)
                         // U-45: «Купил / Продал» live on the currency's screen.
-                        Box(Modifier.cascade(i, play)) { PositionRow(p) { onOpenCurrency(p.currency) } }
+                        Box(Modifier.cascade(i, play).tourTarget(TourTarget.CURRENCY_ROW, active = i == 0, radius = 16.dp)) { PositionRow(p) { onOpenCurrency(p.currency) } }
                     }
                 }
             }
@@ -142,7 +144,7 @@ private fun GroupTitle(text: String) {
 @Composable
 fun BuySellButtons(canSell: Boolean, onBuy: () -> Unit, onSell: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        BrassButton(onClick = onBuy, modifier = Modifier.weight(1f)) { Text("+ Купил") }
+        BrassButton(onClick = onBuy, modifier = Modifier.weight(1f).tourTarget(TourTarget.ADD_BUTTON, radius = 16.dp)) { Text("+ Купил") }
         PlateButton(onClick = onSell, enabled = canSell, modifier = Modifier.weight(1f)) { Text("− Продал") }
     }
 }

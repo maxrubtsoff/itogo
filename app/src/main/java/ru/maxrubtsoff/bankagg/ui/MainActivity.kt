@@ -1,9 +1,18 @@
 package ru.maxrubtsoff.bankagg.ui
 
+import ru.maxrubtsoff.bankagg.ui.common.rememberNotificationAccess
+import ru.maxrubtsoff.bankagg.util.Perms
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.TourTargets
 import ru.maxrubtsoff.bankagg.ui.showcase.ShowcaseScreen
 import androidx.compose.ui.text.style.TextOverflow
 import ru.maxrubtsoff.bankagg.ui.onboarding.LocalTourOffer
-import ru.maxrubtsoff.bankagg.ui.onboarding.TourScreen
+import ru.maxrubtsoff.bankagg.ui.onboarding.TourCoach
+import ru.maxrubtsoff.bankagg.ui.onboarding.TourSandboxLayer
+import ru.maxrubtsoff.bankagg.ui.onboarding.TourSession
+import ru.maxrubtsoff.bankagg.ui.onboarding.TourView
 import ru.maxrubtsoff.bankagg.ui.onboarding.LearningScreen
 import ru.maxrubtsoff.bankagg.domain.model.TourSection
 import ru.maxrubtsoff.bankagg.domain.model.TourScript
@@ -215,8 +224,6 @@ private object Routes {
     const val SETTINGS_LOG = "settings/log"
     const val LEARNING = "settings/learning"
     const val SHOWCASE = "debug/showcase"
-    const val TOUR = "tour/{section}"
-    fun tour(section: TourSection) = "tour/${section.key}"
     const val SETTINGS_PRIVACY = "settings/privacy"
     const val DEPOSITS_ADD = "deposits/add"
     const val DEPOSITS_SHOT = "deposits/shot/{shotId}"
@@ -517,12 +524,16 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     }
 
     val lastBackup by container.autoBackup.lastSaved.collectAsStateWithLifecycle()
+    // F-30, B-56: a tour plays on the screen it belongs to, over it; no route of its own.
+    var pendingTour by remember { mutableStateOf<TourSection?>(null) }
+    var tour by remember { mutableStateOf<TourSession?>(null) }
+    val notifAccess by rememberNotificationAccess()
     LaunchedEffect(onboarded, setupSeen) {
-        if (onboarded && setupSeen && TourScript.startAfterSetup(toursDone)) nav.navigate(Routes.tour(TourSection.GENERAL))
+        if (onboarded && setupSeen && TourScript.startAfterSetup(toursDone)) pendingTour = TourSection.GENERAL
     }
     val tourScope = rememberCoroutineScope()
     val tourOffer: (TourSection, Boolean) -> (() -> Unit)? = { section, hasData ->
-        if (TourScript.offerInSection(section, features, hasData, toursDone)) ({ nav.navigate(Routes.tour(section)) }) else null
+        if (TourScript.offerInSection(section, features, hasData, toursDone)) ({ pendingTour = section }) else null
     }
 
     // A tap on one of the app's notifications opens what it is about.
@@ -551,7 +562,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             nav.navigate(home) { popUpTo(nav.graph.findStartDestination().id); launchSingleTop = true }
         }
     }
-    val showBottomBar = currentRoute in topDests.map { it.pattern }
+    val showBottomBar = currentRoute in topDests.map { it.pattern } && tour?.view != TourView.SHOT
 
     // U-38: «Добавить вклад» anywhere opens the same «Со скринов / Вручную» sheet.
     var addingDeposit by remember { mutableStateOf(false) }
@@ -588,6 +599,22 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     /** A capital part on the Overview opens its section of «Капитал» — the same slide as every move deeper (B-41). */
     fun openPart(part: CapitalPart) = jumpTo(Routes.capital(part))
 
+    // A tour begins once the screen it is about is standing still: if the person is elsewhere
+    // (Настройки → Обучение), the app goes there first, as it always does, and the tour starts when it has arrived.
+    LaunchedEffect(pendingTour, backStack) {
+        val section = pendingTour ?: return@LaunchedEffect
+        if (tour != null) { pendingTour = null; return@LaunchedEffect }
+        val (pattern, route) = tourScreenOf(section, features)
+        val entry = backStack ?: return@LaunchedEffect
+        if (entry.destination.route != pattern) {
+            if (section == TourSection.GENERAL) openTab(route) else nav.navigate(route)
+            return@LaunchedEffect
+        }
+        entry.lifecycle.currentStateFlow.first { it == Lifecycle.State.RESUMED }
+        pendingTour = null
+        tour = TourSession(section, features, notifAccess, container.sandbox(features))
+    }
+
     val myBanks by container.banks.myBanks.collectAsStateWithLifecycle(initialValue = emptyList())
     val newBanks by container.bankCandidates.candidates.collectAsStateWithLifecycle(initialValue = emptyList())
     ProvideDustClock(running = hidden) {
@@ -607,11 +634,12 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
         },
         bottomBar = {
             if (showBottomBar) {
-                SlitokBottomBar(tabs, current = backStack?.destination, onSelect = { tabTaps++; openTab(it.route) })
+                SlitokBottomBar(tabs, current = backStack?.destination, tourTargets = tour?.targets, onSelect = { tabTaps++; openTab(it.route) })
             }
         }
     ) { padding ->
         CompositionLocalProvider(LocalTabTaps provides tabTaps, LocalTourOffer provides tourOffer) {
+        Box(Modifier.fillMaxSize()) {
         NavHost(
             navController = nav,
             startDestination = startRoute,
@@ -880,16 +908,9 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             composable(Routes.LEARNING) {
                 LearningScreen(
                     features, toursDone,
-                    onOpen = { nav.navigate(Routes.tour(it)) },
+                    onOpen = { pendingTour = it },
                     onBack = { nav.popBackStack() }
                 )
-            }
-            composable(Routes.TOUR) { entry ->
-                val section = TourSection.fromKey(entry.arguments?.getString("section")) ?: TourSection.GENERAL
-                TourScreen(section, features, onDone = {
-                    tourScope.launch { container.settings.markTourDone(section.key) }
-                    nav.popBackStack()
-                })
             }
             composable(Routes.SETTINGS_LOG) {
                 // Accounts switched off while the log was open: it closes (U-51).
@@ -903,10 +924,25 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                 SettingsPrivacyScreen(settingsVm, Biometrics.available(context), onBack = { nav.popBackStack() })
             }
         }
+        // The tour's examples over the screen it plays on (B-56); the bottom bar stays the real one.
+        tour?.let { TourSandboxLayer(it, padding) }
+        }
         }
     }
     }
     }
+    }
+    tour?.let { session ->
+        val context = LocalContext.current
+        TourCoach(
+            session,
+            // A closed tour counts as taken (F-30).
+            onFinished = {
+                tourScope.launch { container.settings.markTourDone(session.section.key) }
+                tour = null
+            },
+            onAllowAccess = { Perms.openNotificationAccessSettings(context) }
+        )
     }
     if (addingDeposit) {
         AddSheet(
@@ -935,6 +971,17 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     }
 }
 
+/** The tab a tour plays on: its route pattern and the route to open it with. */
+private fun tourScreenOf(section: TourSection, features: Features): Pair<String, String> = when (section) {
+    TourSection.GENERAL -> startRouteOf(features).let { route -> topDests.first { it.route == route }.pattern to route }
+    TourSection.ACCOUNTS -> Routes.CAPITAL to Routes.capital(CapitalPart.ACCOUNTS)
+    TourSection.DEPOSITS -> Routes.CAPITAL to Routes.capital(CapitalPart.DEPOSITS)
+    TourSection.CURRENCY -> Routes.CAPITAL to Routes.capital(CapitalPart.CURRENCY)
+    TourSection.CASH -> Routes.CAPITAL to Routes.capital(CapitalPart.CASH)
+    TourSection.CASHBACK -> Routes.CASHBACK to Routes.CASHBACK_BASE
+    TourSection.SUBSCRIPTIONS -> Routes.CASHBACK to (Routes.CASHBACK_BASE + "?section=1")
+}
+
 /**
  * After saving a deposit: back to the deposits section of Capital. When the
  * flow started on the overview (empty state), Capital isn't on the stack —
@@ -951,7 +998,7 @@ private fun backToDeposits(nav: NavHostController) {
 
 /** Floating, rounded bottom bar in the Слиток style with a brass active pill. */
 @Composable
-private fun SlitokBottomBar(tabs: List<TopDest>, current: NavDestination?, onSelect: (TopDest) -> Unit) {
+private fun SlitokBottomBar(tabs: List<TopDest>, current: NavDestination?, tourTargets: TourTargets?, onSelect: (TopDest) -> Unit) {
     val shape = RoundedCornerShape(26.dp)
     Box(
         Modifier
@@ -967,6 +1014,11 @@ private fun SlitokBottomBar(tabs: List<TopDest>, current: NavDestination?, onSel
                 .clip(shape)
                 .background(Brush.verticalGradient(listOf(Slitok.PanelTop, Slitok.PanelBottom)))
                 .border(1.dp, Slitok.Line, shape)
+                // B-48: the bar is the real one; a tour lights it where it stands.
+                .onGloballyPositioned { c ->
+                    tourTargets?.bounds?.set(TourTarget.BOTTOM_BAR, c.boundsInRoot())
+                    tourTargets?.radius?.set(TourTarget.BOTTOM_BAR, 26.dp)
+                }
                 .padding(8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically

@@ -2,6 +2,8 @@
 
 package ru.maxrubtsoff.bankagg.ui.overview
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import androidx.compose.foundation.layout.ColumnScope
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.domain.model.HideToggle
@@ -146,7 +148,7 @@ fun OverviewScreen(
         ScreenHeader("Обзор") {
             val hidden = LocalAmountsHidden.current
             val hasAmounts = snapshot?.parts?.any { it.hasData } == true
-            if (HideToggle.visible(hasAmounts, hidden)) IconButton(onClick = onToggleHidden) {
+            if (HideToggle.visible(hasAmounts, hidden)) IconButton(onClick = onToggleHidden, modifier = Modifier.tourTarget(TourTarget.HIDE_EYE, radius = 24.dp)) {
                 Icon(
                     if (hidden) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                     contentDescription = if (hidden) "Показать суммы" else "Скрыть суммы",

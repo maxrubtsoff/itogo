@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.ui.common
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +62,7 @@ fun NotificationAccessBanner(
     val shape = RoundedCornerShape(18.dp)
     Column(
         modifier
+            .tourTarget(TourTarget.ACCESS_TILE, radius = 18.dp)
             .fillMaxWidth()
             .clip(shape)
             .background(Slitok.BrassTint)

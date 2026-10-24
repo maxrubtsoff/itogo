@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.data.repository.sample
 
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -40,8 +41,13 @@ class SampleBankRepository(banks: List<BankBrand>) : BankRepository {
     override suspend fun cbrEntries(): List<CbrBanks.Entry> = emptyList()
 }
 
-/** A tour reads no real screenshots: the engine is never ready, what a shot "says" comes from the example data. */
+/**
+ * A tour reads no real screenshots, and never answers: a reading started here
+ * stays a reading until the tour itself finishes the example shot (what a shot
+ * "says" comes from the example data in the sample shot repositories). An engine
+ * that said "not ready" would end the reading at once, with nothing read.
+ */
 object SampleOcrEngine : OcrEngine {
-    override suspend fun isReady(): Boolean = false
-    override suspend fun recognize(imagePath: String): String? = null
+    override suspend fun isReady(): Boolean = awaitCancellation()
+    override suspend fun recognize(imagePath: String): String? = awaitCancellation()
 }

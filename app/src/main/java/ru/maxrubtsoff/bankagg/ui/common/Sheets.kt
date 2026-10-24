@@ -1,6 +1,25 @@
 package ru.maxrubtsoff.bankagg.ui.common
 
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 import android.view.View
 import android.view.Window
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +65,12 @@ import java.time.ZoneOffset
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SlitokSheet(onDismiss: () -> Unit, scroll: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+    // A tour plays inside one window, where its veil and light reach the sheet too (U-54).
+    val inline = LocalInlineSheets.current
+    if (inline != null) {
+        InlineSheet(inline, scroll, content)
+        return
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -65,6 +90,64 @@ fun SlitokSheet(onDismiss: () -> Unit, scroll: Boolean = true, content: @Composa
             content = content
         )
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+/**
+ * Where a tour draws the sheets of the screens it plays on (U-54): a real sheet
+ * is a window of its own, above the tour's veil, so in a tour it is drawn in
+ * place — the same content, the same look, in the one window the tour lights.
+ */
+class InlineSheetHost {
+    var content by mutableStateOf<(@Composable () -> Unit)?>(null)
+}
+
+/** Set only by a tour; null in the app, where sheets are real windows. */
+val LocalInlineSheets = compositionLocalOf<InlineSheetHost?> { null }
+
+@Composable
+private fun InlineSheet(host: InlineSheetHost, scroll: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    val latest by rememberUpdatedState(content)
+    DisposableEffect(host) {
+        host.content = {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                    .padding(horizontal = 20.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) { latest() }
+        }
+        onDispose { host.content = null }
+    }
+}
+
+/** The tour's sheet host: the sheet rises from the bottom of the screen and goes back down. */
+@Composable
+fun InlineSheetLayer(host: InlineSheetHost, modifier: Modifier = Modifier) {
+    val shown = host.content
+    var last by remember { mutableStateOf(shown) }
+    SideEffect { if (shown != null) last = shown }
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        AnimatedVisibility(
+            visible = shown != null,
+            enter = slideInVertically(Motion.tween(Motion.NORMAL)) { it } + fadeIn(Motion.tween(Motion.NORMAL)),
+            exit = slideOutVertically(Motion.tween(Motion.FAST)) { it } + fadeOut(Motion.tween(Motion.FAST))
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .tourTarget(TourTarget.ADD_SHEET, radius = 28.dp)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .background(Slitok.PanelTop),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(Modifier.padding(vertical = 12.dp).size(width = 32.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(Slitok.Faint))
+                (shown ?: last)?.invoke()
+                Spacer(Modifier.height(12.dp))
+            }
+        }
     }
 }
 

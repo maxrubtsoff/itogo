@@ -36,7 +36,9 @@ enum class TourTarget {
     MISSING_PERCENT, BANK_PANEL,
     ACCOUNT_ROW, CURRENCY_ROW, CASH_SUM, FINDING,
     /** The thumbnail of the example screenshot while it is being read (F-34). */
-    SHOT_THUMB
+    SHOT_THUMB,
+    /** «Со скринов» in the sheet of ways to add: the finger presses it. */
+    SHOTS_TILE
 }
 
 /**

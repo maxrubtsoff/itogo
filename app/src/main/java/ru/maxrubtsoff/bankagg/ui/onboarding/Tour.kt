@@ -1,8 +1,15 @@
 package ru.maxrubtsoff.bankagg.ui.onboarding
 
-import androidx.compose.ui.text.style.TextOverflow
-import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateValueAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,47 +17,40 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Percent
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -61,139 +61,261 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
-import ru.maxrubtsoff.bankagg.domain.model.Features
+import ru.maxrubtsoff.bankagg.domain.model.AppTab
 import ru.maxrubtsoff.bankagg.domain.model.TourAction
 import ru.maxrubtsoff.bankagg.domain.model.TourAnim
 import ru.maxrubtsoff.bankagg.domain.model.TourHighlight
-import ru.maxrubtsoff.bankagg.domain.model.TourScript
+import ru.maxrubtsoff.bankagg.domain.model.TourSample
 import ru.maxrubtsoff.bankagg.domain.model.TourSection
-import ru.maxrubtsoff.bankagg.domain.model.TourStep
-import ru.maxrubtsoff.bankagg.domain.model.TourTarget
-import ru.maxrubtsoff.bankagg.ui.cashback.CashbackLineRow
-import ru.maxrubtsoff.bankagg.ui.cashback.PercentState
-import ru.maxrubtsoff.bankagg.ui.common.AddButton
-import ru.maxrubtsoff.bankagg.ui.common.BrassButton
-import ru.maxrubtsoff.bankagg.ui.common.ButtonRow
-import ru.maxrubtsoff.bankagg.ui.common.Dot
-import ru.maxrubtsoff.bankagg.ui.common.GhostButton
-import ru.maxrubtsoff.bankagg.ui.common.ListRow
-import ru.maxrubtsoff.bankagg.ui.common.Panel
-import ru.maxrubtsoff.bankagg.ui.common.PlateButton
-import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
-import ru.maxrubtsoff.bankagg.ui.common.StatusLine
-import ru.maxrubtsoff.bankagg.ui.common.TagTone
-import ru.maxrubtsoff.bankagg.ui.common.TileButton
-import ru.maxrubtsoff.bankagg.ui.common.ValueChip
-import ru.maxrubtsoff.bankagg.ui.common.heroGlow
+import ru.maxrubtsoff.bankagg.ui.capital.CapitalScreen
+import ru.maxrubtsoff.bankagg.ui.capital.CapitalViewModel
+import ru.maxrubtsoff.bankagg.ui.cashback.CashbackScreen
+import ru.maxrubtsoff.bankagg.ui.cashback.CashbackViewModel
+import ru.maxrubtsoff.bankagg.ui.cashback.ShotPreviewScreen
+import ru.maxrubtsoff.bankagg.ui.common.AddSheet
+import ru.maxrubtsoff.bankagg.ui.common.FingerPointer
+import ru.maxrubtsoff.bankagg.ui.common.InlineSheetLayer
+import ru.maxrubtsoff.bankagg.ui.common.LocalAmountsHidden
+import ru.maxrubtsoff.bankagg.ui.common.LocalInlineSheets
+import ru.maxrubtsoff.bankagg.ui.common.LocalMyBanks
+import ru.maxrubtsoff.bankagg.ui.common.LocalRevealAmounts
+import ru.maxrubtsoff.bankagg.ui.common.LocalTourDrive
+import ru.maxrubtsoff.bankagg.ui.common.LocalTourTargets
+import ru.maxrubtsoff.bankagg.ui.common.Motion
+import ru.maxrubtsoff.bankagg.ui.common.SandboxViewModelFactory
 import ru.maxrubtsoff.bankagg.ui.common.nbsp
-import ru.maxrubtsoff.bankagg.ui.common.rememberNotificationAccess
-import ru.maxrubtsoff.bankagg.ui.overview.CapitalPartArt
-import ru.maxrubtsoff.bankagg.ui.theme.Amounts
+import ru.maxrubtsoff.bankagg.ui.deposits.DepositShotPreviewScreen
+import ru.maxrubtsoff.bankagg.ui.deposits.DepositsViewModel
+import ru.maxrubtsoff.bankagg.ui.overview.OverviewScreen
+import ru.maxrubtsoff.bankagg.ui.subscriptions.PaymentsScreen
+import ru.maxrubtsoff.bankagg.ui.subscriptions.SubscriptionsSection
+import ru.maxrubtsoff.bankagg.ui.subscriptions.SubscriptionsViewModel
+import ru.maxrubtsoff.bankagg.data.repository.sample.SampleCashbackShotRepository
+import ru.maxrubtsoff.bankagg.data.repository.sample.SampleDepositShotRepository
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.util.Perms
 
-/** Where each element a tour points at sits on the screen, by its [TourTarget]. */
-private class TourTargets { val bounds = mutableStateMapOf<TourTarget, Rect>() }
+/*
+ * The tour (F-30, F-32, U-54, B-56). It plays on the app's own screens: the
+ * screen the person stands on is drawn again over itself from the sandbox's
+ * example data, and the veil, the light and the card come over that. Nothing is
+ * rebuilt or moved — the same place on the same screen — so nothing jumps; the
+ * person's own data goes out and the examples come in (a cross-fade), then the
+ * coach appears, and at the end it all goes back the same way.
+ *
+ * Two layers, in two places of the app's root: [TourSandboxLayer] sits in the
+ * content area (the bottom bar stays the real one), [TourCoach] over everything.
+ */
 
-private val LocalTourTargets = compositionLocalOf<TourTargets?> { null }
+/** The sandbox's view-models live exactly as long as the tour. */
+private class SandboxStoreOwner : ViewModelStoreOwner {
+    override val viewModelStore = ViewModelStore()
+}
 
-/** Marks an element a tour step can point at; the highlight follows the element itself, not coordinates. */
-private fun Modifier.tourTarget(t: TourTarget): Modifier = composed {
-    val targets = LocalTourTargets.current
-    if (targets == null) this else onGloballyPositioned { targets.bounds[t] = it.boundsInRoot() }
+/** Which of the app's screens the tour plays a section on. */
+private sealed interface Stage {
+    data object Overview : Stage
+    data class Capital(val part: CapitalPart?) : Stage
+    data class Payments(val section: Int) : Stage
+}
+
+private fun stageOf(session: TourSession): Stage = when (session.section) {
+    TourSection.GENERAL -> when (session.features.firstTab) {
+        AppTab.CAPITAL -> Stage.Capital(null)
+        AppTab.PAYMENTS -> Stage.Payments(0)
+        else -> Stage.Overview
+    }
+    TourSection.ACCOUNTS -> Stage.Capital(CapitalPart.ACCOUNTS)
+    TourSection.DEPOSITS -> Stage.Capital(CapitalPart.DEPOSITS)
+    TourSection.CURRENCY -> Stage.Capital(CapitalPart.CURRENCY)
+    TourSection.CASH -> Stage.Capital(CapitalPart.CASH)
+    TourSection.CASHBACK -> Stage.Payments(0)
+    TourSection.SUBSCRIPTIONS -> Stage.Payments(1)
 }
 
 /**
- * A tour (F-30): an example screen made of the app's own pieces, marked
- * «Пример»; a light card says what the highlighted element does. Nothing here
- * is saved. The cross closes the whole tour; a closed tour counts as taken.
+ * The sandbox over the real screen of the tour's section: the same `Screen`
+ * functions, run by view-models over the example data. It is as opaque as the
+ * real screen it covers, so the cross-fade is between two complete pictures.
+ * [padding] is the content area's, as for the real tab.
  */
 @Composable
-fun TourScreen(section: TourSection, features: Features, onDone: () -> Unit) {
-    val access by rememberNotificationAccess()
-    // The steps are fixed when the tour starts, so giving access mid-way doesn't reshuffle them.
-    // The example scenes below know only the old targets; the steps for the real screens (F-32, U-54) come with their own UI.
-    val steps = remember(section) {
-        TourScript.steps(section, features, access).filterNot {
-            it.target == TourTarget.SHOT_THUMB || it.anim == TourAnim.PICK_SHOTS ||
-                (section == TourSection.CASHBACK && it.target == TourTarget.ADD_SHEET)
-        }
-    }
-    var index by rememberSaveable { mutableIntStateOf(0) }
-    var filled by rememberSaveable { mutableStateOf(false) }
-    val targets = remember { TourTargets() }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val step = steps[index.coerceIn(0, steps.lastIndex)]
-    fun next() = if (index >= steps.lastIndex) onDone() else index++
-    BackHandler(onBack = onDone)
-
-    CompositionLocalProvider(LocalTourTargets provides targets) {
-        Box(Modifier.fillMaxSize().background(Slitok.Bg)) {
-            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.Center) {
-                    SlitokTag("Пример", TagTone.Violet)
-                }
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    when (section) {
-                        TourSection.GENERAL -> GeneralScene()
-                        TourSection.DEPOSITS -> DepositsScene(sheet = step.target == TourTarget.ADD_SHEET)
-                        TourSection.CASHBACK -> CashbackScene(step.target, filled)
-                        TourSection.ACCOUNTS -> AccountsScene()
-                        TourSection.CURRENCY -> CurrencyScene()
-                        TourSection.CASH -> CashScene()
-                        TourSection.SUBSCRIPTIONS -> SubscriptionsScene()
-                    }
+fun TourSandboxLayer(session: TourSession, padding: PaddingValues) {
+    val owner = remember(session) { SandboxStoreOwner() }
+    DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
+    val factory = remember(session) { SandboxViewModelFactory(session.sandbox) }
+    val banks = remember(session) { TourSample.data(session.sandbox.today.date.value).banks }
+    CompositionLocalProvider(
+        LocalViewModelStoreOwner provides owner,
+        LocalTourTargets provides session.targets,
+        LocalTourDrive provides session.drive,
+        LocalInlineSheets provides session.sheets,
+        LocalAmountsHidden provides session.hidden,
+        LocalRevealAmounts provides {},
+        LocalMyBanks provides banks,
+        LocalTourOffer provides { _, _ -> null }
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = session.sandboxAlpha.value }
+                .background(Slitok.Bg)
+        ) {
+            Crossfade(targetState = session.view, animationSpec = Motion.tween(Motion.NORMAL), label = "tourView") { view ->
+                when (view) {
+                    TourView.SECTION -> SectionScreen(session, factory, padding)
+                    TourView.SHOT -> ShotScreen(session, factory)
                 }
             }
-            CoachOverlay(
-                bounds = targets.bounds[step.target],
-                step = step,
-                index = index,
-                total = steps.size,
-                last = index == steps.lastIndex,
-                onClose = onDone,
-                onNext = {
-                    when (step.action) {
-                        TourAction.NEXT -> next()
-                        TourAction.ALLOW_ACCESS -> { Perms.openNotificationAccessSettings(context); next() }
-                        TourAction.FILL_AND_NEXT -> scope.launch { filled = true; delay(700); next() }
-                    }
-                },
-                onLater = if (step.action == TourAction.ALLOW_ACCESS) ({ next() }) else null
-            )
+            InlineSheetLayer(session.sheets)
+            // «Добавить …»: the same sheet of the screen, opened by the tour from outside.
+            if (session.sheetOpen) {
+                AddSheet(
+                    title = if (session.section == TourSection.DEPOSITS) "Добавить вклад" else "Добавить кэшбэк",
+                    onShots = {}, onManual = {}, onDismiss = {}
+                )
+            }
+            // The sandbox is for looking at: touches don't reach it.
+            Box(Modifier.fillMaxSize().clickable(interactionSource = null, indication = null) {})
         }
     }
 }
 
-/** The veil with a window over the target, a brass frame round it, and the card beside it. */
 @Composable
-private fun CoachOverlay(
-    bounds: Rect?,
-    step: TourStep,
-    index: Int,
-    total: Int,
-    last: Boolean,
-    onClose: () -> Unit,
-    onNext: () -> Unit,
-    onLater: (() -> Unit)?
-) {
+private fun SectionScreen(session: TourSession, factory: SandboxViewModelFactory, padding: PaddingValues) {
+    // The same wrapper as the real tab's: the bottom bar's padding and the status bar.
+    Box(Modifier.fillMaxSize().padding(padding).statusBarsPadding()) {
+        when (val stage = stageOf(session)) {
+            Stage.Overview -> {
+                val capitalVm: CapitalViewModel = viewModel(factory = factory)
+                val cashbackVm: CashbackViewModel = viewModel(factory = factory)
+                OverviewScreen(
+                    vm = capitalVm,
+                    cashbackVm = cashbackVm,
+                    onOpenCapital = {}, onOpenCashback = {}, onOpenCashbackNext = {}, onOpenBanks = {}, onAddDeposit = {},
+                    banksSelected = true,
+                    features = session.features
+                )
+            }
+            is Stage.Capital -> {
+                val capitalVm: CapitalViewModel = viewModel(factory = factory)
+                val depositsVm: DepositsViewModel = viewModel(factory = factory)
+                CapitalScreen(
+                    vm = capitalVm,
+                    depositsVm = depositsVm,
+                    sectionArg = stage.part?.key,
+                    parts = CapitalPart.entries.filter { it in session.features.capitalParts },
+                    onOpenDeposit = {}, onOpenDepositShot = {}, onOpenDepositBatch = {}, onManualDeposit = {},
+                    onOpenPendingShots = {}, onOpenCurrency = {}, onOpenBanks = {}
+                )
+            }
+            is Stage.Payments -> {
+                val cashbackVm: CashbackViewModel = viewModel(factory = factory)
+                val subscriptionsVm: SubscriptionsViewModel = viewModel(factory = factory)
+                PaymentsScreen(
+                    cashback = { monthOffset, byCategory, onMonthOffset ->
+                        CashbackScreen(
+                            cashbackVm, monthOffset, byCategory, onMonthOffset,
+                            onOpenShot = {}, onOpenBatch = {}, onEditBank = { _, _ -> }
+                        )
+                    },
+                    subscriptions = { SubscriptionsSection(subscriptionsVm, onOpen = {}, onCreate = {}) },
+                    onAddSubscription = {},
+                    startSection = stage.section,
+                    showCashback = session.features.showCashback,
+                    showSubscriptions = session.features.showSubscriptions,
+                    showNotifAccess = session.features.showNotifAccessOnPayments
+                )
+            }
+        }
+    }
+}
+
+/** The check of the example screenshot, as the app opens it: the head, the fields, the button. */
+@Composable
+private fun ShotScreen(session: TourSession, factory: SandboxViewModelFactory) {
+    // A new epoch is a new check: the form starts empty and reads the example again.
+    androidx.compose.runtime.key(session.shotEpoch) {
+        if (session.section == TourSection.CASHBACK) {
+            val vm: CashbackViewModel = viewModel(factory = factory)
+            ShotPreviewScreen(vm, SampleCashbackShotRepository.EXAMPLE_ID, onBack = {})
+        } else {
+            val vm: DepositsViewModel = viewModel(factory = factory)
+            DepositShotPreviewScreen(vm, SampleDepositShotRepository.EXAMPLE_ID, onBack = {})
+        }
+    }
+}
+
+/**
+ * The veil with a window over the target, the frame round it, the finger and the
+ * card; and the whole life of the tour's coming and going (B-56): first the
+ * sandbox fades in over the real screen, only then the coach appears; on the
+ * way out the same, backwards. [onFinished] comes when the real screen is bare
+ * again. [onAllowAccess] opens the system's setting (the one real thing in a tour).
+ */
+@Composable
+fun TourCoach(session: TourSession, onFinished: () -> Unit, onAllowAccess: () -> Unit) {
+    BackHandler { session.close() }
+    val finished by rememberUpdatedState(onFinished)
+    LaunchedEffect(session) {
+        // The sandbox is composed while still invisible; its first frames are not the ones that move.
+        withFrameNanos { }
+        withFrameNanos { }
+        session.sandboxAlpha.animateTo(1f, Motion.tween(Motion.NORMAL))
+        session.coachAlpha.animateTo(1f, Motion.tween(Motion.NORMAL))
+        session.playing = true
+        snapshotFlow { session.closing }.first { it }
+        session.playing = false
+        session.finger = null
+        session.coachAlpha.animateTo(0f, Motion.tween(Motion.FAST))
+        session.sheetOpen = false
+        session.view = TourView.SECTION
+        session.sandboxAlpha.animateTo(0f, Motion.tween(Motion.NORMAL))
+        finished()
+    }
+    // A step plays when it begins and again on «Ещё раз»; the next one waits for «Далее».
+    LaunchedEffect(session, session.index, session.replay, session.playing) {
+        if (session.playing) session.play()
+    }
+
+    val step = session.step
     val density = LocalDensity.current
-    val pad = with(density) { 6.dp.toPx() }
-    val radius = with(density) { 18.dp.toPx() }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val hole = bounds?.let { Rect(it.left - pad, it.top - pad, it.right + pad, it.bottom + pad) }
+    val scope = rememberCoroutineScope()
+    val topInset = WindowInsets.statusBars.getTop(density)
+    val bottomInset = WindowInsets.navigationBars.getBottom(density)
+
+    BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer { alpha = session.coachAlpha.value }) {
+        val width = with(density) { maxWidth.toPx() }
+        val height = with(density) { maxHeight.toPx() }
+        val margin = with(density) { 8.dp.toPx() }
+        val pad = with(density) { 6.dp.toPx() }
+        val screen = Rect(0f, 0f, width, height)
+        val safe = Rect(margin, topInset + margin, width - margin, height - bottomInset - margin)
+
+        // The light: where the target is, kept inside what can be seen, with the target's own rounding.
+        val target = session.targets.bounds[step.target]
+        val targetRadius = with(density) { (session.targets.radius[step.target] ?: 18.dp).toPx() }
+        val framed = step.highlight == TourHighlight.FRAMED
+        val window: Rect? = target?.let {
+            if (framed) TourFrame.framed(it, pad, safe) else TourFrame.dimmed(it, screen, reach = with(density) { 40.dp.toPx() })
+        }
+        var last by remember { mutableStateOf(Rect.Zero) }
+        SideEffect { if (window != null) last = window }
+        val shown by animateValueAsState(window ?: last, Rect.VectorConverter, Motion.tween(Motion.NORMAL, Motion.Standard), label = "tourWindow")
+        val shownAlpha by animateFloatAsState(if (window != null) 1f else 0f, Motion.tween(Motion.FAST), label = "tourWindowAlpha")
+        val radius = TourFrame.radius(targetRadius, if (framed) pad else 0f, shown)
+
         Canvas(
             Modifier
                 .fillMaxSize()
@@ -201,32 +323,46 @@ private fun CoachOverlay(
                 .clickable(interactionSource = null, indication = null) {}
         ) {
             drawRect(Slitok.Scrim)
-            if (hole != null) {
-                drawRoundRect(Color.Transparent, Offset(hole.left, hole.top), Size(hole.width, hole.height), CornerRadius(radius), blendMode = BlendMode.Clear)
-                if (step.highlight == TourHighlight.FRAMED)
-                    drawRoundRect(Slitok.Brass2, Offset(hole.left, hole.top), Size(hole.width, hole.height), CornerRadius(radius), style = Stroke(2.dp.toPx()))
+            if (shownAlpha > 0f) {
+                drawRoundRect(
+                    Color.Black.copy(alpha = shownAlpha), Offset(shown.left, shown.top), Size(shown.width, shown.height),
+                    CornerRadius(radius), blendMode = BlendMode.DstOut
+                )
+                if (framed) {
+                    drawRoundRect(
+                        Slitok.Brass2.copy(alpha = shownAlpha), Offset(shown.left, shown.top), Size(shown.width, shown.height),
+                        CornerRadius(radius), style = Stroke(2.dp.toPx())
+                    )
+                }
             }
         }
-        val screenH = with(density) { maxHeight.toPx() }
-        val gap = with(density) { 14.dp.toPx() }
+
+        FingerPointer(session.finger, pressed = session.pressed)
+
         // The card goes under the target when there's room, otherwise over it.
-        val below = hole == null || hole.bottom + gap + with(density) { 220.dp.toPx() } < screenH
-        val y = when {
-            hole == null -> screenH / 3
-            below -> hole.bottom + gap
-            else -> hole.top - gap - with(density) { 200.dp.toPx() }
-        }
-        CoachCard(step, index, total, last, onClose, onNext, onLater, Modifier.offset { IntOffset(0, y.toInt().coerceAtLeast(0)) })
+        var cardHeight by remember { mutableFloatStateOf(0f) }
+        val cardTop = TourFrame.cardTop(window, cardHeight, with(density) { 14.dp.toPx() }, safe)
+        val animatedTop by animateFloatAsState(cardTop, Motion.tween(Motion.NORMAL, Motion.Standard), label = "tourCardTop")
+        CoachCard(
+            session = session,
+            onNext = {
+                when (step.action) {
+                    TourAction.NEXT -> session.next()
+                    TourAction.ALLOW_ACCESS -> { onAllowAccess(); session.next() }
+                    TourAction.FILL_AND_NEXT -> scope.launch { session.fillAndNext() }
+                }
+            },
+            onLater = if (step.action == TourAction.ALLOW_ACCESS) ({ session.next() }) else null,
+            modifier = Modifier
+                .offset { IntOffset(0, animatedTop.toInt()) }
+                .onSizeChanged { cardHeight = it.height.toFloat() }
+        )
     }
 }
 
 @Composable
 private fun CoachCard(
-    step: TourStep,
-    index: Int,
-    total: Int,
-    last: Boolean,
-    onClose: () -> Unit,
+    session: TourSession,
     onNext: () -> Unit,
     onLater: (() -> Unit)?,
     modifier: Modifier
@@ -240,36 +376,43 @@ private fun CoachCard(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(verticalAlignment = Alignment.Top) {
-            Text(step.title, style = MaterialTheme.typography.titleMedium, color = Slitok.CoachInk, modifier = Modifier.weight(1f))
-            Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Close, contentDescription = "Закрыть обучение", tint = Slitok.CoachQuiet, modifier = Modifier.size(18.dp))
+        AnimatedContent(
+            targetState = session.index,
+            transitionSpec = {
+                (fadeIn(Motion.tween(Motion.NORMAL)) togetherWith fadeOut(Motion.tween(Motion.FAST)))
+                    .using(SizeTransform(clip = false) { _, _ -> Motion.tween(Motion.NORMAL, Motion.Standard) })
+            },
+            label = "tourCardText"
+        ) { i ->
+            val step = session.steps[i.coerceIn(0, session.steps.lastIndex)]
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Text(step.title, style = MaterialTheme.typography.titleMedium, color = Slitok.CoachInk, modifier = Modifier.weight(1f))
+                    Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClick = session::close), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Close, contentDescription = "Закрыть обучение", tint = Slitok.CoachQuiet, modifier = Modifier.size(18.dp))
+                    }
+                }
+                Text(step.text.nbsp(), style = MaterialTheme.typography.bodyMedium, color = Slitok.CoachText)
             }
         }
-        Text(step.text.nbsp(), style = MaterialTheme.typography.bodyMedium, color = Slitok.CoachText)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                repeat(total) { i ->
+                repeat(session.steps.size) { i ->
                     Box(
-                        Modifier.size(width = if (i == index) 16.dp else 6.dp, height = 6.dp)
+                        Modifier.size(width = if (i == session.index) 16.dp else 6.dp, height = 6.dp)
                             .clip(RoundedCornerShape(3.dp))
-                            .background(if (i == index) Slitok.CoachInk else Slitok.CoachInk.copy(alpha = 0.2f))
+                            .background(if (i == session.index) Slitok.CoachInk else Slitok.CoachInk.copy(alpha = 0.2f))
                     )
                 }
             }
-            if (onLater != null) {
-                Text(
-                    "Позже",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Slitok.CoachQuiet,
-                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onLater).padding(horizontal = 12.dp, vertical = 10.dp)
-                )
+            if (session.step.anim != TourAnim.NONE) {
+                CardAction("Ещё раз", session::again)
             }
+            if (onLater != null) CardAction("Позже", onLater)
             Text(
                 when {
                     onLater != null -> "Разрешить"
-                    last -> "Готово"
+                    session.isLast -> "Готово"
                     else -> "Далее"
                 },
                 style = MaterialTheme.typography.labelLarge,
@@ -285,254 +428,14 @@ private fun CoachCard(
     }
 }
 
-// ---- example scenes: the app's own pieces with made-up data ----
-
+/** A quiet action of the card: «Ещё раз», «Позже». */
 @Composable
-private fun SceneTitle(title: String, trailing: @Composable () -> Unit = {}) {
-    ScreenHeader(title) { trailing() }
-}
-
-@Composable
-private fun SceneColumn(content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
-}
-
-@Composable
-private fun GeneralScene() {
-    Box(Modifier.fillMaxSize()) {
-        SceneColumn {
-            SceneTitle("Обзор") {
-                Box(Modifier.size(44.dp).tourTarget(TourTarget.HIDE_EYE), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Visibility, contentDescription = null, tint = Slitok.Muted)
-                }
-            }
-            Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.ACCESS_TILE), radius = 20.dp) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CapitalPartArt(CapitalPart.ACCOUNTS, Modifier.size(width = 72.dp, height = 56.dp))
-                    Text("Счета из уведомлений", style = MaterialTheme.typography.titleLarge)
-                    BrassButton(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Разрешить доступ") }
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Panel(Modifier.weight(1f).height(110.dp)) {}
-                Panel(Modifier.weight(1f).height(110.dp)) {}
-            }
-        }
-        ExampleBottomBar(Modifier.align(Alignment.BottomCenter).tourTarget(TourTarget.BOTTOM_BAR))
-    }
-}
-
-@Composable
-private fun ExampleBottomBar(modifier: Modifier) {
-    Panel(Modifier.padding(horizontal = 16.dp, vertical = 10.dp).then(modifier).fillMaxWidth(), radius = 26.dp) {
-        Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf(
-                Icons.Filled.Dashboard to "Обзор",
-                Icons.Filled.AccountBalanceWallet to "Капитал",
-                Icons.Filled.Percent to "Платежи",
-                Icons.Filled.Settings to "Настройки"
-            ).forEachIndexed { i, (icon, label) ->
-                BarItem(icon, label, selected = i == 0, Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun BarItem(icon: ImageVector, label: String, selected: Boolean, modifier: Modifier) {
-    Column(
-        modifier.clip(RoundedCornerShape(18.dp)).background(if (selected) Slitok.BrassPill else Color.Transparent).padding(vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-        val tint = if (selected) Slitok.Brass2 else Slitok.Muted
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/** An example list row: name and sum, a quiet line and its value under them. */
-@Composable
-private fun ExampleRow(name: String, sum: String, quiet: String, side: String, sideColor: Color = Slitok.Mint, bar: Float? = null) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(sum, style = Amounts.Row, color = Slitok.Fg)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(quiet, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, modifier = Modifier.weight(1f))
-            Text(side, style = Amounts.Small, color = sideColor)
-        }
-        if (bar != null) {
-            Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Slitok.Line)) {
-                Box(Modifier.fillMaxWidth(bar).height(3.dp).background(Slitok.Violet))
-            }
-        }
-    }
-}
-
-@Composable
-private fun DepositsScene(sheet: Boolean) {
-    Box(Modifier.fillMaxSize()) {
-        SceneColumn {
-            SceneTitle("Вклады")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("2 вклада", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Box(Modifier.tourTarget(TourTarget.ADD_BUTTON)) { AddButton("Добавить вклад") {} }
-            }
-            Panel(Modifier.fillMaxWidth()) {
-                Column {
-                    Box(Modifier.tourTarget(TourTarget.LIST_ROW)) {
-                        ExampleRow("Накопительный", "500 000 ₽", "ещё 41 дн.", "+12 340 ₽", bar = 0.7f)
-                    }
-                    HorizontalDivider(color = Slitok.Line)
-                    ExampleRow("Вклад 13,2%", "300 000 ₽", "ещё 120 дн.", "+2 150 ₽", bar = 0.2f)
-                }
-            }
-        }
-        if (sheet) {
-            Column(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(Slitok.PanelTop)
-                    .tourTarget(TourTarget.ADD_SHEET)
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Text("Добавить вклад", style = MaterialTheme.typography.titleLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TileButton(Icons.Filled.AddPhotoAlternate, "Со скринов", Modifier.weight(1f)) {}
-                    TileButton(Icons.Filled.Edit, "Вручную", Modifier.weight(1f)) {}
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CashbackScene(target: TourTarget, filled: Boolean) {
-    SceneColumn {
-        SceneTitle("Кэшбэк")
-        when (target) {
-            TourTarget.ADD_BUTTON -> {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Кэшбэка пока нет", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Box(Modifier.tourTarget(TourTarget.ADD_BUTTON)) { AddButton("Добавить кэшбэк") {} }
-                }
-            }
-            TourTarget.MISSING_PERCENT -> {
-                Panel(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        StatusLine("Распознано 3 из 4", Slitok.Mint)
-                        Text("Процент одной категории не прочитался", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
-                    }
-                }
-                Panel(Modifier.fillMaxWidth()) {
-                    Column {
-                        ExampleLine("Супермаркеты", "5", "groceries")
-                        HorizontalDivider(Modifier.padding(start = 64.dp), color = Slitok.Line)
-                        ExampleLine("Рестораны", "5", "restaurant")
-                        HorizontalDivider(Modifier.padding(start = 64.dp), color = Slitok.Line)
-                        Box(Modifier.tourTarget(TourTarget.MISSING_PERCENT)) {
-                            ExampleLine("Аптеки", if (filled) "5" else "", "pharmacy", asked = !filled)
-                        }
-                    }
-                }
-            }
-            else -> {
-                Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.BANK_PANEL)) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Банк-пример", style = MaterialTheme.typography.titleMedium)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ValueChip("Супермаркеты", "5%")
-                            ValueChip("Рестораны", "5%")
-                            ValueChip("Аптеки", "5%")
-                            ValueChip("На всё", "1%", dashed = true)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExampleLine(name: String, percent: String, icon: String, asked: Boolean = false) {
-    CashbackLineRow(
-        iconKey = icon,
-        categoryName = name,
-        percentText = percent,
-        onPickCategory = {},
-        onPercentChange = {},
-        onRemove = {},
-        percentState = if (asked) PercentState.Asked else PercentState.Normal,
-        note = if (asked) "впишите процент" else null
+private fun CardAction(text: String, onClick: () -> Unit) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = Slitok.CoachQuiet,
+        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp)
     )
 }
-
-@Composable
-private fun AccountsScene() {
-    SceneColumn {
-        SceneTitle("Счета")
-        Panel(Modifier.fillMaxWidth()) {
-            Column {
-                Box(Modifier.tourTarget(TourTarget.ACCOUNT_ROW)) {
-                    ListRow("Банк-пример", leading = { Dot(Slitok.Brass) }, trailing = { Text("84 210 ₽", style = Amounts.Row) })
-                }
-                HorizontalDivider(Modifier.padding(start = 38.dp), color = Slitok.Line)
-                ListRow("Ещё банк", leading = { Dot(Slitok.Brass) }, trailing = { Text("12 600 ₽", style = Amounts.Row) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun CurrencyScene() {
-    SceneColumn {
-        SceneTitle("Валюта") { Box(Modifier.tourTarget(TourTarget.ADD_BUTTON)) { AddButton("Купил валюту") {} } }
-        Panel(Modifier.fillMaxWidth()) {
-            Box(Modifier.tourTarget(TourTarget.CURRENCY_ROW)) {
-                ExampleRow("Доллар США", "1 200 $", "по курсу ЦБ", "96 300 ₽", sideColor = Slitok.Fg)
-            }
-        }
-    }
-}
-
-@Composable
-private fun CashScene() {
-    SceneColumn {
-        SceneTitle("Наличные")
-        Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.CASH_SUM), radius = 22.dp) {
-            Box(Modifier.fillMaxWidth().heroGlow(Slitok.Sand)) {
-                Text("45 000 ₽", style = Amounts.Hero, modifier = Modifier.padding(20.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SubscriptionsScene() {
-    SceneColumn {
-        SceneTitle("Подписки")
-        Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.FINDING)) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Музыка-пример?", style = MaterialTheme.typography.bodyLarge)
-                Text("199 ₽ каждый месяц, 3 раза", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
-                ButtonRow {
-                    PlateButton(onClick = {}) { Text("Подписка") }
-                    GhostButton("Не подписка", onClick = {}, quiet = true)
-                }
-            }
-        }
-        Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.LIST_ROW)) {
-            ExampleRow("Облако-пример", "149 ₽", "12 ноября", "", sideColor = Slitok.Muted)
-        }
-        Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.ACCESS_TILE)) {
-            ListRow("Доступ к уведомлениям", trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Faint) })
-        }
-    }
-}
-

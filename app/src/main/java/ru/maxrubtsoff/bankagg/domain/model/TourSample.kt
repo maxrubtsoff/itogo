@@ -113,10 +113,13 @@ object TourSample {
         method = AccrualMethod.LINEAR
     )
 
+    /** The deposit the example screenshot becomes: the tour's list marks it. */
+    const val HOLIDAY_ID = "sample-dep-holiday"
+
     fun scannedDeposit(today: LocalDate): Deposit {
         val d = scannedDepositDraft(today)
         return Deposit(
-            "sample-dep-holiday", BANK, d.title, d.principal!!, d.rateBp!!, d.startDate!!, d.endDate!!,
+            HOLIDAY_ID, BANK, d.title, d.principal!!, d.rateBp!!, d.startDate!!, d.endDate!!,
             method = d.method ?: AccrualMethod.LINEAR, createdAt = noon(today)
         )
     }
@@ -135,6 +138,9 @@ object TourSample {
     )
 
     fun cash(today: LocalDate): CashBalance = CashBalance(Money.ofMinor(1_500_000), noon(today))
+
+    /** The sum the «Наличные» step changes it to. */
+    const val CASH_AFTER_MINOR = 2_000_000L
 
     // --- Cashback -----------------------------------------------------------
 

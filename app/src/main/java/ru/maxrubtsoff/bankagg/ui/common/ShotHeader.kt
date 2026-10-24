@@ -90,7 +90,7 @@ fun ShotHeader(imagePath: String, status: ShotStatus?, modifier: Modifier = Modi
                                 .clip(shape)
                                 .border(1.dp, Slitok.Line, shape)
                                 .background(Slitok.Inset)
-                                .tourTarget(TourTarget.SHOT_THUMB)
+                                .tourTarget(TourTarget.SHOT_THUMB, radius = 10.dp)
                                 .clickable { photoOpen = true },
                             contentAlignment = Alignment.Center
                         ) { ShotPicture(imagePath, ContentScale.Crop) }

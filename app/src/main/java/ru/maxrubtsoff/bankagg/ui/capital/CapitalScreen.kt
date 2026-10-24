@@ -1,5 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.capital
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeaderGap
@@ -214,7 +216,7 @@ private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenB
             }
             byBank.forEachIndexed { i, (brand, list) ->
                 val allOut = list.all { it.excluded }
-                Panel(Modifier.fillMaxWidth().cascade(i, play)) {
+                Panel(Modifier.fillMaxWidth().cascade(i, play).tourTarget(TourTarget.ACCOUNT_ROW, active = i == 0, radius = 18.dp)) {
                     // Long press (U-18): leave the bank's accounts out of the capital, or bring them back.
                     LongPressMenu(items = listOf((if (allOut) "Учитывать в капитале" else "Не учитывать в капитале") to { vm.setExcluded(list.map { it.id }, !allOut) })) { onLong ->
                     val single = list.singleOrNull()
@@ -322,7 +324,7 @@ private fun CashSection(vm: CapitalViewModel, snap: CapitalSnapshot) {
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Panel(Modifier.fillMaxWidth().sharedCard("part-${CapitalPart.CASH.key}").clickable { editing = true }, radius = 22.dp) {
+        Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.CASH_SUM, radius = 22.dp).sharedCard("part-${CapitalPart.CASH.key}").clickable { editing = true }, radius = 22.dp) {
             Box(Modifier.fillMaxWidth().heroGlow(Slitok.Sand)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     SectionHeroText("Наличные", (cash?.amount ?: Money.ZERO).format())

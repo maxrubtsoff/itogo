@@ -78,6 +78,8 @@ fun ShotPreviewScreen(vm: CashbackViewModel, shotId: String, onBack: () -> Unit)
     val imagePath = shot?.imagePath.orEmpty()
     val monthKey = shot?.monthKey.orEmpty()
     val status = shot?.status
+    // A reading is shown as it is; a result only once it is in the form.
+    val revealStatus = if (status == ShotStatus.PROCESSING || initialised) status else null
     val hint = if (status == ShotStatus.NEEDS_INPUT) ShotHints.cashback(shot?.lines.orEmpty()) else null
 
     Scaffold(
@@ -107,7 +109,7 @@ fun ShotPreviewScreen(vm: CashbackViewModel, shotId: String, onBack: () -> Unit)
             // U-53: the screenshot small, with what was read; a tap opens it whole.
             ShotHeader(imagePath, status, hint = hint)
             // The fields wait as a skeleton until the draft is in the editor, then rise in turn (F-34).
-            ScanReveal(status.takeIf { initialised }) { play ->
+            ScanReveal(revealStatus) { play ->
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     BankPickerRow(selected = brand, onSelect = { brandKey = it.key }, modifier = Modifier.cascade(0, play))
                     CashbackLinesEditor(lines, vm, tried = tried, reveal = play)

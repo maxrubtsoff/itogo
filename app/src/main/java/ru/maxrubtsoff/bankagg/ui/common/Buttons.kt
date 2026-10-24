@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.ui.common
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -186,6 +187,7 @@ fun ChipButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = t
 fun AddButton(contentDescription: String, onClick: () -> Unit) {
     Box(
         Modifier
+            .tourTarget(TourTarget.ADD_BUTTON, radius = 14.dp)
             .pressScale()
             .size(44.dp)
             .clip(RoundedCornerShape(14.dp))
@@ -256,7 +258,7 @@ fun AddSheet(title: String, onShots: () -> Unit, onManual: () -> Unit, onDismiss
     SlitokSheet(onDismiss) {
         Text(title, style = MaterialTheme.typography.titleLarge, color = Slitok.Fg)
         Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TileButton(Icons.Filled.AddPhotoAlternate, "Со скринов", Modifier.weight(1f)) { onDismiss(); onShots() }
+            TileButton(Icons.Filled.AddPhotoAlternate, "Со скринов", Modifier.weight(1f).tourTarget(TourTarget.SHOTS_TILE, radius = 20.dp)) { onDismiss(); onShots() }
             TileButton(Icons.Filled.Edit, "Вручную", Modifier.weight(1f)) { onDismiss(); onManual() }
         }
     }

@@ -70,6 +70,8 @@ fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -
 
     val imagePath = shot?.imagePath.orEmpty()
     val status = shot?.status
+    // A reading is shown as it is; a result only once it is in the form.
+    val revealStatus = if (status == ShotStatus.PROCESSING || initialised) status else null
     val hint = if (status == ShotStatus.NEEDS_INPUT) shot?.draft?.let(ShotHints::deposit) else null
 
     Scaffold(
@@ -88,7 +90,7 @@ fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -
         ) {
             Spacer(Modifier.height(4.dp))
             ShotHeader(imagePath, status, hint = hint)
-            ScanReveal(status.takeIf { initialised }, skeletonHeight = 360.dp) { play ->
+            ScanReveal(revealStatus, skeletonHeight = 360.dp) { play ->
                 DepositFormFields(form, reveal = play)
             }
 

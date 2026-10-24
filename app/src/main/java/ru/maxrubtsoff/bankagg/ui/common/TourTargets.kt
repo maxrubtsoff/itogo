@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 
 /**
@@ -19,16 +21,25 @@ import ru.maxrubtsoff.bankagg.domain.model.TourTarget
  */
 class TourTargets {
     val bounds = mutableStateMapOf<TourTarget, Rect>()
+
+    /** The corner of each marked part, so the light round it repeats the part's own rounding (B-48). */
+    val radius = mutableStateMapOf<TourTarget, Dp>()
 }
 
 /** Set only by the tour's sandbox layer: the real screens underneath don't register. */
 val LocalTourTargets = compositionLocalOf<TourTargets?> { null }
 
-/** Marks a part a tour step can point at. [active] false leaves it unmarked (one of many rows). */
+/**
+ * Marks a part a tour step can point at. [active] false leaves it unmarked (one
+ * of many rows); [radius] is the part's own corner.
+ */
 @Composable
-fun Modifier.tourTarget(target: TourTarget, active: Boolean = true): Modifier {
+fun Modifier.tourTarget(target: TourTarget, active: Boolean = true, radius: Dp = 18.dp): Modifier {
     val targets = LocalTourTargets.current
-    return if (targets == null || !active) this else onGloballyPositioned { targets.bounds[target] = it.boundsInRoot() }
+    return if (targets == null || !active) this else onGloballyPositioned {
+        targets.bounds[target] = it.boundsInRoot()
+        targets.radius[target] = radius
+    }
 }
 
 /**

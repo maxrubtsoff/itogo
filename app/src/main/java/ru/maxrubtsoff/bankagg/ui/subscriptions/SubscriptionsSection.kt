@@ -1,5 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.subscriptions
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
 import ru.maxrubtsoff.bankagg.ui.common.GhostButton
 import androidx.compose.foundation.background
@@ -71,7 +73,7 @@ fun SubscriptionsSection(vm: SubscriptionsViewModel, onOpen: (Subscription) -> U
     ) {
         state.findings.firstOrNull()?.let { f ->
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Slitok.BrassTint)
+                Modifier.fillMaxWidth().tourTarget(TourTarget.FINDING, radius = 18.dp).clip(RoundedCornerShape(18.dp)).background(Slitok.BrassTint)
                     .border(1.dp, Slitok.BrassLine, RoundedCornerShape(18.dp))
                     .clickable { finding = f }.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -120,7 +122,7 @@ fun SubscriptionsSection(vm: SubscriptionsViewModel, onOpen: (Subscription) -> U
             Panel(Modifier.fillMaxWidth()) {
                 state.active.forEachIndexed { i, s ->
                     if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = Slitok.Line)
-                    SubscriptionRow(s, state.today) { onOpen(s) }
+                    Box(Modifier.tourTarget(TourTarget.LIST_ROW, active = i == 0, radius = 16.dp)) { SubscriptionRow(s, state.today) { onOpen(s) } }
                 }
             }
         }
