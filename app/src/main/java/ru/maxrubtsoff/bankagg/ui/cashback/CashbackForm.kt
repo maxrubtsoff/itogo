@@ -91,10 +91,11 @@ fun CashbackLineRow(
     percentState: PercentState = PercentState.Normal,
     note: String? = null,
     percentFocus: FocusRequester? = null,
-    onPercentDone: () -> Unit = {}
+    onPercentDone: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     Row(
-        Modifier
+        modifier
             .keepVisibleWhenFocused()
             .fillMaxWidth()
             .heightIn(min = 60.dp)

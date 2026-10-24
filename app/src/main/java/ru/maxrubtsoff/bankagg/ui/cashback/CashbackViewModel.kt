@@ -134,12 +134,16 @@ class CashbackViewModel(
 
     // ---- shots: upload, recognise, save-all, delete ----
 
-    /** A draft row in an editor: display text, its group, percent text, and the OCR line it came from. */
+    /**
+     * A draft row in an editor: display text, its group, percent text, and the OCR line it came from.
+     * [id] is the row's own name, so a list can keep it in place while others come and go (B-52).
+     */
     data class DraftLine(
         val text: String,
         val groupKey: String,
         val percentText: String,
-        val sourceText: String = ""
+        val sourceText: String = "",
+        val id: String = UUID.randomUUID().toString()
     ) {
         val iconKey: String get() = CategoryGroups.byKey(groupKey).iconKey
         val isComplete: Boolean get() = CashbackDraft.isComplete(text, percentText)
