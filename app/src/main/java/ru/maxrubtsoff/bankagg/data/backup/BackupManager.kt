@@ -27,6 +27,7 @@ import ru.maxrubtsoff.bankagg.data.local.FxRateEntity
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.data.local.TransactionEntity
 import ru.maxrubtsoff.bankagg.data.local.SubscriptionEntity
+import ru.maxrubtsoff.bankagg.domain.repository.CandidateRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import java.io.File
 import java.time.Instant
@@ -49,7 +50,8 @@ class BackupManager(
     private val context: Context,
     private val db: AppDatabase,
     private val settings: SettingsRepository,
-    private val banks: BankStore? = null
+    private val banks: BankStore? = null,
+    private val candidates: CandidateRepository? = null
 ) {
     private val ledger get() = db.ledgerDao()
     private val events get() = db.eventDao()
@@ -302,6 +304,11 @@ class BackupManager(
         settings.currentSelectedPackages().forEach { pkgs.put(it) }
         root.put("selectedPackages", pkgs)
 
+        // v9: apps answered «Не банк» — otherwise a restore asks about them again (B-57).
+        candidates?.let { c ->
+            root.put("notBanks", JSONArray().apply { c.ignored().forEach { put(it) } })
+        }
+
         // Cashback — manually entered and not reconstructable from notifications,
         // so it must live in the backup.
         val cbJson = JSONArray()
@@ -423,7 +430,8 @@ class BackupManager(
         val capitalParts: Set<CapitalPart>?,
         val rates: List<FxRateEntity>,
         val banks: List<BankBrand>? = null,
-        val logos: Map<String, ByteArray> = emptyMap()
+        val logos: Map<String, ByteArray> = emptyMap(),
+        val notBanks: Set<String>? = null
     )
 
     /**
@@ -466,6 +474,13 @@ class BackupManager(
             if (snapshot.rates.isNotEmpty()) fx.upsertRates(snapshot.rates)
         }
         snapshot.selectedPackages?.let { settings.setSelectedPackages(it) }
+        // «Не банк» survives a restore: what was answered stays answered (B-57).
+        candidates?.let { store ->
+            snapshot.notBanks?.let { saved ->
+                (store.ignored() - saved).forEach { store.unignore(it) }
+                saved.forEach { store.ignore(it) }
+            }
+        }
         snapshot.capitalParts?.let { settings.setCapitalParts(it) }
         snapshot.banks?.let { list ->
             // Pictures from the copy are written back into the app's files (F-25).
@@ -535,6 +550,9 @@ class BackupManager(
             selectedPackages = root.optJSONArray("selectedPackages")?.let { arr ->
                 (0 until arr.length()).map { arr.getString(it) }.toSet()
             },
+            notBanks = root.optJSONArray("notBanks")?.let { arr ->
+                (0 until arr.length()).map { arr.getString(it) }.toSet()
+            },
             // "favoriteGroups" from older copies is ignored: the home card picks itself.
             cashback = root.objects("cashback").map { o ->
                 CashbackEntity(
@@ -601,7 +619,7 @@ class BackupManager(
 
     private companion object {
         // v7: own bank pictures; v6: banks; v5: cash currency, cash, capital parts, rates (v4: deposits; v3: cashback groupKey).
-        const val FORMAT_VERSION = 8
+        const val FORMAT_VERSION = 9
         const val FOLDER = "BankAggregator"
     }
 }

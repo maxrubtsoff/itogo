@@ -62,7 +62,17 @@ class NewBankAnswers(
     }
 
     /** «Не банк»: never asked about again. */
-    suspend fun ignore(c: BankCandidate) = candidates.ignore(c.packageName)
+    suspend fun ignore(c: BankCandidate) = ignore(c.packageName)
+
+    /**
+     * «Не банк» by package: the answer is remembered even when the waiting
+     * candidate is already gone — swept away, answered elsewhere or dropped
+     * with the app's text (B-57).
+     */
+    suspend fun ignore(pkg: String) = candidates.ignore(pkg)
+
+    /** The user changed their mind in «Банки» → «Не банки» (B-57). */
+    suspend fun unignore(pkg: String) = candidates.unignore(pkg)
 
     private suspend fun collect(c: BankCandidate) {
         settings.setSelectedPackages(settings.currentSelectedPackages() + c.packageName)

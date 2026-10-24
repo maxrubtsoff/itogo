@@ -37,7 +37,7 @@ class BanksViewModel(
     private val settings: SettingsRepository,
     installedIcons: StateFlow<Map<BankBrand, Bitmap>>,
     private val logos: LogoMaker,
-    candidateRepo: CandidateRepository,
+    private val candidateRepo: CandidateRepository,
     private val answers: NewBankAnswers,
     private val ledger: LedgerRepository,
     private val deposits: DepositRepository,
@@ -52,6 +52,12 @@ class BanksViewModel(
     fun link(c: BankCandidate, bank: BankBrand) = viewModelScope.launch { answers.link(c, bank) }
     fun addNew(c: BankCandidate) = viewModelScope.launch { answers.addNew(c) }
     fun ignore(c: BankCandidate) = viewModelScope.launch { answers.ignore(c) }
+
+    /** Apps answered «Не банк» — shown at the bottom of «Банки» to change one's mind (B-57). */
+    val notBanks: StateFlow<Set<String>> =
+        candidateRepo.ignoredApps.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    fun unignore(pkg: String) = viewModelScope.launch { answers.unignore(pkg) }
 
 
     val mine: StateFlow<List<BankBrand>> = banks.myBanks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

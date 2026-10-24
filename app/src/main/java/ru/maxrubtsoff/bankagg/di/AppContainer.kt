@@ -121,7 +121,7 @@ class AppContainer(context: Context) {
     val textEmbedder: TextEmbedder by lazy { OnnxTextEmbedder(appContext) }
     val categoryResolver by lazy { CategoryResolver(textEmbedder) }
 
-    val backupManager by lazy { BackupManager(appContext, db, settings, banks) }
+    val backupManager by lazy { BackupManager(appContext, db, settings, banks, bankCandidates) }
     val autoBackup by lazy { AutoBackup(db, backupManager, settings) }
     val backupPassword by lazy { BackupPassword(appContext) }
     val subscriptionRepository: SubscriptionRepository by lazy { SubscriptionRepositoryImpl(db.subscriptionDao()) }

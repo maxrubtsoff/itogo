@@ -17,4 +17,10 @@ interface CandidateRepository {
     /** "Not a bank": never asked about again. */
     suspend fun ignore(packageName: String)
     suspend fun ignored(): Set<String>
+
+    /** Apps answered «Не банк», for the list in «Банки» (B-57). */
+    val ignoredApps: Flow<Set<String>>
+
+    /** The user changed their mind: the app may be offered again (B-57). */
+    suspend fun unignore(packageName: String)
 }
