@@ -1,200 +1,142 @@
-# CLAUDE.md — руководство по доработке проекта
+# CLAUDE.md — карта проекта Itogo
 
-Инструкция для ИИ-ассистента (и людей), как устроен проект и как его развивать, не ломая архитектуру и стиль. Читай целиком перед первой задачей в репозитории.
+Короткая карта для ИИ-ассистента и людей: что это, где что лежит, как развивать, не ломая архитектуру. Подробные правила живут рядом с кодом (вложенные `CLAUDE.md`) и в скиллах — они подгружаются сами, когда нужны.
 
 ---
 
 ## 1. Что это
 
-**Itogo** (раньше «Агрегатор счетов») — личное Android-приложение. Собирает операции и балансы по счетам, читая **push-уведомления банков** на устройстве, и показывает общий капитал из четырёх частей (счета, вклады, валюта, наличные) и кэшбэк.
+**Itogo** (раньше «Агрегатор счетов») — личное Android-приложение. Собирает операции и балансы по счетам, читая **push-уведомления банков** на устройстве, и показывает общий капитал (счета, вклады, валюта, наличные) и кэшбэк. Пользователь — Максим, Казань; весь UI на русском.
 
-Ключевые принципы продукта:
-- **Данные локально.** Никакого сервера. Данные живут в Room на телефоне. В сеть приложение ходит **только за публичными курсами ЦБ РФ** (`data/rates/CbrRatesSource`, `HttpURLConnection`), без данных пользователя. (Серверный код в `server/` — опциональный артефакт на будущее, в сборку приложения не входит.)
-- **Приватность.** Только уведомления (не SMS). Конкретные пакеты банков объявлены в `<queries>` — без `QUERY_ALL_PACKAGES`.
-- **Офлайн и бесплатно.** Любые зависимости должны работать без интернета и без платных сервисов. Без сети приложение работает полностью — только курс не свежий.
+Принципы продукта:
+- **Данные локально.** Никакого сервера. Данные — в Room на телефоне, БД зашифрована (SQLCipher, ключ в Android Keystore). В сеть приложение ходит **только за публичными курсами ЦБ РФ** (`data/rates`, `HttpURLConnection`), без данных пользователя. (`server/` — опциональный артефакт на будущее, в сборку не входит.)
+- **Приватность.** Только уведомления (не SMS). Пакеты банков объявлены в `<queries>` — без `QUERY_ALL_PACKAGES`. Вход — пин/отпечаток (`ui/lock`). Копия — шифрованная, с паролем.
+- **Офлайн и бесплатно.** Все зависимости работают без интернета и без платных сервисов, включая распознавание скринов (OCR Tesseract + ONNX-эмбеддер, офлайн). Без сети приложение работает полностью — только курс не свежий.
 
-Пользователь: Максим, Казань. Весь UI — на русском.
-
----
-
-## 2. Технологии и инструменты
+## 2. Технологии
 
 | Что | Чем |
 |-----|-----|
 | Язык | Kotlin **2.0.21** |
-| UI | Jetpack Compose (BOM **2024.10.01**), Material 3 |
-| Compose-компилятор | плагин `org.jetbrains.kotlin.plugin.compose` (не kotlinCompilerExtensionVersion) |
+| UI | Jetpack Compose (BOM **2024.10.01**), Material 3; плагин `org.jetbrains.kotlin.plugin.compose` |
 | Навигация | `navigation-compose` 2.8.x (predictive back) |
-| Хранение | Room 2.6.1 + **KSP** (не kapt) |
+| Хранение | Room 2.6.1 + **KSP** (не kapt), SQLCipher (`net.zetetic:sqlcipher-android`) |
 | Асинхронность | Coroutines + Flow |
-| DI | **Ручной** контейнер `di/AppContainer` (без Hilt/Dagger) |
-| Сборка | Gradle (Kotlin DSL), AGP 8.5.2, `./gradlew assembleRelease` (то, что ставится), `assembleDebug` для отладки |
+| DI | **ручной** контейнер `di/AppContainer` (без Hilt/Dagger) |
+| Картинки | Coil (`coil-compose`) |
+| Виджет | Glance (`glance-appwidget`) |
+| Напоминания | WorkManager (`work-runtime-ktx`), офлайн |
+| Распознавание | Tesseract4Android (OCR, кириллица) + ONNX Runtime (эмбеддер, `assets/embedder`) |
+| Вход | `androidx.biometric` (отпечаток), пин |
+| Сборка | Gradle (Kotlin DSL), AGP 8.5.2; `./gradlew assembleRelease` (ставится), `assembleDebug` для отладки |
 | Тесты | JUnit4 (JVM, `app/src/test`), гоняются в CI |
-| Шрифты | зашиты в `res/font` (Unbounded, Golos Text) — вариативные, offline |
+| Шрифты | зашиты в `res/font` (Unbounded, Golos Text), вариативные, offline |
 | minSdk / targetSdk / compileSdk | 26 / 34 / 34 |
 
-APK и тесты собираются в **GitHub Actions** (`.github/workflows/build.yml`) при пуше в `main` и в ветки разработки `dev*`. Ставится **release**-сборка (не отладочная — Compose в ней в разы быстрее, применяются baseline-профили библиотек), артефакт — `bank-aggregator`. Release подписан ключом из секретов CI (`SIGNING_*`, см. `docs/publishing.md`), а пока их нет — **фиксированным** `app/debug.keystore` (в репозитории), чтобы обновление ставилось поверх. Debug ставится рядом: `applicationIdSuffix = ".debug"`. `versionCode` = номер сборки CI. В release включён **R8** (правила — `app/proguard-rules.pro`) и свой Baseline Profile (`app/src/main/baseline-prof.txt`). Все зависимости сверяются по контрольным суммам (`gradle/verification-metadata.xml`): новую зависимость добавляй вместе с обновлением файла (`./gradlew --write-verification-metadata sha256 testDebugUnitTest assembleRelease`).
-
----
+APK и тесты собираются в **GitHub Actions** (`.github/workflows/build.yml`) при пуше в `main` и `dev*`. Ставится **release** (не отладка — Compose быстрее, применяются baseline-профили), артефакт `bank-aggregator`. Release подписан ключом из секретов CI (`SIGNING_*`, см. `docs/publishing.md`), а пока их нет — **фиксированным** `app/debug.keystore` (в репозитории), чтобы обновление ставилось поверх. Debug ставится рядом (`applicationIdSuffix = ".debug"`). `versionCode` = номер сборки CI. В release включён R8 (`app/proguard-rules.pro`) и Baseline Profile (`app/src/main/baseline-prof.txt`). Зависимости сверяются по контрольным суммам (`gradle/verification-metadata.xml`): новую добавляй вместе с `./gradlew --write-verification-metadata sha256 testDebugUnitTest assembleRelease`.
 
 ## 3. Архитектура (DDD, три слоя)
 
-Зависимости направлены **внутрь**: `ui → domain ← data`. Домен ни от чего не зависит (чистый Kotlin, тестируемый на JVM). UI и data реализуют интерфейсы домена.
+Зависимости направлены **внутрь**: `ui → domain ← data`. Домен — чистый Kotlin, ни от чего не зависит, тестируется на JVM. UI и data реализуют интерфейсы домена.
 
 ```
-┌─────────────────────────── ui (Compose) ───────────────────────────┐
-│ MainActivity (NavHost, нижняя панель, переходы)                     │
-│ overview/ capital/ cashback/ deposits/ settings/ log/ widget/       │
-│ theme/ common/                                                      │
-│ каждый экран: <Name>Screen + <Name>ViewModel                        │
-│ ViewModel ── вызывает ──▶ use-case или repository (интерфейс домена) │
-└───────────────┬─────────────────────────────────────────────────────┘
-                │ создаёт VM через
-         ui/common/ViewModelFactory ──читает──▶ di/AppContainer
-                                                     │ держит синглтоны
-                ┌────────────────────────────────────┴──────────────┐
-                ▼                                                    ▼
-┌──────────────── domain (чистый Kotlin) ───────┐   ┌──────── data (Android) ────────┐
-│ model/     Money, Currencies, BankBrand,       │   │ local/   Room: *Entity, *Dao,  │
-│            Account, Deposit*, Fx*, Capital*,   │◀──│          AppDatabase, *Mappers │
-│            Cashback*, CashEdit                 │   │ repository/  *RepositoryImpl    │
-│ parser/    NotificationParser (→ ParsedOp)     │   │ settings/    SettingsStore      │
-│ repository/ *Repository, Today, RatesSource    │◀──│ backup/      BackupManager      │
-│            (ИНТЕРФЕЙСЫ)                         │   │ rates/   CbrRatesSource, CbrXml │
-│ usecase/   RecordNotification, GetCapital,     │   │ time/    SystemToday            │
-│            RefreshRates, Recognize*Shot        │   │ (реализуют интерфейсы домена)   │
-└────────────────────────────────────────────────┘   └─────────────────────────────────┘
-
-service/BankNotificationListener ──(через App.container)──▶ RecordNotification use-case
-util/   InstalledApps, Perms
+ui (Compose)  →  domain (чистый Kotlin)  ←  data (Android)
+  экраны+VM        model/ parser/             local/(Room) repository/
+  создаёт VM       repository(интерфейсы)/     rates/ settings/ backup/
+  через            usecase/                    time/ ocr/ embed/ icons/
+  ViewModelFactory                             notify/ security/
+      ↑ di/AppContainer держит все синглгоны и use-cases
+service/BankNotificationListener → (через App.container) → RecordNotification
 ```
 
-### Граф потоков данных (главные сценарии)
+Главный сценарий (захват операции): `BankNotificationListener.onNotificationPosted` → `recordNotification` (use-case) → `NotificationParser.parse` → запись в журнал (дедуп), баланс и операция в Room → Flow → ViewModel → экран (реактивно).
 
-**Захват операции из уведомления:**
-```
-BankNotificationListener.onNotificationPosted
-  → App.container.recordNotification(pkg,title,text,postedAt)          [use-case RecordNotification]
-      → NotificationParser.parse(title,text) : ParsedOp?
-      → EventRepository.record(CapturedEvent)      (журнал, дедуп по hash)
-      → LedgerRepository.upsertAccountBalance(...) (баланс из «Доступно…»)
-      → LedgerRepository.addTransaction(Transaction)
-  → Room (accounts/transactions/events)
-  → Flow → AccountsViewModel.overview → OverviewScreen/AccountsScreen (реактивно)
-```
-
-**Кэшбэк:**
-```
-CashbackScreen / CashbackCard / CashbackWidget ─ CashbackViewModel ─ CashbackRepository ─ CashbackDao (Room)
-домен: CashbackMonth (ключи месяцев), CashbackSummary (по категориям), CashbackSpotlight (плашка и виджет)
-```
-
-**Капитал:**
-```
-OverviewScreen / CapitalScreen ─ CapitalViewModel ─ GetCapital (use-case)
-  ← LedgerRepository, DepositRepository, FxRepository, RatesRepository, CashRepository,
-    SettingsRepository (части в итоге), Today
-  → CapitalCalculator.compute(...) : CapitalSnapshot  (домен, под тестами)
-Курсы: MainActivity.onResume → RefreshRates.ifNeeded → CbrRatesSource (единственный сетевой вызов)
-```
-
----
+Правила каждого слоя — во вложенных файлах, подгружаются автоматически:
+- `app/src/main/java/ru/maxrubtsoff/bankagg/domain/CLAUDE.md` — чистота домена, деньги, парсеры.
+- `app/src/main/java/ru/maxrubtsoff/bankagg/ui/CLAUDE.md` — дизайн-система «Слиток».
+- `app/src/main/java/ru/maxrubtsoff/bankagg/data/local/CLAUDE.md` — Room, миграции, шифрование.
 
 ## 4. Карта пакетов
 
-- `domain/model` — доменные модели и чистая логика. **Money в минорных единицах (копейки)**, `Currencies` — справочник валют ЦБ, `BankBrand` — банк: известные (с пакетами приложений), из справочника ЦБ (`CbrBanks`, `assets/banks/cbr.tsv`) и свои пользователя (`BankDirectory`); встроенных банков нет — у каждого свой список (`BankRepository`), `DepositMath`, `FxPortfolio` (средняя цена), `CapitalCalculator`, `CashbackSpotlight` — логика под тесты.
-- `domain/parser` — `NotificationParser`: текст уведомления → `ParsedOp` (сумма со знаком, валюта, тип, баланс, контрагент). Консервативен: не уверен — `null`.
+- `domain/model` — доменные модели и чистая логика (`Money`, `Currencies`, `BankBrand`/`CbrBanks`/`BankDirectory`, `Deposit*`, `Fx*`, `Capital*`, `Cashback*`, `Subscription`, `Features`, `CapitalCalculator`, `DepositMath`, `FxPortfolio`, `CashbackSpotlight`, парсеры `DepositParser`/`CashbackParser`).
+- `domain/parser` — `NotificationParser` (текст уведомления → `ParsedOp`, консервативно: не уверен — `null`).
 - `domain/repository` — **только интерфейсы**.
-- `domain/usecase` — оркестрация (`RecordNotification`, `GetOverview`).
-- `data/local` — Room: `*Entity`, `*Dao`, `AppDatabase`, `*Mappers` (Entity ↔ domain). Версия БД растёт при изменении схемы; с версии 10 каждая смена схемы идёт с миграцией (`Migration`), чтобы данные пользователя не стирались. `fallbackToDestructiveMigration()` остаётся только для старых схем.
+- `domain/usecase` — оркестрация: `RecordNotification`, `GetCapital`, `RefreshRates`, `RecognizeCashbackShot`, `RecognizeDepositShot`, `RepairFromJournal`, `CheckPin`, `ClassifyScreenshot`, `MyBanksScope`, `NewBankAnswers`.
+- `data/local` — Room: `*Entity`, `*Dao`, `AppDatabase`, `*Mappers`, `DatabaseCipher`.
 - `data/repository` — реализации интерфейсов домена.
-- `data/settings` — `SettingsStore` (выбранные банки, части капитала, последний раздел, последняя валюта, отметки обновления курсов).
-- `data/rates` — `CbrRatesSource` (HTTP к ЦБ) и `CbrXml` (чистый разбор ответа, под тестом на образце из `app/src/test/resources/cbr`).
-- `data/time` — `SystemToday`: живая дата, тикает в полночь.
-- `data/backup` — `BackupManager` (экспорт/импорт JSON в «Загрузки/BankAggregator» без диалога пути).
-- `di` — `AppContainer` (все синглтоны и use-cases), создаётся в `App`.
+- `data/rates` — `CbrRatesSource` (HTTP к ЦБ) и `CbrXml` (разбор, под тестом).
+- `data/settings` — `SettingsStore`. `data/time` — `SystemToday`. `data/backup` — `BackupManager`/`BackupCipher`/`LogoBackup`.
+- `data/ocr` — Tesseract OCR. `data/embed` — ONNX-эмбеддер. `data/icons` — `LogoMaker`. `data/notify` — напоминания. `data/security` — ключи (`PhoneKeys`).
+- `di` — `AppContainer` (синглтоны, use-cases), создаётся в `App`.
 - `service` — `BankNotificationListener` (NotificationListenerService).
-- `ui/theme` — дизайн-система «Слиток» (`Slitok` палитра, `Fonts`, `Type`, `Theme`).
-- `ui/common` — переиспользуемое: `Panel`, `heroGlow`, `BankIcon`, `ViewModelFactory`.
-- `ui/<feature>` — экран + ViewModel на фичу: `overview` (Обзор), `capital` (вкладка «Капитал»: счета, валюта, наличные, шторки), `deposits` (раздел «Вклады» и его экраны), `cashback`, `settings`, `log`, `widget`.
-- Нижняя панель — ровно четыре вкладки: Обзор · Капитал · Платежи · Настройки. «Платежи» — «Кэшбэк · Подписки» (`ui/subscriptions`).
-- `benchmark` — модуль замеров (Macrobenchmark) и генератор Baseline Profile; гоняется на эмуляторе/телефоне, не в CI (`docs/analysis/performance.md`).
-- `util` — `InstalledApps` (иконки/наличие банков через `<queries>`), `Perms`.
+- `ui/theme` — «Слиток» (`Slitok`, `AppTypography`, `Motion`). `ui/common` — переиспользуемое (`ScreenHeader`, `MoneyText`, `BankIcon`, `ViewModelFactory`, шторки).
+- `ui/<feature>` — экран + ViewModel: `overview`, `capital`, `cashback`, `subscriptions` (вкладка «Платежи»), `deposits`, `settings`, `log`, `onboarding` (слайды, обучение), `lock` (вход), `showcase` (витрина).
+- `benchmark` — Macrobenchmark и генератор Baseline Profile (не в CI, см. `docs/analysis/performance.md`).
+- `util` — `InstalledApps`, `Perms`.
 
----
+## 5. Как добавить фичу (порядок слоёв, не перепрыгивать)
 
-## 5. Как добавить фичу (обязательный порядок)
-
-Пример: новая сущность с экраном. Двигайся **снаружи домена внутрь, затем наружу в UI**:
-
-1. **Домен:** модель в `domain/model`; при наличии логики — чистые функции/объекты (тестируемые).
+1. **Домен:** модель в `domain/model`; логика — чистые функции под тест.
 2. **Интерфейс репозитория** в `domain/repository`.
-3. **Use-case** в `domain/usecase`, если есть оркестрация (иначе ViewModel зовёт репозиторий напрямую).
-4. **Room:** `*Entity` + `*Dao` + `*Mappers` в `data/local`; добавь entity и `abstract fun dao()` в `AppDatabase` и **подними `version`**.
-5. **Реализация репозитория** в `data/repository` (Entity ↔ domain через мапперы).
-6. **DI:** добавь в `AppContainer` (`by lazy`).
-7. **ViewModel** в `ui/<feature>`: Flow из репозитория → `StateFlow` через `stateIn`.
+3. **Use-case** в `domain/usecase` — если есть оркестрация.
+4. **Room:** `*Entity`+`*Dao`+`*Mappers` в `data/local`; entity и `dao()` в `AppDatabase`, поднять `version` + `Migration`.
+5. **Реализация репозитория** в `data/repository`.
+6. **DI:** `by lazy` в `AppContainer`.
+7. **ViewModel** в `ui/<feature>`: Flow → `StateFlow` через `stateIn`.
 8. **Factory:** ветка в `ui/common/ViewModelFactory`.
-9. **Screen** (Compose) + маршрут в `MainActivity` (`Routes`, `composable(...)`, навигация).
-10. **Тесты** на доменную логику (минимум — то, что считает/парсит/решает).
+9. **Screen** + маршрут в `ui/MainActivity` (`Routes`, `composable`, навигация).
+10. **Тесты** на доменную логику.
 
-Не перепрыгивай слои: UI не трогает Room/Entity напрямую, домен не знает про Android.
+UI не трогает Room/`*Entity` напрямую; домен не знает про Android. Детали правил — во вложенных `CLAUDE.md` (§3).
 
----
+## 6. Мультиагентная разработка
 
-## 6. Стандарты и правила
+Полный цикл ведут субагенты (`.claude/agents/`), главная сессия — оркестратор: держит решения, раздаёт задачи, мержит; грязную работу (чтение кода, тесты, логи) отдаёт агентам, чтобы её объём не копился в окне.
 
-**Домен чист.** В `domain/*` нет импортов `android.*`/Compose. Любую считающую/парсящую/решающую логику выноси в чистые функции домена и покрывай тестами — UI только отображает. (Счётчик банков уже ловится тестом — так и держим.)
+| Агент | Модель | Зачем |
+|-------|--------|-------|
+| `explorer` | haiku | найти код, карта фичи по слоям (только чтение) |
+| `architect` | opus | план фичи по DDD (не кодит) |
+| `designer` | opus | вид и компоненты по «Слитку» (макет) |
+| `coder` | sonnet | реализация по плану + зелёная сборка |
+| `tester` | sonnet | доменные тесты (TDD) |
+| `reviewer` | sonnet | ревью дифа по правилам (только чтение) |
+| `device-check` | sonnet | проверка интерфейса на эмуляторе (adb: скрины, кадры) |
 
-**Деньги.** Только `Money` (минорные единицы, `ofMajor/ofMinor`), никаких `Double`/`Float` для сумм в хранении и расчётах.
+Цикл запускается двумя скиллами: **`cycle-start`** (пишешь «новая задача» — ветка `cycle-N` от `main`, файл `docs/cycles/cycle-N.md`, режим сбора без анализа) и **`cycle-run`** (пишешь «запускай полный цикл» — весь поток ниже). Запреты-инварианты стоят хуком (`.claude/hooks/guard.ps1`), а не только текстом.
 
-**Flow реактивно.** Экраны читают `StateFlow` из репозиториев; никаких ручных «обновить». Для `StateFlow<T?>` с начальным `null` используй `stateIn<T?>(...)`.
+`cycle-run` работает **фазами по всем пунктам сразу**, а не гоняет полный конвейер на каждый пункт:
+1. **Классификация:** рядовой пункт (баг/доработка в текущем дизайне) едет автономно; дизайн/структурный (редизайн, новая навигация, смена решения, смежного с инвариантом) — только предложение, ждёт согласования.
+2. **Анализ** всех пунктов: `explorer` (карта, файлы) → `architect` (планы) → `designer` (варианты для дизайн-пунктов).
+3. **Вопросы одним пакетом** (гейт 1) → **макеты одним пакетом** (гейт 2). После гейта 2 — автономно до `main`.
+4. **Разработка группами:** пункты с общими файлами — одна группа (коммит на пункт), непересекающиеся — параллельно; `coder` → `tester` → `reviewer`.
+5. **CI волнами** (пуш пачкой, не по пункту) → **`device-check`** на эмуляторе → **слияние** (`release`).
 
-**Строки UI — на русском.** Пользовательские тексты по-русски, в тоне «Слитка» (коротко, по делу, без канцелярита).
-
-**Дизайн-система «Слиток» — [`docs/design-system/README.md`](docs/design-system/README.md).** Перед любой работой с интерфейсом прочитай этот файл — он эталон (утверждён в цикле 7, F-31). Правила:
-- Экран собирается **только** из компонентов `ui/common` и токенов `ui/theme` (`Slitok`, `AppTypography`, шкала сумм `Amounts`). Суммы — только через `MoneyText`/`AmountText`.
-- Нужного компонента нет — сначала добавь его в дизайн-систему (`ui/common` + раздел в README + пример в `docs/design-system/showcase.html` и в «Витрине» `ui/showcase/ShowcaseScreen.kt`), потом используй. Новый компонент или изменение вида — только через макет и согласование с Максимом.
-- Никаких своих кнопок, полей, диалогов, переключателей, меток, `Card`, hex-цветов и ручного `fontFamily = Unbounded` на экранах — это ловит `DesignSystemGuardTest`; не ослабляй его, исключение — только с причиной в самом тесте.
-- Меняешь компонент — в том же коммите обнови README, витрину и её пример.
-- Тёмная тема одна (без light/dynamic) — не возвращай `dynamicColor`.
-
-**Room.** Меняешь схему — поднимаешь `version` и пишешь `Migration` (данные не стираем). Используем **KSP**, не kapt.
-
-**Приватность/разрешения.** Известный банк с приложением → пакеты в `<queries>` манифеста и в `BankBrand.known`; остальные банки пользователь добавляет сам, новые приложения находятся по уведомлениям (`NewBanks`). Не добавляй широких разрешений; SMS не читаем.
-
-**DI вручную.** Зависимости — через `AppContainer`, конструкторная инъекция. Не тащи Hilt.
-
-**Стабильная подпись.** Не трогай `signingConfigs`/`app/debug.keystore` — иначе у пользователя обновление не встанет поверх. Переход на ключ публикации — только по `docs/publishing.md` и решению Максима.
-
-**UX и проактивность.** При любой доработке предлагай пользователю самый удобный для него вариант дизайна, а не самый простой в реализации. Будь проактивен: замечаешь неудобство, лишний шаг или баг рядом с задачей — скажи и предложи решение (с макетом, если это экран). Упрощай интерфейс везде, где можно: меньше экранов, полей, диалогов и пояснений; то, что приложение может решить само, оно решает само, оставляя пользователю одно касание на исправление. При этом интерфейс должен оставаться удобным, современным и информативным: человек всегда понимает, что произошло и что он может сделать.
-
----
+**Два уровня правил.** *Инварианты* (слои, деньги в копейках, домен без Android, приватность, подпись, офлайн, тесты, цвет/шрифт токенами) не нарушаются даже при редизайне — это хук. *Текущие решения* (4 вкладки, палитра, набор экранов) — сегодняшний вид, их меняет дизайн/структурный пункт после согласования, обновляя правила (`ui/CLAUDE.md`, `design-system/README.md`) в том же изменении.
 
 ## 7. Сборка, тесты, CI
 
 - Локально: `./gradlew assembleDebug`, `./gradlew testDebugUnitTest`.
-- CI (`.github/workflows/build.yml`): ставит JDK 17, принимает лицензии SDK, **гоняет юнит-тесты**, собирает release APK, грузит артефакт `bank-aggregator`. Падение теста/компиляции роняет сборку.
-- Тесты домена — в `app/src/test/java/...` (JVM, без эмулятора). Для Compose UI-тестов подключены `androidTest`-зависимости (нужен эмулятор/устройство).
-- **Работа идёт прямо в `main`: коммить и пушь в `main`, без PR и без feature-веток** — push в `main` сразу запускает CI (`build.yml`) и сборку APK. PR заводи только если об этом попросят явно.
-- Коммиты подписывай по правилам сессии (атрибуция в конце сообщения).
-- **После пуша дождись зелёной сборки.** Работа не считается сделанной, пока `build.yml` на этом коммите не прошёл. Красная сборка: прочитай лог (`gh run view --log-failed`), исправь, запушь и снова жди — повторяй, пока не станет зелёной. До пуша локально прогоняй `./gradlew testDebugUnitTest assembleDebug` и так же циклично чини ошибки. Не отключай и не ослабляй тесты, чтобы сборка прошла.
-
----
+- CI (`build.yml`): JDK 17, лицензии SDK, **юнит-тесты**, release APK, артефакт `bank-aggregator`. Падение теста/компиляции роняет сборку.
+- Тесты домена — `app/src/test/java/...` (JVM). Для Compose UI-тестов — `androidTest` (нужен эмулятор).
+- **Работа идёт прямо в `main`** (кроме циклов разработки в ветке `dev-N`, см. `docs/TZ.md`): коммить и пушь, без PR и feature-веток, если не попросят иначе. Push запускает CI.
+- **После пуша дождись зелёной сборки.** Красная: `gh run view --log-failed`, исправь, запушь, жди — пока не зелёная. До пуша локально `./gradlew testDebugUnitTest assembleDebug`. Тесты не отключать и не ослаблять.
 
 ## 8. Дорожная карта
 
-- `docs/TZ.md` — ТЗ текущего цикла (ветка `dev-N`): только то, что делается в этом цикле, сводка пунктов со статусами. Прошлые циклы — в `docs/archive/TZ-N.md`.
-- `docs/ROADMAP.md` — все идеи (`I-n`) и их статусы, продуктовый анализ, волны к публикации. Новая идея, не взятая в цикл, пишется туда; взятая — получает пункт в ТЗ, а в ROADMAP статус «в цикле N (пункт)»; по итогам цикла статус меняется на «сделано».
-- Документ проекта `claude/status.md` (claude.ai) — краткий статус.
-
----
+- `docs/cycles/cycle-N.md` — файл текущего цикла (ветка `cycle-N`), пункты со статусами; заводит его `cycle-start`. Прошлые циклы лежат там же — это и есть архив. _(Цикл 8 ещё на старой схеме: ветка `dev-8`, `docs/TZ.md`, архив `docs/archive/TZ-N.md`. Новые циклы — по новой схеме.)_
+- `docs/ROADMAP.md` — все идеи (`I-n`) и статусы. Новая идея вне цикла пишется туда.
+- `claude/status.md` (claude.ai) — краткий статус.
 
 ## 9. Чего не делать
 
 - Не добавлять сервер и сетевые вызовы, кроме курсов ЦБ. Никаких данных пользователя наружу.
-- Не возвращать чтение SMS и `QUERY_ALL_PACKAGES`.
-- Не класть бизнес-логику в Compose-функции — она в домене, под тестами.
-- Не ломать слои DDD и не хардкодить цвета/шрифты мимо «Слитка».
-- Не менять подпись/keystore.
-- Не открывать PR и не плодить feature-ветки под свои изменения — пушить напрямую в `main` (CI собирает по push в `main`).
+- Не возвращать чтение SMS и `QUERY_ALL_PACKAGES`. _(хук)_
+- Не класть бизнес-логику в Compose — она в домене, под тестами. _(хук на `import android.*` в домене)_
+- Не ломать слои DDD, не хардкодить цвета/шрифты мимо «Слитка». _(хук + `DesignSystemGuardTest`)_
+- Не менять подпись/keystore (`signingConfigs`, `app/debug.keystore`) — иначе обновление не встанет поверх. _(хук; переход на ключ публикации — по `docs/publishing.md`)_
+- Не открывать PR и не плодить feature-ветки под свои изменения.
+
+## Compact Instructions
+
+При сжатии контекста сохраняй: текущий пункт `docs/TZ.md` и его статус; какие файлы уже изменены и зачем; вывод `./gradlew testDebugUnitTest assembleDebug` (успех/ошибки); решения по макетам и выбранные варианты; что ещё не проверено на устройстве.
