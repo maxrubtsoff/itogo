@@ -41,7 +41,6 @@ import ru.maxrubtsoff.bankagg.ui.common.ProvideDustClock
 import ru.maxrubtsoff.bankagg.ui.settings.SettingsPrivacyScreen
 import ru.maxrubtsoff.bankagg.ui.lock.LockScreen
 import ru.maxrubtsoff.bankagg.ui.lock.Biometrics
-import ru.maxrubtsoff.bankagg.ui.onboarding.IntroSlides
 import ru.maxrubtsoff.bankagg.ui.subscriptions.PaymentsScreen
 import ru.maxrubtsoff.bankagg.ui.subscriptions.SubscriptionCardScreen
 import ru.maxrubtsoff.bankagg.ui.subscriptions.SubscriptionFormScreen
@@ -214,7 +213,6 @@ private object Routes {
     fun bankNew(name: String) = "settings/bank-new?name=${Uri.encode(name)}"
     const val SETTINGS_BACKUP = "settings/backup"
     const val SETTINGS_LOG = "settings/log"
-    const val INTRO = "settings/intro"
     const val LEARNING = "settings/learning"
     const val SHOWCASE = "debug/showcase"
     const val TOUR = "tour/{section}"
@@ -864,7 +862,6 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                 LearningScreen(
                     features, toursDone,
                     onOpen = { nav.navigate(Routes.tour(it)) },
-                    onOpenIntro = { nav.navigate(Routes.INTRO) },
                     onBack = { nav.popBackStack() }
                 )
             }
@@ -874,9 +871,6 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                     tourScope.launch { container.settings.markTourDone(section.key) }
                     nav.popBackStack()
                 })
-            }
-            composable(Routes.INTRO) {
-                IntroSlides(onDone = { nav.popBackStack() }, doneLabel = "Понятно")
             }
             composable(Routes.SETTINGS_LOG) {
                 LogScreen(logVm, onBack = { nav.popBackStack() })

@@ -60,7 +60,7 @@ private fun TourSection.dot() = when (this) {
 /** «Настройки → Обучение» (F-30): the general tour and one per kept section; any can be taken again. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LearningScreen(features: Features, done: Set<TourSection>, onOpen: (TourSection) -> Unit, onOpenIntro: () -> Unit, onBack: () -> Unit) {
+fun LearningScreen(features: Features, done: Set<TourSection>, onOpen: (TourSection) -> Unit, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             ScreenHeader("Обучение", onBack)
@@ -73,9 +73,10 @@ fun LearningScreen(features: Features, done: Set<TourSection>, onOpen: (TourSect
         ) {
             Panel(Modifier.fillMaxWidth()) {
                 Column {
-                    ListRow("Что такое Itogo", onClick = onOpenIntro, leading = { Dot(Slitok.Brass2) })
-                    sections.forEach { s ->
-                        HorizontalDivider(Modifier.padding(start = 38.dp), color = Slitok.Line)
+                    // «Что такое Itogo» is not here: the slides are a first-launch
+                    // thing only (B-50).
+                    sections.forEachIndexed { i, s ->
+                        if (i > 0) HorizontalDivider(Modifier.padding(start = 38.dp), color = Slitok.Line)
                         ListRow(
                             s.label(),
                             onClick = { onOpen(s) },

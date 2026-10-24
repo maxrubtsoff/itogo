@@ -56,6 +56,11 @@ interface SettingsRepository : PinStore {
     suspend fun setHideBySwipe(on: Boolean)
 
     /** F-30: the tours already taken (or skipped). */
+    /** «Что такое Itogo» has been shown once (B-50). */
+    suspend fun introShown(): Boolean = true
+
+    suspend fun markIntroShown() {}
+
     val toursDone: Flow<Set<String>> get() = kotlinx.coroutines.flow.flowOf(emptySet())
     suspend fun markTourDone(key: String) {}
 

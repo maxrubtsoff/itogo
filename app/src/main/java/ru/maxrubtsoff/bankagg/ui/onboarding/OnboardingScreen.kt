@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.settings.FeaturesGrid
 import ru.maxrubtsoff.bankagg.ui.settings.SettingsViewModel
+import androidx.compose.runtime.LaunchedEffect
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
 /**
@@ -48,7 +49,11 @@ import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 fun OnboardingScreen(vm: SettingsViewModel, banks: @Composable (onDone: () -> Unit) -> Unit) {
     val features by vm.features.collectAsStateWithLifecycle()
     // -1: the intro slides; back from a step goes one step back, from the slides — out.
-    var step by rememberSaveable { mutableIntStateOf(-1) }
+    // They are shown once ever (B-50), so the first step is decided by the mark.
+    var step by rememberSaveable { mutableIntStateOf(-2) }
+    LaunchedEffect(Unit) {
+        if (step == -2) step = if (vm.showIntroSlides()) -1 else 0
+    }
     val finish = { vm.finishOnboarding(); Unit }
     BackHandler(enabled = step >= 0) { step-- }
 
@@ -61,7 +66,8 @@ fun OnboardingScreen(vm: SettingsViewModel, banks: @Composable (onDone: () -> Un
         label = "onboarding"
     ) { s ->
         when (s) {
-            -1 -> IntroSlides(onDone = { step = 0 })
+            -2 -> Box(Modifier.fillMaxSize().background(Slitok.Bg))
+            -1 -> IntroSlides(onDone = { vm.markIntroShown(); step = 0 })
             0 -> Column(
                 Modifier.fillMaxSize().background(Slitok.Bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)

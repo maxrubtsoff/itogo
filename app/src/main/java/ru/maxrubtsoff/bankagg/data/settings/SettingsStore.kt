@@ -24,6 +24,14 @@ class SettingsStore(context: Context) : SettingsRepository {
         if (prefs.contains(LEGACY_FAVORITES)) prefs.edit().remove(LEGACY_FAVORITES).apply()
     }
 
+    // ---- «Что такое Itogo» shown once (B-50) ----
+
+    override suspend fun introShown(): Boolean = prefs.getBoolean(KEY_INTRO_SHOWN, false)
+
+    override suspend fun markIntroShown() {
+        prefs.edit().putBoolean(KEY_INTRO_SHOWN, true).apply()
+    }
+
     // ---- the parser the log was read with (B-45, B-46) ----
 
     override suspend fun repairedParserVersion(): Int = prefs.getInt(KEY_PARSER_VERSION, 0)
@@ -247,5 +255,6 @@ class SettingsStore(context: Context) : SettingsRepository {
         const val KEY_HIDE_RECENTS = "hide_in_recents"
         const val KEY_TOURS_DONE = "tours_done"
         const val KEY_PARSER_VERSION = "parser_version"
+        const val KEY_INTRO_SHOWN = "intro_shown"
     }
 }

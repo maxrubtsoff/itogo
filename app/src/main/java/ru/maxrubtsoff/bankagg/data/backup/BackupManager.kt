@@ -304,6 +304,8 @@ class BackupManager(
         settings.currentSelectedPackages().forEach { pkgs.put(it) }
         root.put("selectedPackages", pkgs)
 
+        // v9: «Что такое Itogo» was shown — a restore must not bring the slides back (B-50).
+        root.put("introShown", settings.introShown())
         // v9: apps answered «Не банк» — otherwise a restore asks about them again (B-57).
         candidates?.let { c ->
             root.put("notBanks", JSONArray().apply { c.ignored().forEach { put(it) } })
@@ -431,7 +433,8 @@ class BackupManager(
         val rates: List<FxRateEntity>,
         val banks: List<BankBrand>? = null,
         val logos: Map<String, ByteArray> = emptyMap(),
-        val notBanks: Set<String>? = null
+        val notBanks: Set<String>? = null,
+        val introShown: Boolean = false
     )
 
     /**
@@ -474,6 +477,7 @@ class BackupManager(
             if (snapshot.rates.isNotEmpty()) fx.upsertRates(snapshot.rates)
         }
         snapshot.selectedPackages?.let { settings.setSelectedPackages(it) }
+        if (snapshot.introShown) settings.markIntroShown()
         // «Не банк» survives a restore: what was answered stays answered (B-57).
         candidates?.let { store ->
             snapshot.notBanks?.let { saved ->
@@ -553,6 +557,7 @@ class BackupManager(
             notBanks = root.optJSONArray("notBanks")?.let { arr ->
                 (0 until arr.length()).map { arr.getString(it) }.toSet()
             },
+            introShown = root.optBoolean("introShown", false),
             // "favoriteGroups" from older copies is ignored: the home card picks itself.
             cashback = root.objects("cashback").map { o ->
                 CashbackEntity(

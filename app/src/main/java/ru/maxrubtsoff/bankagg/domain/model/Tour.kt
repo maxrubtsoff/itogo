@@ -44,6 +44,16 @@ data class TourStep(
     val action: TourAction = TourAction.NEXT
 )
 
+/**
+ * «Что такое Itogo» — the intro slides (F-29) are shown once, at the very first
+ * launch, and never again (B-50): neither on later launches nor from anywhere
+ * in the app. The mark travels in the backup, so a restore or a re-install with
+ * a copy doesn't bring them back.
+ */
+object IntroSlidesRule {
+    fun show(onboarded: Boolean, shown: Boolean): Boolean = !onboarded && !shown
+}
+
 object TourScript {
 
     /** The sections whose tours the person can take: the kept ones, after the general one. */
