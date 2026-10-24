@@ -451,18 +451,19 @@ private fun EmptyCapital(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (plan.lead != EmptyStart.Lead.NONE) {
             StartPlate(lead = true, art = { CapitalPartArt(CapitalPart.ACCOUNTS, Modifier.size(width = 72.dp, height = 56.dp)) }) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        when (plan.lead) {
-                            EmptyStart.Lead.WAITING -> "Ждём уведомления"
-                            EmptyStart.Lead.GRANT_ACCESS -> "Счета из уведомлений"
-                            else -> "Счета из уведомлений"
-                        },
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (collecting.isNotEmpty()) BankStack(collecting)
-                }
+                // B-54: the title takes the whole line (it wraps by words, never into a column); the banks stand under it.
+                Text(
+                    when (plan.lead) {
+                        EmptyStart.Lead.WAITING -> "Ждём уведомления"
+                        EmptyStart.Lead.GRANT_ACCESS -> "Счета из уведомлений"
+                        else -> "Счета из уведомлений"
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (collecting.isNotEmpty()) BankStack(collecting)
                 when (plan.lead) {
                     EmptyStart.Lead.WAITING ->
                         Text("Баланс появится после первой операции", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
