@@ -9,6 +9,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMerge
 import ru.maxrubtsoff.bankagg.domain.model.CashbackShot
 import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
+import ru.maxrubtsoff.bankagg.domain.model.TourSample
 import ru.maxrubtsoff.bankagg.domain.repository.CashbackRepository
 import ru.maxrubtsoff.bankagg.domain.repository.CashbackShotRepository
 
@@ -62,7 +63,9 @@ class SampleCashbackShotRepository : CashbackShotRepository {
 
     override suspend fun add(shot: CashbackShot) = update(shot)
 
-    override suspend fun update(shot: CashbackShot) = shots.update { it.filterNot { s -> s.id == shot.id } + shot }
+    override suspend fun update(shot: CashbackShot) = put(shot)
+
+    private fun put(shot: CashbackShot) = shots.update { it.filterNot { s -> s.id == shot.id } + shot }
 
     override suspend fun setStatus(id: String, status: ShotStatus) = shots.update { list ->
         list.map { if (it.id == id) it.copy(status = status) else it }
@@ -74,4 +77,28 @@ class SampleCashbackShotRepository : CashbackShotRepository {
 
     /** There is no file to remove. */
     override suspend fun deleteImage(imagePath: String) {}
+
+    /**
+     * The example screenshot of the tour, just picked and still being read.
+     * There is no file behind it: the head of the form draws a screenshot itself.
+     */
+    fun startExample(monthKey: String): String {
+        put(CashbackShot(id = EXAMPLE_ID, monthKey = monthKey, imagePath = "", status = ShotStatus.PROCESSING))
+        return EXAMPLE_ID
+    }
+
+    /**
+     * The example is read: the bank and the rows come from the example data
+     * ([TourSample.scannedCashbackLines], one percent left unread on purpose),
+     * not from an engine that would have to read a picture.
+     */
+    fun finishExample() = shots.update { list ->
+        list.map {
+            if (it.id == EXAMPLE_ID) it.copy(brand = TourSample.BANK, status = ShotStatus.NEEDS_INPUT, lines = TourSample.scannedCashbackLines()) else it
+        }
+    }
+
+    companion object {
+        const val EXAMPLE_ID = "sample-shot-cashback"
+    }
 }

@@ -1,30 +1,15 @@
 package ru.maxrubtsoff.bankagg.ui.deposits
 
-import ru.maxrubtsoff.bankagg.ui.common.BrassButton
-import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,22 +18,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.rememberAsyncImagePainter
-import ru.maxrubtsoff.bankagg.ui.common.ShotImage
 import kotlinx.coroutines.flow.map
+import ru.maxrubtsoff.bankagg.domain.model.ShotHints
 import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
-import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.ui.common.BrassButton
+import ru.maxrubtsoff.bankagg.ui.common.ScanReveal
+import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
+import ru.maxrubtsoff.bankagg.ui.common.ShotHeader
 import ru.maxrubtsoff.bankagg.ui.common.aboveKeyboard
-import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import java.io.File
 
+/**
+ * A deposit screenshot to check. One layout from the first frame to the last
+ * (B-51): the head with the screenshot and its state ([ShotHeader], U-53), the
+ * fields under it (a skeleton while the app reads, then the recognised values
+ * rising one after another, F-34) and the button. A field that was not read is
+ * simply empty — no red, the head says what to look at.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -> Unit) {
@@ -81,28 +69,14 @@ fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -
     }
 
     val imagePath = shot?.imagePath.orEmpty()
-    val status = shot?.status ?: ShotStatus.PROCESSING
+    val status = shot?.status
+    val hint = if (status == ShotStatus.NEEDS_INPUT) shot?.draft?.let(ShotHints::deposit) else null
 
     Scaffold(
         topBar = {
             ScreenHeader("Проверьте вклад", onBack)
         }
     ) { padding ->
-        if (!initialised) {
-            Column(
-                Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Spacer(Modifier.height(4.dp))
-                if (imagePath.isNotBlank()) UserPhoto(imagePath)
-                RecognitionBanner(ShotStatus.PROCESSING)
-                Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Slitok.Violet)
-                }
-            }
-            return@Scaffold
-        }
-
       Column(Modifier.fillMaxSize().aboveKeyboard(padding)) {
         Column(
             Modifier
@@ -113,10 +87,10 @@ fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Spacer(Modifier.height(4.dp))
-            UserPhoto(imagePath)
-            RecognitionBanner(status)
-
-            DepositFormFields(form)
+            ShotHeader(imagePath, status, hint = hint)
+            ScanReveal(status.takeIf { initialised }, skeletonHeight = 360.dp) { play ->
+                DepositFormFields(form, reveal = play)
+            }
 
             Spacer(Modifier.height(4.dp))
             BrassButton(
@@ -136,70 +110,12 @@ fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -
                         onDone = { leave() }
                     )
                 },
-                enabled = form.isValid,
+                enabled = initialised && form.isValid,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Сохранить вклад") }
             Spacer(Modifier.height(16.dp))
         }
         KeyboardExitSum(form)
       }
-    }
-}
-
-@Composable
-private fun UserPhoto(path: String) {
-    val exists = remember(path) { path.isNotBlank() && File(path).exists() }
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(max = 300.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .border(1.dp, Slitok.Line, RoundedCornerShape(20.dp))
-            .background(Slitok.Inset),
-        contentAlignment = Alignment.Center
-    ) {
-        if (exists) {
-            Image(
-                painter = rememberAsyncImagePainter(ShotImage(path)),
-                contentDescription = "Загруженный скрин",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxWidth()
-            )
-        } else {
-            Text(
-                "Фото недоступно",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Slitok.Faint,
-                modifier = Modifier.padding(24.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun RecognitionBanner(status: ShotStatus) {
-    val (label, hint, accent) = when (status) {
-        ShotStatus.RECOGNIZED -> Triple("Распознано", "Сверьте со скрином и сохраните.", Slitok.Mint)
-        ShotStatus.NEEDS_INPUT -> Triple("Проверьте", "Не всё распозналось — проверьте и дополните поля.", Slitok.Brass2)
-        ShotStatus.FAILED -> Triple("Не распознано", "Заполните поля вручную по фото.", Slitok.Coral)
-        ShotStatus.PROCESSING -> Triple("Обработка…", "Распознаём текст со скрина.", Slitok.Muted)
-    }
-    Panel(modifier = Modifier.fillMaxWidth(), radius = 14.dp) {
-        Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(accent.copy(alpha = 0.16f))
-                    .border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 10.dp, vertical = 3.dp)
-            ) {
-                Text(label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.SemiBold)
-            }
-            Text(hint, style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
-        }
     }
 }

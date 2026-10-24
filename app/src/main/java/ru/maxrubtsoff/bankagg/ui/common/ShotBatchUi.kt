@@ -34,16 +34,26 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
+import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import java.io.File
 
-/** "Распознаю 2 из 6…" while OCR runs over the batch. */
+/**
+ * «Распознаю 2 из 6…» while OCR runs over the batch (F-34): a screenshot with
+ * the scan line over it, the count under it and a bar. The groups come in where
+ * this stands, not on another screen (B-51).
+ */
 @Composable
 fun BatchProgress(done: Int, total: Int) {
     Panel(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Распознаю $done из $total…", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ScanningThumb(status = ShotStatus.PROCESSING, modifier = Modifier.size(width = 84.dp, height = 150.dp), readingText = "Распознаю $done из $total…") {
+                ShotPicture("", ContentScale.Crop)
+            }
             LinearProgressIndicator(
                 progress = { if (total == 0) 0f else done.toFloat() / total },
                 modifier = Modifier.fillMaxWidth(),

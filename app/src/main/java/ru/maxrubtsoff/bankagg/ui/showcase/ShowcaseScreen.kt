@@ -48,6 +48,7 @@ import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.ui.common.FingerPointer
 import ru.maxrubtsoff.bankagg.ui.common.ScanReveal
 import ru.maxrubtsoff.bankagg.ui.common.ScanningThumb
+import ru.maxrubtsoff.bankagg.ui.common.ShotHeader
 import ru.maxrubtsoff.bankagg.ui.common.cascade
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -150,6 +151,9 @@ fun ShowcaseScreen(onBack: () -> Unit) {
 
             Caption("Распознавание (скан)")
             ScanDemo()
+
+            Caption("Шапка скрина")
+            ShotHeaderDemo()
 
             Caption("Обучение")
             TourDemo()
@@ -265,6 +269,17 @@ private fun ScanDemo() {
                 onClick = { status = if (status == ShotStatus.PROCESSING) ShotStatus.RECOGNIZED else ShotStatus.PROCESSING }
             )
         }
+    }
+}
+
+/** U-53: the head over a recognised screenshot, through its states; a tap on «Дальше» moves to the next one. */
+@Composable
+private fun ShotHeaderDemo() {
+    var step by remember { mutableIntStateOf(0) }
+    val states = listOf(ShotStatus.PROCESSING, ShotStatus.NEEDS_INPUT, ShotStatus.RECOGNIZED, ShotStatus.FAILED)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ShotHeader("", states[step], hint = if (states[step] == ShotStatus.NEEDS_INPUT) "Не прочиталось: дата закрытия" else null)
+        GhostButton("Дальше", onClick = { step = (step + 1) % states.size })
     }
 }
 

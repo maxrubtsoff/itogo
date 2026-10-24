@@ -9,7 +9,10 @@ import org.junit.Test
 import ru.maxrubtsoff.bankagg.data.repository.sample.SampleCashbackRepository
 import ru.maxrubtsoff.bankagg.data.repository.sample.SampleDepositRepository
 import ru.maxrubtsoff.bankagg.data.repository.sample.SampleLedgerRepository
+import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.domain.model.TourSample
+import ru.maxrubtsoff.bankagg.data.repository.sample.SampleCashbackShotRepository
+import ru.maxrubtsoff.bankagg.data.repository.sample.SampleDepositShotRepository
 
 /** The tours' in-memory repositories (U-54): they behave like the real ones and forget everything with the tour. */
 class SampleRepositoriesTest {
@@ -56,5 +59,28 @@ class SampleRepositoriesTest {
         repo.saveBankMonth(data.monthKey, TourSample.BANK, incoming, append = false)
         assertEquals(before + incoming.size, repo.observeMonth(data.monthKey).first().size)
         assertEquals(listOf(data.monthKey), repo.observeMonths().first())
+    }
+
+    @Test fun cashbackExampleShotIsReadFromTheExampleData() = runBlocking {
+        val repo = SampleCashbackShotRepository()
+        val id = repo.startExample(data.monthKey)
+        assertEquals(ShotStatus.PROCESSING, repo.get(id)!!.status)
+        repo.finishExample()
+        val shot = repo.get(id)!!
+        assertEquals(ShotStatus.NEEDS_INPUT, shot.status)
+        assertEquals(TourSample.BANK, shot.brand)
+        assertEquals(TourSample.scannedCashbackLines(), shot.lines)
+    }
+
+    @Test fun depositExampleShotIsReadFromTheExampleData() = runBlocking {
+        val repo = SampleDepositShotRepository()
+        val id = repo.startExample()
+        assertEquals(ShotStatus.PROCESSING, repo.get(id)!!.status)
+        repo.finishExample(today)
+        val shot = repo.get(id)!!
+        assertEquals(ShotStatus.RECOGNIZED, shot.status)
+        assertEquals(TourSample.BANK, shot.brand)
+        assertEquals(TourSample.scannedDepositDraft(today), shot.draft)
+        assertTrue(shot.draft.isComplete)
     }
 }

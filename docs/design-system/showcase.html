@@ -375,6 +375,7 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
   <div class="grp">Механика</div>
   <a href="#motion">Переходы и поведение</a>
   <a href="#scan">Распознавание (скан)</a>
+  <a href="#shotheader">Шапка скрина</a>
   <a href="#tour">Обучение</a>
   <a href="#words">Тексты</a>
   <a href="#map">Компоненты в коде</a>
@@ -998,6 +999,22 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
       </div>
       <p class="note">По миниатюре идёт полоса сканирования (<span class="code">Motion.SLOW</span>, по кругу) со статусом «Читаем скрин». По окончании полоса гаснет (<span class="code">Motion.FAST</span>), поля плавно встают снизу каскадом через <span class="code">Motion.STAGGER_MS</span> — <span class="code">Modifier.cascade(index, play)</span>. Значения стоят на месте, не «вылетают». В пакете — то же по каждому скрину. Пока читается — вместо полей скелет.</p>
       <p class="note"><b>Не задерживает результат.</b> Скрин, уже прочитанный при открытии экрана, показывается сразу (<span class="code">play = false</span>); результат сразу правится. С «Убрать анимации» — без полосы и подъёма, поля просто есть.</p>
+    </div>
+  </div>
+</section>
+
+<section id="shotheader">
+  <h2>Шапка скрина <span class="st new">новое</span> <code>ShotHeader</code></h2>
+  <p class="lead">Над формой распознанного скрина — кэшбэк, вклад, пакеты — один и тот же элемент (U-53).</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Статусы <span class="tag n">U-53</span></h3>
+      <div class="stage" style="display:flex;flex-direction:column;gap:10px">
+        <div class="panel" style="display:flex;gap:14px;align-items:center;padding:12px"><div style="width:52px;height:92px;border-radius:10px;border:1px solid var(--line);background:var(--inset);flex:none"></div><div style="display:flex;flex-direction:column;gap:4px"><span class="status" style="color:var(--mint)">Распознано</span><span class="note" style="margin:0">Сверьте со скрином и сохраните</span></div></div>
+        <div class="panel" style="display:flex;gap:14px;align-items:center;padding:12px"><div style="width:52px;height:92px;border-radius:10px;border:1px solid var(--line);background:var(--inset);flex:none"></div><div style="display:flex;flex-direction:column;gap:4px"><span class="status" style="color:var(--brass2)">Проверьте</span><span class="note" style="margin:0">Не прочиталось: дата закрытия</span></div></div>
+        <div class="panel" style="display:flex;gap:14px;align-items:center;padding:12px"><div style="width:52px;height:92px;border-radius:10px;border:1px solid var(--line);background:var(--inset);flex:none"></div><div style="display:flex;flex-direction:column;gap:4px"><span class="status" style="color:var(--muted)">Скрин не прочитался</span><span class="note" style="margin:0">Заполните по скрину</span></div></div>
+      </div>
+      <p class="note">Читается — скрин стоит крупно под полосой сканирования («Читаем скрин»); прочитано — он сжимается на месте в эту панель (один <span class="code">AnimatedContent</span>, <span class="code">Motion.NORMAL</span>), форма под ним не подменяется. Касание по миниатюре открывает скрин целиком. «Не прочиталось» — серое, не красное; пустые поля формы видны сами, отдельной плашки «Проверьте» нет.</p>
     </div>
   </div>
 </section>

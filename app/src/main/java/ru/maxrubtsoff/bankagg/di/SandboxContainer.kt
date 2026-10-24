@@ -21,9 +21,7 @@ import ru.maxrubtsoff.bankagg.domain.model.TourSample
 import ru.maxrubtsoff.bankagg.domain.repository.BankRepository
 import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.CashbackRepository
-import ru.maxrubtsoff.bankagg.domain.repository.CashbackShotRepository
 import ru.maxrubtsoff.bankagg.domain.repository.DepositRepository
-import ru.maxrubtsoff.bankagg.domain.repository.DepositShotRepository
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
 import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
@@ -53,12 +51,12 @@ class SandboxContainer(context: Context, val today: Today, features: Features) {
     val banks: BankRepository = SampleBankRepository(sample.banks)
     val ledgerRepository: LedgerRepository = SampleLedgerRepository(sample.accounts, sample.transactions)
     val depositRepository: DepositRepository = SampleDepositRepository(sample.deposits)
-    val depositShotRepository: DepositShotRepository = SampleDepositShotRepository()
+    val depositShotRepository = SampleDepositShotRepository()
     val fxRepository: FxRepository = SampleFxRepository(sample.fxOps)
     val ratesRepository: RatesRepository = SampleRatesRepository(sample.rates)
     val cashRepository: CashRepository = SampleCashRepository(sample.cash)
     val cashbackRepository: CashbackRepository = SampleCashbackRepository(sample.cashback)
-    val cashbackShotRepository: CashbackShotRepository = SampleCashbackShotRepository()
+    val cashbackShotRepository = SampleCashbackShotRepository()
     val subscriptionRepository: SubscriptionRepository = SampleSubscriptionRepository(sample.subscriptions)
 
     // Pickers and OCR are never really used in a tour; these only satisfy what the view-models ask for.

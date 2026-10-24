@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -115,21 +117,29 @@ fun ScanningThumb(
 
 /**
  * The fields under a screenshot: a skeleton while [status] is
- * [ShotStatus.PROCESSING], then [content] with `play` true — give each field
- * `Modifier.cascade(index, play)` and they rise one after another
- * ([Motion.STAGGER_MS] apart). A shot that is already read when the screen
- * opens gets `play` false: the result is at once, never held back by an animation.
+ * [ShotStatus.PROCESSING] (or null — not loaded yet), then [content] with `play`
+ * true — give each field `Modifier.cascade(index, play)` and they rise one after
+ * another ([Motion.STAGGER_MS] apart). The skeleton goes out as the fields come
+ * in, in one place, so the screen never swaps its whole tree (B-51). A shot that
+ * is already read when the screen opens gets `play` false: the result is at
+ * once, never held back by an animation.
  */
 @Composable
 fun ScanReveal(
-    status: ShotStatus,
+    status: ShotStatus?,
     modifier: Modifier = Modifier,
     skeletonHeight: Dp = 168.dp,
     content: @Composable (play: Boolean) -> Unit
 ) {
-    val openedWhileReading = remember { status == ShotStatus.PROCESSING }
-    Box(modifier) {
-        if (status == ShotStatus.PROCESSING) {
+    var sawReading by remember { mutableStateOf(false) }
+    LaunchedEffect(status) { if (status == ShotStatus.PROCESSING) sawReading = true }
+    Crossfade(
+        targetState = status == null || status == ShotStatus.PROCESSING,
+        modifier = modifier,
+        animationSpec = Motion.tween(Motion.NORMAL),
+        label = "scanReveal"
+    ) { waiting ->
+        if (waiting) {
             val shape = RoundedCornerShape(20.dp)
             Box(
                 Modifier
@@ -140,7 +150,7 @@ fun ScanReveal(
                     .border(1.dp, Slitok.Line, shape)
             )
         } else {
-            content(openedWhileReading)
+            content(sawReading)
         }
     }
 }

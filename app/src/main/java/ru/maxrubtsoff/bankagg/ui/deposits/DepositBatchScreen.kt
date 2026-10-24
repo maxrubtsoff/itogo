@@ -5,6 +5,7 @@ import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -56,6 +57,8 @@ import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.ui.cashback.BankPickerRow
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
+import ru.maxrubtsoff.bankagg.ui.common.Motion
+import ru.maxrubtsoff.bankagg.ui.common.cascade
 import ru.maxrubtsoff.bankagg.ui.common.BatchProgress
 import ru.maxrubtsoff.bankagg.ui.common.MoveShotSheet
 import ru.maxrubtsoff.bankagg.ui.common.Panel
@@ -81,6 +84,10 @@ fun DepositBatchScreen(
     val list = shots ?: emptyList()
     val processing = list.count { it.status == ShotStatus.PROCESSING }
     val byId = list.associateBy { it.id }
+
+    // Cards rise in turn only after a reading seen here; coming back to a read batch shows it at once.
+    var sawReading by remember { mutableStateOf(false) }
+    LaunchedEffect(processing) { if (processing > 0) sawReading = true }
 
     var layoutText by rememberSaveable { mutableStateOf("") }
     // Laid out once recognition is over; afterwards only kept in sync with deletions.
@@ -111,29 +118,34 @@ fun DepositBatchScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Spacer(Modifier.height(4.dp))
-            if (shots == null || processing > 0) {
-                BatchProgress(done = list.size - processing, total = maxOf(list.size, ids.size))
-            } else {
-                Text(
-                    "${RuPlural.screens(list.size)} → ${RuPlural.deposits(groups.size)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Slitok.Muted
-                )
-                groups.forEach { g ->
-                    GroupCard(
-                        group = g,
-                        shots = g.ids.mapNotNull(byId::get),
-                        onPickBank = { vm.setShotsBrand(g.ids, it) },
-                        onChoose = { part, value -> chosen[g.ids.first()] = chosen[g.ids.first()].orEmpty() + (part to value) },
-                        onOpenShot = { moving = it },
-                        onFill = { vm.collapseGroup(g) { id -> onOpenShot(id) } }
+            // One place for the whole batch: the reading goes out as the cards come in (B-51, F-34).
+            Crossfade(shots == null || processing > 0, animationSpec = Motion.tween(Motion.NORMAL), label = "batch") { waiting ->
+                if (waiting) {
+                    BatchProgress(done = list.size - processing, total = maxOf(list.size, ids.size))
+                } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "${RuPlural.screens(list.size)} → ${RuPlural.deposits(groups.size)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Slitok.Muted
                     )
+                    groups.forEachIndexed { i, g ->
+                        Box(Modifier.cascade(i, sawReading)) {
+                            GroupCard(
+                                group = g,
+                                shots = g.ids.mapNotNull(byId::get),
+                                onPickBank = { vm.setShotsBrand(g.ids, it) },
+                                onChoose = { part, value -> chosen[g.ids.first()] = chosen[g.ids.first()].orEmpty() + (part to value) },
+                                onOpenShot = { moving = it },
+                                onFill = { vm.collapseGroup(g) { id -> onOpenShot(id) } }
+                            )
+                        }
+                    }
+                    BrassButton(
+                        onClick = { saving = true; vm.saveGroups(ready) { saving = false } },
+                        enabled = ready.isNotEmpty() && !saving,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(if (ready.size == groups.size) "Сохранить ${RuPlural.deposits(ready.size)}" else "Сохранить готовые: ${ready.size}") }
                 }
-                BrassButton(
-                    onClick = { saving = true; vm.saveGroups(ready) { saving = false } },
-                    enabled = ready.isNotEmpty() && !saving,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(if (ready.size == groups.size) "Сохранить ${RuPlural.deposits(ready.size)}" else "Сохранить готовые: ${ready.size}") }
             }
             Spacer(Modifier.height(16.dp))
         }

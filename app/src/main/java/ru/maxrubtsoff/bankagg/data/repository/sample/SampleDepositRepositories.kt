@@ -8,6 +8,8 @@ import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.DepositShot
 import ru.maxrubtsoff.bankagg.domain.model.DepositTopUp
 import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
+import ru.maxrubtsoff.bankagg.domain.model.TourSample
+import java.time.LocalDate
 import ru.maxrubtsoff.bankagg.domain.repository.DepositRepository
 import ru.maxrubtsoff.bankagg.domain.repository.DepositShotRepository
 
@@ -50,7 +52,9 @@ class SampleDepositShotRepository : DepositShotRepository {
 
     override suspend fun add(shot: DepositShot) = update(shot)
 
-    override suspend fun update(shot: DepositShot) = shots.update { it.filterNot { s -> s.id == shot.id } + shot }
+    override suspend fun update(shot: DepositShot) = put(shot)
+
+    private fun put(shot: DepositShot) = shots.update { it.filterNot { s -> s.id == shot.id } + shot }
 
     override suspend fun setStatus(id: String, status: ShotStatus) = shots.update { list ->
         list.map { if (it.id == id) it.copy(status = status) else it }
@@ -62,4 +66,21 @@ class SampleDepositShotRepository : DepositShotRepository {
 
     /** There is no file to remove. */
     override suspend fun deleteImage(imagePath: String) {}
+
+    /** The example screenshot of the tour, just picked and still being read; no file behind it. */
+    fun startExample(): String {
+        put(DepositShot(id = EXAMPLE_ID, imagePath = "", status = ShotStatus.PROCESSING))
+        return EXAMPLE_ID
+    }
+
+    /** The example is read: the bank and the fields come from [TourSample.scannedDepositDraft], not from an engine. */
+    fun finishExample(today: LocalDate) = shots.update { list ->
+        list.map {
+            if (it.id == EXAMPLE_ID) it.copy(brand = TourSample.BANK, status = ShotStatus.RECOGNIZED, draft = TourSample.scannedDepositDraft(today)) else it
+        }
+    }
+
+    companion object {
+        const val EXAMPLE_ID = "sample-shot-deposit"
+    }
 }

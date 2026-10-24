@@ -1,64 +1,48 @@
 package ru.maxrubtsoff.bankagg.ui.cashback
 
-import androidx.compose.foundation.layout.size
-import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
-import androidx.compose.foundation.clickable
-import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
-import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
-import ru.maxrubtsoff.bankagg.ui.common.StatusLine
-import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
-import ru.maxrubtsoff.bankagg.ui.common.BrassButton
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.rememberAsyncImagePainter
-import ru.maxrubtsoff.bankagg.ui.common.ShotImage
-import ru.maxrubtsoff.bankagg.domain.model.BankBrand
-import ru.maxrubtsoff.bankagg.domain.model.CategoryGroups
-import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
-import ru.maxrubtsoff.bankagg.ui.common.Panel
-import ru.maxrubtsoff.bankagg.ui.common.aboveKeyboard
-import ru.maxrubtsoff.bankagg.ui.common.keyboardOpen
-import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import kotlinx.coroutines.flow.map
-import java.io.File
+import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
+import ru.maxrubtsoff.bankagg.domain.model.ShotHints
+import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
+import ru.maxrubtsoff.bankagg.ui.common.BrassButton
+import ru.maxrubtsoff.bankagg.ui.common.ScanReveal
+import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
+import ru.maxrubtsoff.bankagg.ui.common.ShotHeader
+import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
+import ru.maxrubtsoff.bankagg.ui.common.aboveKeyboard
+import ru.maxrubtsoff.bankagg.ui.common.cascade
+import ru.maxrubtsoff.bankagg.ui.common.keyboardOpen
 
+/**
+ * A cashback screenshot to check. One layout from the first frame to the last
+ * (B-51): the head with the screenshot and its state ([ShotHeader] — big with
+ * the scan line while the app reads, compact after), the fields under it (a
+ * skeleton, then the recognised rows rising one after another, F-34) and the
+ * button. Nothing is swapped for another screen when reading ends.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShotPreviewScreen(vm: CashbackViewModel, shotId: String, onBack: () -> Unit) {
@@ -73,9 +57,9 @@ fun ShotPreviewScreen(vm: CashbackViewModel, shotId: String, onBack: () -> Unit)
 
     var initialised by rememberSaveable { mutableStateOf(false) }
     var tried by rememberSaveable { mutableStateOf(false) }
-    var photoOpen by remember { mutableStateOf(false) }
     var brandKey by rememberSaveable { mutableStateOf<String?>(null) }
-    val brand: BankBrand? = brandKey?.let(BankBrand::fromKey)
+    // The shot's own bank first: an example bank is not in the directory by its key.
+    val brand: BankBrand? = brandKey?.let { k -> shot?.brand?.takeIf { it.key == k } ?: BankBrand.fromKey(k) }
     val lines = rememberDraftLines()
 
     val save = rememberSaveCashback(vm) { vm.discardShot(shotId); leave() }
@@ -93,7 +77,8 @@ fun ShotPreviewScreen(vm: CashbackViewModel, shotId: String, onBack: () -> Unit)
     }
     val imagePath = shot?.imagePath.orEmpty()
     val monthKey = shot?.monthKey.orEmpty()
-    val status = shot?.status ?: ShotStatus.PROCESSING
+    val status = shot?.status
+    val hint = if (status == ShotStatus.NEEDS_INPUT) ShotHints.cashback(shot?.lines.orEmpty()) else null
 
     Scaffold(
         topBar = {
@@ -102,23 +87,9 @@ fun ShotPreviewScreen(vm: CashbackViewModel, shotId: String, onBack: () -> Unit)
             }
         }
     ) { padding ->
-        if (!initialised) {
-            Column(
-                Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Spacer(Modifier.height(4.dp))
-                ShotSummary(imagePath, ShotStatus.PROCESSING, lines.size, onOpenPhoto = { photoOpen = true })
-                Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Slitok.Brass)
-                }
-            }
-            return@Scaffold
-        }
-
       val typing = keyboardOpen()
       // B-35: «Сохранить» works once there is a line; an unfinished line turns red only after it's pressed.
-      val canSave = lines.isNotEmpty()
+      val canSave = initialised && lines.isNotEmpty()
       fun trySave() {
           if (lines.all { it.isComplete }) save.start(monthKey, brand, lines.toList()) else tried = true
       }
@@ -133,10 +104,15 @@ fun ShotPreviewScreen(vm: CashbackViewModel, shotId: String, onBack: () -> Unit)
         ) {
             Spacer(Modifier.height(4.dp))
 
-            // U-39: the screenshot small, with what was read; a tap opens it whole.
-            ShotSummary(imagePath, status, lines.count { it.isComplete }, onOpenPhoto = { photoOpen = true })
-            BankPickerRow(selected = brand, onSelect = { brandKey = it.key })
-            CashbackLinesEditor(lines, vm, tried = tried)
+            // U-53: the screenshot small, with what was read; a tap opens it whole.
+            ShotHeader(imagePath, status, hint = hint)
+            // The fields wait as a skeleton until the draft is in the editor, then rise in turn (F-34).
+            ScanReveal(status.takeIf { initialised }) { play ->
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BankPickerRow(selected = brand, onSelect = { brandKey = it.key }, modifier = Modifier.cascade(0, play))
+                    CashbackLinesEditor(lines, vm, tried = tried, reveal = play)
+                }
+            }
 
             Spacer(Modifier.height(4.dp))
             // While typing, the button rides on top of the keyboard instead.
@@ -160,79 +136,4 @@ fun ShotPreviewScreen(vm: CashbackViewModel, shotId: String, onBack: () -> Unit)
     }
 
     SaveCashbackDialogs(save)
-    if (photoOpen) SlitokSheet(onDismiss = { photoOpen = false }) { UserPhoto(imagePath) }
 }
-
-/**
- * The screenshot as a thumbnail and what came of it (U-39): a dot and a word
- * for the state, one quiet line under it — both from the same edge. Not
- * recognised is not an error of the person, so it's grey, not red (B-35).
- */
-@Composable
-private fun ShotSummary(path: String, status: ShotStatus, found: Int, onOpenPhoto: () -> Unit) {
-    val (label, hint, color) = when (status) {
-        ShotStatus.RECOGNIZED -> Triple("Распознано", if (found > 0) "Сверьте со скрином и сохраните" else "Сверьте со скрином", Slitok.Mint)
-        ShotStatus.NEEDS_INPUT -> Triple("Распознано не всё", "Допишите, чего не хватает", Slitok.Brass2)
-        ShotStatus.FAILED -> Triple("Скрин не прочитался", "Заполните по скрину", Slitok.Muted)
-        ShotStatus.PROCESSING -> Triple("Читаю скрин…", "Это несколько секунд", Slitok.Muted)
-    }
-    Panel(Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            ShotThumb(path, onOpenPhoto)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                StatusLine(label, color)
-                Text(hint, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ShotThumb(path: String, onClick: () -> Unit) {
-    val exists = remember(path) { path.isNotBlank() && File(path).exists() }
-    Box(
-        Modifier
-            .size(width = 52.dp, height = 92.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, Slitok.Line, RoundedCornerShape(10.dp))
-            .background(Slitok.Inset)
-            .clickable(enabled = exists, onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        if (exists) {
-            Image(
-                painter = rememberAsyncImagePainter(ShotImage(path)),
-                contentDescription = "Скрин целиком",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
-}
-
-@Composable
-private fun UserPhoto(path: String) {
-    val exists = remember(path) { path.isNotBlank() && File(path).exists() }
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(max = 320.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .border(1.dp, Slitok.Line, RoundedCornerShape(20.dp))
-            .background(Slitok.Inset),
-        contentAlignment = Alignment.Center
-    ) {
-        if (exists) {
-            Image(
-                painter = rememberAsyncImagePainter(ShotImage(path)),
-                contentDescription = "Загруженный скрин",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxWidth()
-            )
-        } else {
-            Text("Фото недоступно", style = MaterialTheme.typography.bodyMedium, color = Slitok.Faint,
-                modifier = Modifier.padding(24.dp))
-        }
-    }
-}
-
