@@ -41,6 +41,13 @@ class BankBrand(
     val order: Int get() = known.indexOf(this).let { if (it < 0) Int.MAX_VALUE else it }
     val isUser: Boolean get() = key.startsWith(USER_PREFIX)
 
+    /** The logo as a shared look (F-33): what the editor edits and the avatar draws. */
+    fun decor(): BrandDecor = BrandDecor(primaryColor, letters, textColor, logoFile)
+
+    /** This bank under [title] with the look [d] (the editor's result). */
+    fun withDecor(title: String, d: BrandDecor): BankBrand =
+        copy(title = title, primaryColor = d.colorArgb, letters = d.letters, textColor = d.textColorArgb, logoFile = d.logoFile)
+
     fun copy(
         title: String = this.title,
         primaryColor: Long = this.primaryColor,

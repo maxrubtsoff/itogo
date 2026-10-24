@@ -273,6 +273,10 @@ class BackupManager(
                     put("brandKey", s.brandKey ?: JSONObject.NULL); put("payee", s.payee ?: JSONObject.NULL)
                     put("remind", s.remind); put("status", s.status)
                     put("previousPriceMinor", s.previousPriceMinor ?: JSONObject.NULL); put("createdAt", s.createdAt)
+                    // v10: the subscription's own look (F-33), its picture travels like a bank's.
+                    put("colorArgb", s.colorArgb ?: JSONObject.NULL); put("letters", s.letters ?: JSONObject.NULL)
+                    put("textColorArgb", s.textColorArgb ?: JSONObject.NULL); put("logoFile", s.logoFile ?: JSONObject.NULL)
+                    LogoBackup.encode(s.logoFile)?.let { put("logoPng", it) }
                 })
             }
         })
@@ -433,6 +437,8 @@ class BackupManager(
         val rates: List<FxRateEntity>,
         val banks: List<BankBrand>? = null,
         val logos: Map<String, ByteArray> = emptyMap(),
+        /** Subscription pictures by subscription id (F-33). */
+        val subscriptionLogos: Map<String, ByteArray> = emptyMap(),
         val notBanks: Set<String>? = null,
         val introShown: Boolean = false
     )
@@ -451,6 +457,12 @@ class BackupManager(
         } catch (e: Exception) {
             throw RestoreError.Corrupt()
         }
+        // Subscription pictures go back into the app's files first; a path from the file itself is never trusted (B-30).
+        val logoDir = File(context.filesDir, "bank-logos")
+        val restoredSubscriptions = snapshot.subscriptions.map { s ->
+            val own = snapshot.subscriptionLogos[s.id]?.let { bytes -> runCatching { LogoBackup.write(logoDir, s.id, bytes) }.getOrNull() }
+            s.copy(logoFile = own ?: s.logoFile?.takeIf { SafeFiles.inside(logoDir, it) != null })
+        }
         db.withTransaction {
             ledger.clearTransactions()
             ledger.clearAccounts()
@@ -463,7 +475,7 @@ class BackupManager(
             fx.clear()
             fx.clearCash()
             subscriptions.clear()
-            snapshot.subscriptions.forEach { subscriptions.upsert(it) }
+            restoredSubscriptions.forEach { subscriptions.upsert(it) }
             snapshot.accounts.forEach { ledger.upsertAccount(it) }
             snapshot.transactions.forEach { ledger.insertTransaction(it) }
             snapshot.events.forEach { events.insert(it) }
@@ -488,7 +500,6 @@ class BackupManager(
         snapshot.capitalParts?.let { settings.setCapitalParts(it) }
         snapshot.banks?.let { list ->
             // Pictures from the copy are written back into the app's files (F-25).
-            val logoDir = File(context.filesDir, "bank-logos")
             val restored = list.map { b ->
                 snapshot.logos[b.key]?.let { bytes ->
                     runCatching { LogoBackup.write(logoDir, b.key, bytes) }.getOrNull()?.let { b.copy(logoFile = it) }
@@ -516,7 +527,12 @@ class BackupManager(
                     payee = o.optStringOrNull("payee"), remind = o.optBoolean("remind", false),
                     status = o.optString("status", "ACTIVE"),
                     previousPriceMinor = if (o.isNull("previousPriceMinor") || !o.has("previousPriceMinor")) null else o.getLong("previousPriceMinor"),
-                    createdAt = o.optLong("createdAt", 0L)
+                    createdAt = o.optLong("createdAt", 0L),
+                    // Copies before v10 have no look: the title gives the default.
+                    colorArgb = if (o.isNull("colorArgb") || !o.has("colorArgb")) null else o.getLong("colorArgb"),
+                    letters = o.optStringOrNull("letters"),
+                    textColorArgb = if (o.isNull("textColorArgb") || !o.has("textColorArgb")) null else o.getLong("textColorArgb"),
+                    logoFile = o.optStringOrNull("logoFile")
                 )
             },
             accounts = root.objects("accounts").map { o ->
@@ -618,13 +634,16 @@ class BackupManager(
             },
             logos = root.objects("banks").mapNotNull { o ->
                 LogoBackup.decode(o.optString("logoPng"))?.let { o.getString("key") to it }
+            }.toMap(),
+            subscriptionLogos = root.objects("subscriptions").mapNotNull { o ->
+                LogoBackup.decode(o.optString("logoPng"))?.let { o.getString("id") to it }
             }.toMap()
         )
     }
 
     private companion object {
-        // v7: own bank pictures; v6: banks; v5: cash currency, cash, capital parts, rates (v4: deposits; v3: cashback groupKey).
-        const val FORMAT_VERSION = 9
+        // v10: subscription look and pictures (F-33); v7: own bank pictures; v6: banks; v5: cash currency, cash, capital parts, rates (v4: deposits; v3: cashback groupKey).
+        const val FORMAT_VERSION = 10
         const val FOLDER = "BankAggregator"
     }
 }

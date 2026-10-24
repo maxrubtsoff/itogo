@@ -27,7 +27,9 @@ data class Reminder(
     val title: String,
     val text: String,
     val depositId: String? = null,
-    val bank: BankBrand? = null
+    val bank: BankBrand? = null,
+    /** The subscription's own look for the big icon (F-33). */
+    val decor: BrandDecor? = null
 ) {
     enum class Kind { DEPOSIT_ENDING, CASHBACK_MONTH, SUBSCRIPTION }
 }
@@ -92,7 +94,7 @@ object Reminders {
             val id = "sub:${s.id}:$date"
             if (id in sent) return@forEach
             val price = if (hidden) "•••• ₽" else Money.ofMinor(s.priceMinor).format()
-            out += Reminder(id, Reminder.Kind.SUBSCRIPTION, "Завтра спишется ${s.title}", listOfNotNull(price, s.brand?.title).joinToString(" · "), bank = s.brand)
+            out += Reminder(id, Reminder.Kind.SUBSCRIPTION, "Завтра спишется ${s.title}", listOfNotNull(price, s.brand?.title).joinToString(" · "), bank = s.brand, decor = s.look)
         }
         if (settings.depositEnding && ReminderKind.DEPOSIT_ENDING in kinds) deposits.forEach { d ->
             val left = ChronoUnit.DAYS.between(today, d.endDate)
