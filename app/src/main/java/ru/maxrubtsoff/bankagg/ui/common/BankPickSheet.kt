@@ -30,10 +30,11 @@ import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 /**
  * «Банк» (U-39): the one way to pick a single bank for a form — the person's
  * banks in a sheet, the picked one checked; a search when the list is long.
- * Opened from a [SelectRow].
+ * Opened from a [SelectRow]. With [onClear] the first row is «Не указан» — the
+ * bank can be taken off again (checked while nothing is picked).
  */
 @Composable
-fun BankPickSheet(selected: BankBrand?, onPick: (BankBrand) -> Unit, onDismiss: () -> Unit) {
+fun BankPickSheet(selected: BankBrand?, onPick: (BankBrand) -> Unit, onDismiss: () -> Unit, onClear: (() -> Unit)? = null) {
     val all = pickable(LocalMyBanks.current, selected)
     var query by rememberSaveable { mutableStateOf("") }
     val shown = if (query.isBlank()) all else all.filter { it.title.contains(query.trim(), ignoreCase = true) }
@@ -41,6 +42,21 @@ fun BankPickSheet(selected: BankBrand?, onPick: (BankBrand) -> Unit, onDismiss: 
         Text("Банк", style = MaterialTheme.typography.titleLarge, color = Slitok.Fg)
         if (all.size > SEARCH_FROM) SlitokField(query, { query = it }, placeholder = "Найти банк")
         Column {
+            if (onClear != null && query.isBlank()) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { onClear(); onDismiss() }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text("Не указан", style = MaterialTheme.typography.bodyLarge, color = Slitok.Muted, modifier = Modifier.weight(1f))
+                    if (selected == null) Icon(Icons.Filled.Check, contentDescription = "Выбрано", tint = Slitok.Brass2, modifier = Modifier.size(22.dp))
+                }
+            }
             shown.forEach { b ->
                 Row(
                     Modifier

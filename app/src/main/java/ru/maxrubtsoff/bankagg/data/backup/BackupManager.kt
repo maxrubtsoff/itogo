@@ -457,11 +457,10 @@ class BackupManager(
         } catch (e: Exception) {
             throw RestoreError.Corrupt()
         }
-        // Subscription pictures go back into the app's files first; a path from the file itself is never trusted (B-30).
         val logoDir = File(context.filesDir, "bank-logos")
+        // A path from the file itself is never trusted (B-30), and a missing file means letters, not a broken picture.
         val restoredSubscriptions = snapshot.subscriptions.map { s ->
-            val own = snapshot.subscriptionLogos[s.id]?.let { bytes -> runCatching { LogoBackup.write(logoDir, s.id, bytes) }.getOrNull() }
-            s.copy(logoFile = own ?: s.logoFile?.takeIf { SafeFiles.inside(logoDir, it) != null })
+            s.copy(logoFile = s.logoFile?.takeIf { path -> SafeFiles.inside(logoDir, path)?.isFile == true })
         }
         db.withTransaction {
             ledger.clearTransactions()
@@ -487,6 +486,12 @@ class BackupManager(
             snapshot.fxOperations.forEach { fx.upsert(it) }
             snapshot.cash?.let { fx.setCash(it) }
             if (snapshot.rates.isNotEmpty()) fx.upsertRates(snapshot.rates)
+        }
+        // Subscription pictures go back into the app's files only after the data is in: a rolled-back restore erases nothing.
+        restoredSubscriptions.forEach { s ->
+            snapshot.subscriptionLogos[s.id]?.let { bytes ->
+                runCatching { LogoBackup.write(logoDir, s.id, bytes) }.getOrNull()?.let { subscriptions.upsert(s.copy(logoFile = it)) }
+            }
         }
         snapshot.selectedPackages?.let { settings.setSelectedPackages(it) }
         if (snapshot.introShown) settings.markIntroShown()

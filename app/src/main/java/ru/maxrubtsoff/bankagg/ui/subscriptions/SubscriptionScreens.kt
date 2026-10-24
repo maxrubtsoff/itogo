@@ -61,6 +61,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.maxrubtsoff.bankagg.domain.model.BrandDecor
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.Period
 import ru.maxrubtsoff.bankagg.domain.model.PeriodUnit
@@ -101,7 +102,7 @@ fun SubscriptionFormScreen(vm: SubscriptionsViewModel, onBack: () -> Unit) {
     val start = draft ?: run { LaunchedEffect(Unit) { onBack() }; return }
     val banks by vm.myBanks.collectAsStateWithLifecycle()
 
-    val look = rememberBrandDecorState(start.title, start.look, touched = start.decor != null, key = start.id)
+    val look = rememberBrandDecorState(start.title, start.look, touched = start.decor != null && start.decor != BrandDecor.defaultFor(start.title), key = start.id)
     val price0 = if (start.priceMinor > 0) amountInput(start.priceMinor) else ""
     var price by remember(start.id) { mutableStateOf(TextFieldValue(price0, TextRange(price0.length))) }
     var unit by remember(start.id) { mutableStateOf(start.period.unit) }
@@ -183,7 +184,7 @@ fun SubscriptionFormScreen(vm: SubscriptionsViewModel, onBack: () -> Unit) {
     if (picking) {
         SlitokDatePicker(next, onPick = { next = it }, onDismiss = { picking = false })
     }
-    if (pickingBank) BankPickSheet(brand, onPick = { brand = it }, onDismiss = { pickingBank = false })
+    if (pickingBank) BankPickSheet(brand, onPick = { brand = it }, onClear = { brand = null }, onDismiss = { pickingBank = false })
 }
 
 @Composable
