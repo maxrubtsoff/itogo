@@ -25,6 +25,9 @@ interface EventDao {
     @Query("DELETE FROM events WHERE (parsed = 1 AND postedAt < :parsedBefore) OR (parsed = 0 AND postedAt < :unparsedBefore)")
     suspend fun trim(parsedBefore: Long, unparsedBefore: Long): Int
 
+    @Query("UPDATE events SET parsed = :parsed, dedupHash = :dedupHash, contentHash = :contentHash WHERE id = :id")
+    suspend fun updateParse(id: Long, parsed: Boolean, dedupHash: String, contentHash: String)
+
     @Query("DELETE FROM events")
     suspend fun clear()
 }

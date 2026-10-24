@@ -30,6 +30,20 @@ interface LedgerRepository {
     /** Adds a transaction; returns false if one with the same id already exists. */
     suspend fun addTransaction(tx: Transaction): Boolean
 
+    suspend fun account(accountId: String): Account?
+
+    /** One operation by id — the log's re-parsing looks up what it recorded (B-45). */
+    suspend fun transaction(id: String): Transaction?
+
+    /** Drops one operation: its notification turned out not to be an operation (B-46). */
+    suspend fun deleteTransaction(id: String)
+
+    /**
+     * The balance counted from the last exact figure, after the log was
+     * re-parsed (B-45). [estimated] — the app's own count is on top of it.
+     */
+    suspend fun setCountedBalance(accountId: String, balanceMinor: Long, estimated: Boolean)
+
     fun observeAccounts(): Flow<List<Account>>
 
     /** «Не учитывать в капитале» / «Учитывать» (U-18). */

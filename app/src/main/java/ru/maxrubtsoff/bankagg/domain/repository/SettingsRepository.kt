@@ -7,6 +7,12 @@ import ru.maxrubtsoff.bankagg.domain.model.Features
 
 /** User settings: tracked banks, what counts in capital, small remembered choices. */
 interface SettingsRepository : PinStore {
+
+    /** Which parser version the log was last re-read with (B-45, B-46). */
+    suspend fun repairedParserVersion(): Int
+
+    suspend fun setRepairedParserVersion(version: Int)
+
     val selectedPackages: Flow<Set<String>>
     suspend fun setSelectedPackages(packages: Set<String>)
     suspend fun currentSelectedPackages(): Set<String>

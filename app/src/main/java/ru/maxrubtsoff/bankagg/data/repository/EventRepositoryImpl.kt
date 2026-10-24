@@ -22,4 +22,9 @@ class EventRepositoryImpl(
 
     override fun observeRecent(limit: Int): Flow<List<CapturedEvent>> =
         dao.observeRecent(limit).map { list -> list.map { it.toDomain() } }
+
+    override suspend fun all(): List<CapturedEvent> = dao.all().map { it.toDomain() }
+
+    override suspend fun updateParse(id: Long, parsed: Boolean, dedupHash: String, contentHash: String) =
+        dao.updateParse(id, parsed, dedupHash, contentHash)
 }

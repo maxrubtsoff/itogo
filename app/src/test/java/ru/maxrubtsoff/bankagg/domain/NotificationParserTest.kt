@@ -27,9 +27,11 @@ class NotificationParserTest {
     }
 
     @Test fun transfer_isDetected() {
+        // A transfer addressed to someone is money going out (B-45): the kind is
+        // still a transfer, the sign comes from the direction.
         val op = NotificationParser.parse(null, "Перевод 3 000 ₽ Ивану Петрову. Доступно 10 000 ₽")!!
         assertEquals(TransactionKind.TRANSFER, op.kind)
-        assertEquals(300_000L, op.amount.minor)
+        assertEquals(-300_000L, op.amount.minor)
     }
 
     @Test fun blankOrNoAmount_returnsNull() {

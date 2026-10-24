@@ -60,7 +60,9 @@ import ru.maxrubtsoff.bankagg.domain.model.JournalRetention
 import ru.maxrubtsoff.bankagg.domain.usecase.ClassifyScreenshot
 import ru.maxrubtsoff.bankagg.domain.usecase.RecognizeCashbackShot
 import ru.maxrubtsoff.bankagg.domain.usecase.RecognizeDepositShot
+import ru.maxrubtsoff.bankagg.domain.parser.NotificationParser
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordNotification
+import ru.maxrubtsoff.bankagg.domain.usecase.RepairFromJournal
 
 /** Manual DI container. Data stays local; the only network call is CBR rates ([CbrRatesSource]). */
 class AppContainer(context: Context) {
@@ -125,6 +127,17 @@ class AppContainer(context: Context) {
     val subscriptionRepository: SubscriptionRepository by lazy { SubscriptionRepositoryImpl(db.subscriptionDao()) }
 
     /** Keeps the notification journal from growing forever (U-33). */
+    /**
+     * The better parser goes over the log once and fixes what the old one got
+     * wrong — wrong signs on transfers and advertisements taken for operations
+     * (B-45, B-46).
+     */
+    suspend fun repairJournal() {
+        if (settings.repairedParserVersion() >= NotificationParser.VERSION) return
+        runCatching { repairFromJournal() }
+            .onSuccess { settings.setRepairedParserVersion(NotificationParser.VERSION) }
+    }
+
     suspend fun trimJournal() {
         val (parsed, unparsed) = JournalRetention.cutoffs(System.currentTimeMillis())
         runCatching { eventRepository.trim(parsed, unparsed) }
@@ -136,6 +149,7 @@ class AppContainer(context: Context) {
     // Use cases
     val transactionRunner by lazy { RoomTransactionRunner(db) }
     val recordNotification by lazy { RecordNotification(eventRepository, ledgerRepository, transactionRunner) }
+    val repairFromJournal by lazy { RepairFromJournal(eventRepository, ledgerRepository, transactionRunner) }
 
     /** The app's own notifications and their switches (F-24). */
     val reminders: ReminderStore by lazy { ReminderStore(appContext) }
