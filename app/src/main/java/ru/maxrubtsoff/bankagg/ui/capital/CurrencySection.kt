@@ -10,6 +10,8 @@ import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import androidx.compose.foundation.combinedClickable
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -79,6 +81,13 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        SectionActions(
+            summary = if (cur.isEmpty) "Валюты пока нет"
+                else RuPlural.currencies((cashPositions.map { it.currency } + cur.holdings.map { it.account.currency }).distinct().size),
+            // «+» is a purchase; a sale is the quiet plate under the list.
+            onAdd = { sheetKind = FxKind.BUY.name },
+            addDescription = "Купил валюту"
+        )
         CurrencyHero(snap, refreshing, onRefresh = vm::refreshRatesNow)
 
         if (cur.isEmpty) {
@@ -106,11 +115,9 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
                     }
                 }
             }
-            BuySellButtons(
-                canSell = cashPositions.any { it.qtyMinor > 0 },
-                onBuy = { sheetKind = FxKind.BUY.name },
-                onSell = { sheetKind = FxKind.SELL.name }
-            )
+            if (cashPositions.any { it.qtyMinor > 0 }) {
+                PlateButton(onClick = { sheetKind = FxKind.SELL.name }, modifier = Modifier.fillMaxWidth()) { Text("− Продал") }
+            }
             if (cur.holdings.isNotEmpty()) {
                 GroupTitle("На счетах")
                 Panel(Modifier.fillMaxWidth()) {

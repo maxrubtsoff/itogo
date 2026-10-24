@@ -86,6 +86,8 @@ import ru.maxrubtsoff.bankagg.ui.common.SlitokField
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSwitch
 import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
 import ru.maxrubtsoff.bankagg.ui.common.StatTile
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.ui.common.ChipButton
 import ru.maxrubtsoff.bankagg.ui.common.StatusLine
 import ru.maxrubtsoff.bankagg.ui.common.SwitchRow
 import ru.maxrubtsoff.bankagg.ui.common.TagTone
@@ -239,6 +241,10 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                 StatTile("К выдаче", Modifier.weight(1f)) { MoneyText("1,33 млн", style = Amounts.Large) }
                 StatTile("Доход за срок", Modifier.weight(1f)) { MoneyText("+229 600", style = Amounts.Large, color = Slitok.Mint) }
             }
+
+            Caption("Строка действий раздела")
+            SectionActions(summary = "7 вкладов", controls = { ChipButton("по закрытию") {} }, onAdd = {}, addDescription = "Добавить вклад")
+            SectionActions(summary = "6 банков · 23 категории", lead = { ChipButton("Октябрь") {} }, onAdd = {}, addDescription = "Добавить кэшбэк")
 
             Caption("Пустое состояние")
             EmptyState("Пока нет вкладов", art = { CapitalPartArt(CapitalPart.DEPOSITS, Modifier.size(84.dp, 64.dp)) }) {

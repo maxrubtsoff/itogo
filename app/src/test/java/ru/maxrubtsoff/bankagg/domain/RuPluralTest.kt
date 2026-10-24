@@ -14,5 +14,11 @@ class RuPluralTest {
         assertEquals("22 категории", RuPlural.categories(22))
         assertEquals("6 скринов", RuPlural.screens(6))
         assertEquals("2 банка", RuPlural.banks(2))
+        assertEquals("1 подписка", RuPlural.subscriptions(1))
+        assertEquals("6 подписок", RuPlural.subscriptions(6))
+        assertEquals("22 подписки", RuPlural.subscriptions(22))
+        assertEquals("1 валюта", RuPlural.currencies(1))
+        assertEquals("3 валюты", RuPlural.currencies(3))
+        assertEquals("11 валют", RuPlural.currencies(11))
     }
 }

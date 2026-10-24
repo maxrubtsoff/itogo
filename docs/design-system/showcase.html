@@ -957,6 +957,16 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
       </div>
       <p class="note"><span class="code">ScreenHeader</span>: полоса 64 под строкой состояния, заголовок по середине — на всех экранах на одной высоте. Вкладки — без «Назад», заголовок 22. Глубже — «Назад», заголовок 18, справа не больше двух значков; редкое и опасное — в «⋮».</p>
     </div>
+    <div class="card">
+      <h3>Строка действий раздела <span class="st new">новое</span> <span class="tag n">U-58</span></h3>
+      <div class="stage">
+        <div class="row" style="flex-wrap:nowrap;min-height:44px"><div style="flex:1;font:600 16px/20px var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">7 вкладов</div><button class="chip"><svg class="i"><use href="#i-up"/></svg>по закрытию</button><button class="btn add" aria-label="Добавить вклад"><svg class="i"><use href="#i-add"/></svg></button></div>
+        <div style="height:14px"></div>
+        <div class="row" style="flex-wrap:nowrap;min-height:44px"><button class="chip" style="color:var(--fg)">Октябрь</button><div style="flex:1"></div><button class="btn add" aria-label="Добавить кэшбэк"><svg class="i"><use href="#i-add"/></svg></button></div>
+        <div style="font:400 12px/16px var(--text);color:var(--muted);padding:4px 4px 0">6 банков · 23 категории</div>
+      </div>
+      <p class="note"><span class="code">SectionActions</span>: первая строка раздела под шапкой и переключателем. Слева — что показано (или выбор: месяц кэшбэка, тогда счётчик тихой строкой ниже), справа — управление списком, «+» последним в правом углу. В шапке — только заголовок и значки.</p>
+    </div>
   </div>
 </section>
 
@@ -1147,6 +1157,7 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
         <tr><td>Шкала сумм amount*</td><td><span class="st new">новое</span></td><td>9 стилей и 24 ручных Unbounded</td></tr>
         <tr><td>KopeckLook — копейки по ступени</td><td><span class="st chg">цикл 8</span></td><td>одно правило 70% / 55% на все размеры (U-56)</td></tr>
         <tr><td>MoneyText, AmountText — пыль на месте цифр</td><td><span class="st chg">цикл 8</span></td><td>Crossfade с пылью «символы × 0,58 em» (B-44)</td></tr>
+        <tr><td>SectionActions — строка действий раздела</td><td><span class="st new">цикл 8</span></td><td>«+» и счётчик в шапке и в разных местах списка (U-58)</td></tr>
         <tr><td>ScreenHeader — шапка экрана</td><td><span class="st new">цикл 8</span></td><td>TopAppBar ×19 и 8 своих шапок с разными отступами (U-57)</td></tr>
         <tr><td>Motion — шкала движения</td><td><span class="st new">цикл 8</span></td><td>вся шкала из Motion: длительности, кривые, тряска ошибки, «Убрать анимации» (U-55)</td></tr>
         <tr><td>ScanningThumb, ScanReveal — скан скрина и появление полей</td><td><span class="st new">цикл 9</span></td><td>вспышка «распознаётся → результат» (F-34, B-51)</td></tr>

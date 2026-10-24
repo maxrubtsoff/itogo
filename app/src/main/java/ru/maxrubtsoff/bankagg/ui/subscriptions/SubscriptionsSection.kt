@@ -4,6 +4,8 @@ import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
 import ru.maxrubtsoff.bankagg.ui.common.GhostButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -72,6 +74,11 @@ fun SubscriptionsSection(vm: SubscriptionsViewModel, onOpen: (Subscription) -> U
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        SectionActions(
+            summary = if (state.active.isEmpty()) "Подписок пока нет" else RuPlural.subscriptions(state.active.size),
+            onAdd = { vm.newBlank(); onCreate() },
+            addDescription = "Добавить подписку"
+        )
         state.findings.firstOrNull()?.let { f ->
             Row(
                 Modifier.fillMaxWidth().tourTarget(TourTarget.FINDING, radius = 18.dp).clip(RoundedCornerShape(18.dp)).background(Slitok.BrassTint)

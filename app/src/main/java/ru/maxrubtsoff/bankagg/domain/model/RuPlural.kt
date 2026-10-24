@@ -20,6 +20,12 @@ object RuPlural {
 
     fun screens(n: Int): String = "$n " + form(n, "скрин", "скрина", "скринов")
 
+    /** "1 подписка", "3 подписки", "5 подписок". */
+    fun subscriptions(n: Int): String = "$n " + form(n, "подписка", "подписки", "подписок")
+
+    /** "1 валюта", "3 валюты", "5 валют". */
+    fun currencies(n: Int): String = "$n " + form(n, "валюта", "валюты", "валют")
+
     fun banks(n: Int): String = "$n " + form(n, "банк", "банка", "банков")
 
     /** «30 секунд», «1 минута», «1 час» — how long the lock keypad rests (B-27). */

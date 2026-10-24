@@ -19,7 +19,7 @@ import ru.maxrubtsoff.bankagg.ui.common.reorderable
 import androidx.compose.ui.layout.LookaheadScope
 import ru.maxrubtsoff.bankagg.ui.common.cascade
 import ru.maxrubtsoff.bankagg.ui.common.rememberCascade
-import ru.maxrubtsoff.bankagg.ui.common.AddButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
 import ru.maxrubtsoff.bankagg.ui.common.AddSheet
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import ru.maxrubtsoff.bankagg.ui.common.SectionPager
@@ -129,8 +129,8 @@ import java.io.File
 
 
 /**
- * The cashback of a month (U-47), a page of «Платежи»: the month and the view
- * (by bank / by category) are chosen in the tab's title row.
+ * The cashback of a month (U-47), a page of «Платежи»: the month, the view
+ * (by bank / by category) and the «+» are in the section's row of actions (U-58).
  */
 @Composable
 fun CashbackScreen(
@@ -141,7 +141,8 @@ fun CashbackScreen(
     onOpenShot: (String) -> Unit,
     onOpenBatch: (List<String>) -> Unit,
     onEditBank: (monthKey: String, BankBrand) -> Unit,
-    onAddManual: (monthKey: String) -> Unit = {}
+    onAddManual: (monthKey: String) -> Unit = {},
+    onByCategory: (Boolean) -> Unit = {}
 ) {
     val anchor = remember { CashbackMonth.currentKey() }
     val currentKey = CashbackMonth.keyForOffset(anchor, monthOffset)
@@ -149,6 +150,10 @@ fun CashbackScreen(
     val hintNextMonth = remember { CashbackMonth.shouldOfferNextMonth() }
 
     var adding by remember { mutableStateOf(false) }
+    var pickingMonth by rememberSaveable { mutableStateOf(false) }
+    // The line under the actions: what the month in view holds.
+    val monthItems by remember(currentKey) { vm.monthItems(currentKey) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
 
     // Photo picker — adds a shot to the month in view, then opens it for review.
     // One screenshot opens for review; several go to the batch check.
@@ -163,6 +168,13 @@ fun CashbackScreen(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionActions(
+            summary = remember(monthItems) { CashbackSummary.caption(monthItems) },
+            lead = { MonthChip(CashbackMonth.shortLabel(currentKey)) { pickingMonth = true } },
+            controls = { ViewToggle(byCategory, onByCategory) },
+            onAdd = { adding = true },
+            addDescription = "Добавить кэшбэк"
+        )
         if (isCurrentMonth && hintNextMonth) {
             NextMonthHint(
                 nextLabel = CashbackMonth.shortLabel(CashbackMonth.nextKey(currentKey)),
@@ -186,12 +198,14 @@ fun CashbackScreen(
                 byCategory = byCategory,
                 onEditBank = { brand -> onEditBank(monthKey, brand) },
                 onOpenShot = onOpenShot,
-                onAdd = { adding = true },
                 onDeleteShot = { vm.deleteShot(it.id) }
             )
         }
     }
 
+    if (pickingMonth) {
+        MonthSheet(anchor, monthOffset, onPick = { onMonthOffset(it); pickingMonth = false }, onDismiss = { pickingMonth = false })
+    }
     if (adding) {
         AddSheet(
             title = "Добавить кэшбэк",
@@ -236,14 +250,13 @@ private fun CategoryPanel(
     order: SortOrder<CashbackSummary.Order>,
     onPick: (CashbackSummary.Order) -> Unit,
     onFlip: () -> Unit,
-    onAdd: () -> Unit,
     onEditBank: (BankBrand) -> Unit
 ) {
     val rows = remember(items, order) { CashbackSummary.sort(CashbackSummary.byCategory(items), order) }
     var open by rememberSaveable { mutableStateOf(setOf<String>()) }
     var sorting by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ListHeader(RuPlural.categories(rows.size), onAdd) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             SortControl(
                 label = orderTitle(order.sort).lowercase(),
                 reversed = order.reversed,
@@ -424,7 +437,6 @@ private fun MonthPage(
     byCategory: Boolean,
     onEditBank: (BankBrand) -> Unit,
     onOpenShot: (String) -> Unit,
-    onAdd: () -> Unit,
     onDeleteShot: (CashbackShot) -> Unit
 ) {
     val items by remember(monthKey) { vm.monthItems(monthKey) }
@@ -439,7 +451,6 @@ private fun MonthPage(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (byBrand.isEmpty()) {
-            ListHeader("Кэшбэка пока нет", onAdd)
             LocalTourOffer.current(TourSection.CASHBACK, false)?.let { tour ->
                 PlateButton(onClick = tour, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Lightbulb, contentDescription = null)
@@ -448,9 +459,8 @@ private fun MonthPage(
             }
         } else if (byCategory) {
             val order by vm.categoryOrder.collectAsStateWithLifecycle()
-            CategoryPanel(items, order, vm::pickCategoryOrder, vm::flipCategoryOrder, onAdd, onEditBank)
+            CategoryPanel(items, order, vm::pickCategoryOrder, vm::flipCategoryOrder, onEditBank)
         } else {
-            ListHeader(RuPlural.banks(byBrand.size), onAdd)
             val play = rememberCascade("cashback-banks")
             byBrand.forEachIndexed { i, (brand, list) ->
                 Box(Modifier.cascade(i, play)) {
@@ -478,16 +488,6 @@ private fun MonthPage(
         ShotRail(shots = shots, onOpenShot = onOpenShot, onDeleteShot = onDeleteShot)
         }
         Spacer(Modifier.height(8.dp))
-    }
-}
-
-/** "4 банка … +": the same row as the deposits' list header. */
-@Composable
-private fun ListHeader(title: String, onAdd: () -> Unit, trailing: @Composable () -> Unit = {}) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        trailing()
-        AddButton("Добавить кэшбэк", onAdd)
     }
 }
 

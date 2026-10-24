@@ -224,14 +224,14 @@ private fun SectionScreen(session: TourSession, factory: SandboxViewModelFactory
                 val cashbackVm: CashbackViewModel = viewModel(factory = factory)
                 val subscriptionsVm: SubscriptionsViewModel = viewModel(factory = factory)
                 PaymentsScreen(
-                    cashback = { monthOffset, byCategory, onMonthOffset ->
+                    cashback = { monthOffset, byCategory, onMonthOffset, onByCategory ->
                         CashbackScreen(
                             cashbackVm, monthOffset, byCategory, onMonthOffset,
-                            onOpenShot = {}, onOpenBatch = {}, onEditBank = { _, _ -> }
+                            onOpenShot = {}, onOpenBatch = {}, onEditBank = { _, _ -> },
+                            onByCategory = onByCategory
                         )
                     },
                     subscriptions = { SubscriptionsSection(subscriptionsVm, onOpen = {}, onCreate = {}) },
-                    onAddSubscription = {},
                     startSection = stage.section,
                     showCashback = session.features.showCashback,
                     showSubscriptions = session.features.showSubscriptions,

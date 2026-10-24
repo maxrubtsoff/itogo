@@ -49,7 +49,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
-import ru.maxrubtsoff.bankagg.ui.common.AddButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.domain.model.Features
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
 import ru.maxrubtsoff.bankagg.ui.common.ChipButton
 import ru.maxrubtsoff.bankagg.ui.common.ListRow
@@ -67,7 +69,7 @@ import ru.maxrubtsoff.bankagg.util.Perms
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsBanksScreen(vm: BanksViewModel, collectsNotifications: Boolean, onBack: () -> Unit, onAdd: () -> Unit, onOpenNew: () -> Unit, onEdit: (BankBrand) -> Unit, onOpen: (BankBrand) -> Unit) {
+fun SettingsBanksScreen(vm: BanksViewModel, features: Features, onBack: () -> Unit, onAdd: () -> Unit, onOpenNew: () -> Unit, onEdit: (BankBrand) -> Unit, onOpen: (BankBrand) -> Unit) {
     var removing by remember { mutableStateOf<BankBrand?>(null) }
     val candidates by vm.candidates.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -75,20 +77,26 @@ fun SettingsBanksScreen(vm: BanksViewModel, collectsNotifications: Boolean, onBa
     val notBanks by vm.notBanks.collectAsStateWithLifecycle()
     val collected by vm.collected.collectAsStateWithLifecycle()
     val notifAccess by rememberNotificationAccess()
+    val collectsNotifications = features.collectsNotifications
     val unrestricted by rememberOnResume { Perms.isBatteryUnrestricted(context) }
 
     Scaffold(
-        topBar = {
-            ScreenHeader("Банки", onBack) {
-                Box(Modifier.padding(end = 12.dp)) { AddButton("Добавить банк", onAdd) }
-            }
-        }
+        topBar = { ScreenHeader("Банки", onBack) }
     ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (collectsNotifications && !notifAccess) NotificationAccessBanner()
+            SectionActions(
+                summary = if (mine.isEmpty()) "Банков пока нет" else RuPlural.banks(mine.size),
+                onAdd = onAdd,
+                addDescription = "Добавить банк"
+            )
+            // The words follow what the notifications feed: balances with accounts, else subscriptions (U-52).
+            if (collectsNotifications && !notifAccess) {
+                if (features.showNotifAccessOnOverview) NotificationAccessBanner()
+                else NotificationAccessBanner(text = "Подписки не находятся — нет доступа к уведомлениям")
+            }
             if (collectsNotifications && !unrestricted) BatteryBanner { Perms.openBatterySettings(context) }
             if (collectsNotifications && candidates.isNotEmpty()) {
                 PlateButton(onClick = onOpenNew, modifier = Modifier.fillMaxWidth()) { Text("Новые банки · ${candidates.size}") }

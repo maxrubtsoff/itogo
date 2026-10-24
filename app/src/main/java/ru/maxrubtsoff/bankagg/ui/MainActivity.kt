@@ -714,12 +714,13 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                 TopLevel(padding) {
                     // «Платежи» (F-27): cashback and subscriptions.
                     PaymentsScreen(
-                        cashback = { monthOffset, byCategory, onMonthOffset ->
+                        cashback = { monthOffset, byCategory, onMonthOffset, onByCategory ->
                             CashbackScreen(
                                 cashbackVm,
                                 monthOffset = monthOffset,
                                 byCategory = byCategory,
                                 onMonthOffset = onMonthOffset,
+                                onByCategory = onByCategory,
                                 onOpenShot = { id -> nav.navigate(Routes.cashbackShot(id)) },
                                 onOpenBatch = { ids -> nav.navigate(Routes.cashbackBatch(ids)) },
                                 onEditBank = { month, brand -> nav.navigate(Routes.cashbackBankEdit(month, brand.key)) },
@@ -733,7 +734,6 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                                 onCreate = { nav.navigate(Routes.SUBSCRIPTION_EDIT) }
                             )
                         },
-                        onAddSubscription = { subscriptionsVm.newBlank(); nav.navigate(Routes.SUBSCRIPTION_EDIT) },
                         startSection = entry.arguments?.getInt("section") ?: 0,
                         initialOffset = entry.arguments?.getInt("offset") ?: 0,
                         showCashback = features.showCashback,
@@ -769,7 +769,9 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         onOpenPendingShots = { nav.navigate(Routes.DEPOSITS_ADD) },
                         onOpenCurrency = { code -> nav.navigate(Routes.currency(code)) },
                         selectedPackages = selectedPackages,
-                        onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) }
+                        onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
+                        showCaptureLog = features.showCaptureLog,
+                        onOpenLog = { nav.navigate(Routes.SETTINGS_LOG) }
                     ) }
                 }
             }
@@ -780,7 +782,6 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
                         onOpenFeatures = { nav.navigate(Routes.SETTINGS_FEATURES) },
                         onOpenBackup = { nav.navigate(Routes.SETTINGS_BACKUP) },
-                        onOpenLog = { nav.navigate(Routes.SETTINGS_LOG) },
                         onOpenPrivacy = { nav.navigate(Routes.SETTINGS_PRIVACY) },
                         onOpenNotifications = { nav.navigate(Routes.SETTINGS_NOTIFICATIONS) },
                         onOpenIntro = { nav.navigate(Routes.LEARNING) },
@@ -867,7 +868,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             composable(Routes.SETTINGS_BANKS) {
                 SettingsBanksScreen(
                     banksVm,
-                    collectsNotifications = features.collectsNotifications,
+                    features = features,
                     onBack = { nav.popBackStack() },
                     onAdd = { nav.navigate(Routes.BANKS_ADD) },
                     onOpenNew = { nav.navigate(Routes.NEW_BANKS) },

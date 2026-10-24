@@ -68,6 +68,14 @@ object CashbackSummary {
             }
             .sortedWith(compareByDescending<CategoryRow> { it.best }.thenBy { it.category.lowercase() })
 
+    /**
+     * What the month shows, in one line under the section's actions (U-58):
+     * «6 банков · 23 категории»; no cashback yet — says so.
+     */
+    fun caption(items: List<CashbackItem>): String =
+        if (items.isEmpty()) "Кэшбэка пока нет"
+        else RuPlural.banks(items.map { it.brand }.distinct().size) + " · " + RuPlural.categories(byCategory(items).size)
+
     /** How the "По категориям" list is ordered (F-17, U-12); each has a natural direction. */
     enum class Order(val key: String) {
         /** Best percent first. */
