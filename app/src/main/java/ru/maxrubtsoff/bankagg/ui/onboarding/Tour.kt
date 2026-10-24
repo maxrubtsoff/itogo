@@ -74,6 +74,8 @@ import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.domain.model.TourAction
+import ru.maxrubtsoff.bankagg.domain.model.TourAnim
+import ru.maxrubtsoff.bankagg.domain.model.TourHighlight
 import ru.maxrubtsoff.bankagg.domain.model.TourScript
 import ru.maxrubtsoff.bankagg.domain.model.TourSection
 import ru.maxrubtsoff.bankagg.domain.model.TourStep
@@ -121,7 +123,13 @@ private fun Modifier.tourTarget(t: TourTarget): Modifier = composed {
 fun TourScreen(section: TourSection, features: Features, onDone: () -> Unit) {
     val access by rememberNotificationAccess()
     // The steps are fixed when the tour starts, so giving access mid-way doesn't reshuffle them.
-    val steps = remember(section) { TourScript.steps(section, features, access) }
+    // The example scenes below know only the old targets; the steps for the real screens (F-32, U-54) come with their own UI.
+    val steps = remember(section) {
+        TourScript.steps(section, features, access).filterNot {
+            it.target == TourTarget.SHOT_THUMB || it.anim == TourAnim.PICK_SHOTS ||
+                (section == TourSection.CASHBACK && it.target == TourTarget.ADD_SHEET)
+        }
+    }
     var index by rememberSaveable { mutableIntStateOf(0) }
     var filled by rememberSaveable { mutableStateOf(false) }
     val targets = remember { TourTargets() }
@@ -195,7 +203,8 @@ private fun CoachOverlay(
             drawRect(Slitok.Scrim)
             if (hole != null) {
                 drawRoundRect(Color.Transparent, Offset(hole.left, hole.top), Size(hole.width, hole.height), CornerRadius(radius), blendMode = BlendMode.Clear)
-                drawRoundRect(Slitok.Brass2, Offset(hole.left, hole.top), Size(hole.width, hole.height), CornerRadius(radius), style = Stroke(2.dp.toPx()))
+                if (step.highlight == TourHighlight.FRAMED)
+                    drawRoundRect(Slitok.Brass2, Offset(hole.left, hole.top), Size(hole.width, hole.height), CornerRadius(radius), style = Stroke(2.dp.toPx()))
             }
         }
         val screenH = with(density) { maxHeight.toPx() }

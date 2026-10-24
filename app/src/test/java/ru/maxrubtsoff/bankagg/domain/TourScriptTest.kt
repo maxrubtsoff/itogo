@@ -7,6 +7,8 @@ import org.junit.Test
 import ru.maxrubtsoff.bankagg.domain.model.Feature
 import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.domain.model.TourAction
+import ru.maxrubtsoff.bankagg.domain.model.TourAnim
+import ru.maxrubtsoff.bankagg.domain.model.TourHighlight
 import ru.maxrubtsoff.bankagg.domain.model.TourScript
 import ru.maxrubtsoff.bankagg.domain.model.TourSection
 import ru.maxrubtsoff.bankagg.domain.model.TourTarget
@@ -51,5 +53,44 @@ class TourScriptTest {
 
     @Test fun keysRoundTrip() {
         TourSection.entries.forEach { assertEquals(it, TourSection.fromKey(it.key)) }
+    }
+
+    @Test fun cashbackPlaysInTheMockupOrder() {
+        assertEquals(
+            listOf(
+                TourAnim.TAP_ADD, TourAnim.OPEN_SHEET, TourAnim.PICK_SHOTS,
+                TourAnim.SCAN, TourAnim.REVEAL_FIELDS, TourAnim.MARK_CATEGORY
+            ),
+            TourScript.steps(TourSection.CASHBACK, Features.ALL, true).map { it.anim }
+        )
+    }
+
+    @Test fun depositAndAccountsPlayTheirAnimations() {
+        assertEquals(
+            listOf(TourAnim.TAP_ADD, TourAnim.OPEN_SHEET, TourAnim.SCAN, TourAnim.REVEAL_FIELDS),
+            TourScript.steps(TourSection.DEPOSITS, Features.ALL, true).map { it.anim }
+        )
+        assertTrue(TourScript.steps(TourSection.ACCOUNTS, Features.ALL, true).any { it.anim == TourAnim.BALANCE_CHANGE })
+    }
+
+    @Test fun everyAnimatedStepWaitsForTheComment() {
+        for (s in TourSection.entries) for (access in listOf(true, false)) {
+            TourScript.steps(s, Features.ALL, access).filter { it.anim != TourAnim.NONE }
+                .forEach { assertTrue("${s.name}: ${it.title}", it.waitForRead) }
+        }
+    }
+
+    @Test fun everySectionHasAnAnimatedStep() {
+        TourSection.entries.forEach { s ->
+            assertTrue(s.name, TourScript.steps(s, Features.ALL, true).any { it.anim != TourAnim.NONE })
+        }
+    }
+
+    @Test fun fullWidthTargetsAreOnlyDimmed() {
+        val fullWidth = setOf(TourTarget.ADD_SHEET, TourTarget.BOTTOM_BAR)
+        for (s in TourSection.entries) for (step in TourScript.steps(s, Features.ALL, false)) {
+            val expected = if (step.target in fullWidth) TourHighlight.DIM_ONLY else TourHighlight.FRAMED
+            assertEquals("${s.name}: ${step.title}", expected, step.highlight)
+        }
     }
 }

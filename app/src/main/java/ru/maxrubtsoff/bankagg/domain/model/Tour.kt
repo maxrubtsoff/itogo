@@ -34,14 +34,65 @@ enum class TourTarget {
     ACCESS_TILE, BOTTOM_BAR, HIDE_EYE,
     ADD_BUTTON, ADD_SHEET, LIST_ROW,
     MISSING_PERCENT, BANK_PANEL,
-    ACCOUNT_ROW, CURRENCY_ROW, CASH_SUM, FINDING
+    ACCOUNT_ROW, CURRENCY_ROW, CASH_SUM, FINDING,
+    /** The thumbnail of the example screenshot while it is being read (F-34). */
+    SHOT_THUMB
 }
 
+/**
+ * What the example "plays" on the real screen during a step (F-32). The
+ * finger and the screen's own changes are drawn by the UI; here is only which
+ * action it is, so the order of a tour is data under test.
+ */
+enum class TourAnim {
+    /** Nothing moves: the comment alone. */
+    NONE,
+    /** The finger taps the step's target — the plus, the eye. */
+    TAP_ADD,
+    /** The sheet with the ways to add rises. */
+    OPEN_SHEET,
+    /** «Со скринов»: an example screenshot is picked. */
+    PICK_SHOTS,
+    /** The scan line runs over the screenshot ([ScanReveal] in the UI). */
+    SCAN,
+    /** The recognised fields appear one after another. */
+    REVEAL_FIELDS,
+    /** A category is filled in or marked as the best one. */
+    MARK_CATEGORY,
+    /** An amount changes after a bank's notification, a purchase, a new sum. */
+    BALANCE_CHANGE
+}
+
+/**
+ * How a step lights its target (B-48): [FRAMED] — a window in the veil with a
+ * brass frame round it; [DIM_ONLY] — only the veil, no frame, for targets that
+ * fill the width (a sheet, the bottom bar) and whose frame would be cut by the
+ * screen's edges.
+ */
+enum class TourHighlight {
+    FRAMED, DIM_ONLY;
+
+    companion object {
+        /** Full-width targets are only dimmed around; the rest get a frame. */
+        fun of(target: TourTarget): TourHighlight = when (target) {
+            TourTarget.ADD_SHEET, TourTarget.BOTTOM_BAR -> DIM_ONLY
+            else -> FRAMED
+        }
+    }
+}
+
+/**
+ * [anim] is what plays on the screen; the next action never starts by itself
+ * while the comment is unread ([waitForRead], F-32): «Далее» goes on.
+ */
 data class TourStep(
     val target: TourTarget,
     val title: String,
     val text: String,
-    val action: TourAction = TourAction.NEXT
+    val action: TourAction = TourAction.NEXT,
+    val anim: TourAnim = TourAnim.NONE,
+    val waitForRead: Boolean = true,
+    val highlight: TourHighlight = TourHighlight.of(target)
 )
 
 /**
@@ -73,34 +124,42 @@ object TourScript {
             // Only the tabs that are really there, and the eye lives on «Обзор» (U-50).
             add(TourStep(TourTarget.BOTTOM_BAR, tabsTitle(features), tabsText(features)))
             if (features.showOverview) add(
-                TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз наверху Обзора прячет все суммы. То же — двумя пальцами вниз по экрану.")
+                TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз наверху Обзора прячет все суммы. То же — двумя пальцами вниз по экрану.", anim = TourAnim.TAP_ADD)
             ) else add(
-                TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз в шапке прячет все суммы. То же — двумя пальцами вниз по экрану.")
+                TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз в шапке прячет все суммы. То же — двумя пальцами вниз по экрану.", anim = TourAnim.TAP_ADD)
             )
         }
+        // TourD1–D3: «+» → шторка → скрин читается → вклад встаёт в список.
         TourSection.DEPOSITS -> listOf(
-            TourStep(TourTarget.ADD_BUTTON, "Добавить вклад", "Плюс открывает два пути: скрин из банка или ввод вручную."),
-            TourStep(TourTarget.ADD_SHEET, "Со скрина быстрее", "Приложение прочитает банк, сумму, ставку и даты. Останется сверить и сохранить."),
-            TourStep(TourTarget.LIST_ROW, "Вклад в списке", "Сколько на нём сейчас и сколько уже набежало. Касание открывает карточку: доход по месяцам, пополнения.")
+            TourStep(TourTarget.ADD_BUTTON, "Добавить вклад", "Плюс открывает два пути: скрин из банка или ввод вручную.", anim = TourAnim.TAP_ADD),
+            TourStep(TourTarget.ADD_SHEET, "Со скрина быстрее", "Приложение прочитает банк, сумму, ставку и даты. Останется сверить и сохранить.", anim = TourAnim.OPEN_SHEET),
+            TourStep(TourTarget.SHOT_THUMB, "Читает сам", "Банк, сумма, ставка и даты — со скрина.", anim = TourAnim.SCAN),
+            TourStep(TourTarget.LIST_ROW, "Вклад в списке", "Сколько на нём сейчас и сколько уже набежало. Касание открывает карточку: доход по месяцам, пополнения.", anim = TourAnim.REVEAL_FIELDS)
         )
+        // TourC1–C5: «+» → шторка → скрин → скан → поля → процент вручную → плашка банка.
         TourSection.CASHBACK -> listOf(
-            TourStep(TourTarget.ADD_BUTTON, "Добавить кэшбэк", "Скрин категорий из приложения банка — и они разложатся сами."),
-            TourStep(TourTarget.MISSING_PERCENT, "Такое бывает", "Если процент не прочитался, его можно вписать здесь вручную.", TourAction.FILL_AND_NEXT),
-            TourStep(TourTarget.BANK_PANEL, "Кэшбэк месяца", "Категории каждого банка — плашками. Карандаш меняет кэшбэк банка.")
+            TourStep(TourTarget.ADD_BUTTON, "Добавить кэшбэк", "Скрин категорий из приложения банка — и они разложатся сами.", anim = TourAnim.TAP_ADD),
+            TourStep(TourTarget.ADD_SHEET, "Со скрина быстрее", "Вручную — если скрина под рукой нет.", anim = TourAnim.OPEN_SHEET),
+            TourStep(TourTarget.ADD_SHEET, "Выбираем скрин", "Можно сразу несколько — по одному на банк.", anim = TourAnim.PICK_SHOTS),
+            TourStep(TourTarget.SHOT_THUMB, "Читает сам", "Банк, категории и проценты определяются сами.", anim = TourAnim.SCAN),
+            TourStep(TourTarget.MISSING_PERCENT, "Такое бывает", "Если процент не прочитался, его можно вписать здесь вручную.", TourAction.FILL_AND_NEXT, anim = TourAnim.REVEAL_FIELDS),
+            TourStep(TourTarget.BANK_PANEL, "Кэшбэк месяца", "Категории каждого банка — плашками. Карандаш меняет кэшбэк банка. Лучший процент по категории подсвечен.", anim = TourAnim.MARK_CATEGORY)
         )
+        // TourA1–A2: счета приходят из уведомлений; пришло — остаток сменился.
         TourSection.ACCOUNTS -> listOf(
-            TourStep(TourTarget.ACCOUNT_ROW, "Счета обновляются сами", "Остаток берётся из уведомлений банка. Касание — сверить с банком, если разошлось."),
+            TourStep(TourTarget.ACCOUNT_ROW, "Счета из уведомлений", "Банк присылает уведомление — приложение его читает."),
+            TourStep(TourTarget.ACCOUNT_ROW, "Баланс обновился", "Остаток берётся из уведомления, покупка — в истории счёта. Касание — сверить с банком, если разошлось.", anim = TourAnim.BALANCE_CHANGE),
             TourStep(TourTarget.ACCOUNT_ROW, "Не всё в капитал", "Долгое нажатие на счёт — не учитывать его в общем капитале.")
         )
         TourSection.CURRENCY -> listOf(
-            TourStep(TourTarget.ADD_BUTTON, "Купил валюту", "Сумма и курс покупки. Дальше приложение само считает по курсу ЦБ."),
+            TourStep(TourTarget.ADD_BUTTON, "Купил валюту", "Сумма и курс покупки. Дальше приложение само считает по курсу ЦБ.", anim = TourAnim.TAP_ADD),
             TourStep(TourTarget.CURRENCY_ROW, "Сколько это в рублях", "Стоимость сейчас и разница с ценой покупки. Касание — все покупки и продажи.")
         )
         TourSection.CASH -> listOf(
-            TourStep(TourTarget.CASH_SUM, "Наличные — одной суммой", "Касание меняет сумму. Без подробностей: сколько на руках.")
+            TourStep(TourTarget.CASH_SUM, "Наличные — одной суммой", "Касание меняет сумму. Без подробностей: сколько на руках.", anim = TourAnim.BALANCE_CHANGE)
         )
         TourSection.SUBSCRIPTIONS -> buildList {
-            add(TourStep(TourTarget.FINDING, "Подписки находятся сами", "Одинаковые списания раз в месяц или год — приложение спросит, подписка ли это."))
+            add(TourStep(TourTarget.FINDING, "Подписки находятся сами", "Одинаковые списания раз в месяц или год — приложение спросит, подписка ли это.", anim = TourAnim.REVEAL_FIELDS))
             add(TourStep(TourTarget.LIST_ROW, "Ближайшие списания", "Сколько и когда спишут. Напоминание — за день до списания."))
             if (!notificationAccess) add(
                 TourStep(TourTarget.ACCESS_TILE, "Нужны уведомления", "Без доступа к уведомлениям списания не видны и подписки не находятся.", TourAction.ALLOW_ACCESS)
