@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Счета — журнал в меню</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="hdr"><h1>Капитал</h1></div>
+  <div class="body" style="padding-top: 0; gap: 12px;">
+    <div class="tabs"><span class="on">Счета</span><span>Вклады</span><span>Валюта</span><span>Наличные</span></div>
+    <div class="actrow">
+      <span class="what">3 счёта</span>
+      <button class="ib" aria-label="Ещё" style="color: var(--fg); background: var(--bpill);"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5h.01M12 12h.01M12 19h.01"></path></svg></button>
+    </div>
+    <div class="panel glow" style="--gc: rgba(215,167,74,.2); padding: 20px; display: flex; flex-direction: column; gap: 6px;">
+      <div class="amt hero">184 320<span class="k">,50 ₽</span></div>
+      <div class="t-sm">по уведомлениям банков</div>
+    </div>
+    <div class="panel list">
+      <div class="lrow"><span class="bk s36 b-alfa">А</span><span class="grow" style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span class="t-body ell">Альфа-Банк</span><span class="t-sm">··1833</span></span><span class="amt rowa">98 262<span class="k">,55 ₽</span></span></div>
+      <div class="lrow"><span class="bk s36 b-t">Т</span><span class="grow" style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span class="t-body ell">Т-Банк</span><span class="t-sm">··0912</span></span><span class="amt rowa">61 057<span class="k">,95 ₽</span></span></div>
+    </div>
+  </div>
+  <div class="veil" style="background: rgba(5,8,7,.55);"></div>
+  <div class="panel menu" style="right: 16px; top: 172px; z-index: 5;">
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"></path></svg>Журнал уведомлений</span>
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20h4"></path></svg>Доступ к уведомлениям</span>
+  </div>
+  <div class="bottombar">
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z"></path></svg>Обзор</span>
+    <span class="on"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16v13H4zM16 12h4"></path></svg>Капитал</span>
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M19 5 5 19M7 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path></svg>Платежи</span>
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-2-4-2 1-2-2V4h-4v2l-2 2-2-1-2 4 2 1v0l-2 1 2 4 2-1 2 2v2h4v-2l2-2 2 1 2-4z"></path></svg>Настройки</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

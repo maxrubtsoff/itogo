@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Подписка — оформление</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+</style>
+</helmet>
+<div class="scr" style="height: 1040px;">
+  <div class="top">
+    <button class="ib fg" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button>
+    <h1 class="sm">Подписка</h1>
+  </div>
+  <div class="body" style="padding-top: 4px; gap: 16px;">
+    <div class="panel" style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+      <div class="row" style="gap: 14px; align-items: center;">
+        <span class="sv s64" style="background: #FC3F1D;">ЯП</span>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;"><label class="flabel" for="sn">Название</label><div class="field"><input id="sn" value="Яндекс Плюс"></div></div>
+      </div>
+      <div class="tabs"><span class="on">Буквы</span><span>Картинка</span></div>
+      <div class="row" style="gap: 12px;">
+        <div style="width: 96px; display: flex; flex-direction: column; gap: 6px;"><label class="flabel" for="sl">Буквы</label><div class="field"><input id="sl" value="ЯП" style="text-align: center; font-weight: 600;"></div></div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;"><span class="flabel">Цвет букв</span><div class="swatches" style="gap: 8px; padding-top: 8px;"><button class="swatch on" aria-label="Белый" style="background: #FFFFFF; width: 32px; height: 32px;"></button><button class="swatch" aria-label="Тёмный" style="background: #14120E; width: 32px; height: 32px;"></button><button class="swatch" aria-label="Латунь" style="background: #F0C878; width: 32px; height: 32px;"></button><button class="swatch" aria-label="Мята" style="background: #59E2A6; width: 32px; height: 32px;"></button></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;"><span class="flabel">Фон</span>
+        <div class="swatches">
+          <button class="swatch on" aria-label="Красный" style="background: #FC3F1D;"></button><button class="swatch" aria-label="Синий" style="background: #2E6BF0;"></button><button class="swatch" aria-label="Фиолетовый" style="background: #7B5CF0;"></button><button class="swatch" aria-label="Зелёный" style="background: #1DB954;"></button><button class="swatch" aria-label="Оранжевый" style="background: #F07A2B;"></button><button class="swatch" aria-label="Жёлтый" style="background: #FFDD2D;"></button><button class="swatch" aria-label="Тёмный" style="background: #1E1033;"></button><button class="swatch" aria-label="Графит" style="background: #3A3F52;"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="brow">
+      <div style="display: flex; flex-direction: column; gap: 6px;"><label class="flabel" for="sp">Цена</label><div class="field"><input id="sp" value="399" style="font-family: var(--display); font-weight: 600;"><span class="muted">₽</span></div></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><span class="flabel">Следующее</span><button class="field" style="width: 100%;"><span class="t-body">28 октября</span></button></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px;"><span class="flabel">Период</span>
+      <div class="row" style="gap: 8px; flex-wrap: wrap;"><button class="chip">Неделя</button><button class="chip on">Месяц</button><button class="chip">Год</button><button class="chip">Своё</button></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span class="flabel">Списывается с</span>
+      <button class="panel select"><span class="bk s36 b-t">Т</span><span class="t-body" style="flex: 1;">Т-Банк</span><svg class="ico" viewBox="0 0 24 24" style="color: var(--faint); width: 18px; height: 18px;"><path d="M9 6l6 6-6 6"></path></svg></button>
+    </div>
+    <div class="panel" style="padding: 6px 16px;"><div class="row" style="min-height: 52px;"><span class="t-body" style="flex: 1;">Напомнить за день</span><span class="sw on"></span></div></div>
+  </div>
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 24px;">
+    <button class="btn brass full">Сохранить</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1040}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Новые анимации</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+.mrowl{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border-radius:12px;background:linear-gradient(180deg,#18211F,#111917);border:1px solid rgba(255,255,255,.08)}
+.mrowl .g{flex:1;min-width:0;font:400 14px/18px "Golos Text",system-ui,sans-serif}
+.mini-ln{height:8px;border-radius:4px;background:rgba(238,243,240,.14)}
+.dustbox{display:inline-block;height:16px;border-radius:5px;background-image:radial-gradient(circle,rgba(238,243,240,.75) .9px,transparent 1.3px),radial-gradient(circle,rgba(238,243,240,.4) .7px,transparent 1.1px);background-size:6px 6px,4px 4px;background-position:0 0,2px 3px}
+.edge{position:absolute;top:0;bottom:0;right:13px;border-right:1px dashed rgba(240,200,120,.5)}
+</style>
+</helmet>
+<div class="mb" style="height: 1000px;">
+
+  <div class="mcol">
+    <h3>«+ Категория»</h3><span class="id">B-52 · сразу выбор, строка после</span>
+    <div class="mframe">
+      <div class="mrowl"><span class="catic" style="width:28px;height:28px"></span><span class="g">Рестораны</span><span class="amt small">5%</span></div>
+      <div class="mrowl"><span class="catic" style="width:28px;height:28px"></span><span class="g">Такси</span><span class="amt small">3%</span></div>
+      <button class="btn plate full" style="min-height:44px;"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 5v14M5 12h14"></path></svg>Категория</button>
+      <span class="finger" style="left:150px;top:150px;width:36px;height:36px;"></span>
+    </div>
+    <div class="mstep"><span class="tm">NORMAL 300</span>шторка выезжает сразу, список готов заранее</div>
+    <div class="mframe" style="padding:0;">
+      <div style="position:absolute;inset:0;background:rgba(5,8,7,.74);"></div>
+      <div class="sheet" style="gap:8px;padding:10px 14px 14px;">
+        <div class="handle"></div>
+        <div class="field" style="min-height:40px;"><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px;color:var(--muted)"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"></path></svg><span class="faint">Категория</span></div>
+        <div class="sgroup"><div class="srow" style="min-height:40px;"><span class="st"><b style="font-size:14px;">Аптеки</b></span></div><div class="srow" style="min-height:40px;"><span class="st"><b style="font-size:14px;">Супермаркеты</b></span></div><div class="srow" style="min-height:40px;opacity:.4;"><span class="st"><b style="font-size:14px;">Рестораны</b></span><span class="tag n">уже есть</span></div></div>
+      </div>
+    </div>
+    <div class="mstep"><span class="tm">NORMAL 300</span>выбор → строка раскрывается, курсор в проценте</div>
+    <div class="mframe">
+      <div class="mrowl"><span class="catic" style="width:28px;height:28px"></span><span class="g">Рестораны</span><span class="amt small">5%</span></div>
+      <div class="mrowl"><span class="catic" style="width:28px;height:28px"></span><span class="g">Такси</span><span class="amt small">3%</span></div>
+      <div class="mrowl" style="min-height:30px;border-color:var(--bline);overflow:hidden;"><span class="catic" style="width:28px;height:22px"></span><span class="g">Аптеки</span><span class="pct hint" style="height:26px;width:60px;"><span>%</span></span></div>
+    </div>
+  </div>
+
+  <div class="mcol">
+    <h3>Скрин → поля</h3><span class="id">F-34, B-51 · без вспышки</span>
+    <div class="mframe" style="align-items:center;">
+      <div class="bigshot" style="width:104px;height:180px;padding:9px 8px;gap:6px;border-radius:12px;"><div class="ln" style="width:70%;height:4px;"></div><div class="ln" style="height:4px;"></div><div class="ln" style="width:55%;height:4px;"></div><div class="ln" style="height:4px;"></div><div class="scanline" style="top:50px;height:36px;"></div></div>
+      <span class="status brass" style="font-size:12px;">Читаем скрин</span>
+    </div>
+    <div class="mstep"><span class="tm">SLOW 450</span>скан по скрину, пока идёт чтение</div>
+    <div class="mframe">
+      <div class="row" style="gap:10px;"><div class="bigshot" style="width:58px;height:100px;padding:6px;gap:4px;border-radius:8px;box-shadow:none;"><div class="ln" style="height:3px;"></div><div class="ln hit" style="height:3px;width:70%;"></div></div><span class="flyer" style="position:static;">Ozon Банк</span></div>
+      <div class="mrowl land"><span class="bk s24 b-ozon">O</span><span class="g">Ozon Банк</span></div>
+      <div class="mrowl faded"><span class="mini-ln" style="width:60%;"></span></div>
+    </div>
+    <div class="mstep"><span class="tm">FAST 200</span>каждое значение — в своё поле, шаг 30 мс</div>
+    <div class="mframe">
+      <div class="row" style="gap:10px;"><span class="sthumb" style="width:30px;height:52px;padding:5px 4px;gap:3px;"><i style="height:3px;"></i><i style="height:3px;"></i></span><span class="status brass" style="font-size:12px;">Проверьте</span></div>
+      <div class="mrowl"><span class="bk s24 b-ozon">O</span><span class="g">Ozon Банк</span></div>
+      <div class="mrowl"><span class="g">Рестораны</span><span class="amt small">5%</span></div>
+    </div>
+  </div>
+
+  <div class="mcol">
+    <h3>Запуск обучения</h3><span class="id">B-56, U-54 · на месте</span>
+    <div class="mframe">
+      <div class="mrowl"><span class="bk s24 b-alfa">А</span><span class="g">Альфа-Банк</span><span class="amt small">98 262 ₽</span></div>
+      <div class="mrowl"><span class="bk s24 b-t">Т</span><span class="g">Т-Банк</span><span class="amt small">61 057 ₽</span></div>
+    </div>
+    <div class="mstep"><span class="tm">NORMAL 300</span>свои данные сменяются примерными наложением</div>
+    <div class="mframe">
+      <span class="tag v" style="align-self:flex-start;">Пример</span>
+      <div class="mrowl"><span class="bk s24" style="background:#3A6B5A;">Б</span><span class="g">Банк-пример</span><span class="amt small">98 262 ₽</span></div>
+      <div class="mrowl"><span class="bk s24 b-t">Т</span><span class="g">Т-Банк</span><span class="amt small">61 057 ₽</span></div>
+    </div>
+    <div class="mstep"><span class="tm">NORMAL 300</span>затемнение, подсветка, комментарий</div>
+    <div class="mframe">
+      <div class="mrowl" style="position:relative;z-index:2;outline:2px solid var(--brass2);outline-offset:-2px;"><span class="bk s24" style="background:#3A6B5A;">Б</span><span class="g">Банк-пример</span><span class="amt small">98 262 ₽</span></div>
+      <div style="position:absolute;inset:0;background:rgba(5,8,7,.74);z-index:1;"></div>
+      <div class="coach" style="position:absolute;left:12px;right:12px;bottom:12px;top:auto;padding:12px;gap:6px;z-index:3;"><span class="ct" style="font-size:14px;">Счета из уведомлений</span><div class="cf"><div class="steps"><i class="on"></i><i></i></div><span class="go" style="height:32px;">Далее</span></div></div>
+    </div>
+  </div>
+
+  <div class="mcol">
+    <h3>Строки списков</h3><span class="id">U-55 P10 · появление и удаление</span>
+    <div class="mframe">
+      <div class="mrowl"><span class="g">Подушка</span><span class="amt small">1 000 000 ₽</span></div>
+      <div class="mrowl"><span class="g">Запас</span><span class="amt small">500 000 ₽</span></div>
+    </div>
+    <div class="mstep"><span class="tm">NORMAL 300</span>новая строка раскрывается, соседи плавно съезжают</div>
+    <div class="mframe">
+      <div class="mrowl fresh" style="min-height:30px;"><span class="g">На отпуск</span><span class="amt small">500 000 ₽</span></div>
+      <div class="mrowl" style="transform:translateY(-2px);"><span class="g">Подушка</span><span class="amt small">1 000 000 ₽</span></div>
+      <div class="mrowl"><span class="g">Запас</span><span class="amt small">500 000 ₽</span></div>
+    </div>
+    <div class="mstep"><span class="tm q">FAST 200</span>удаление: строка сжимается, «Вернуть» снизу</div>
+    <div class="mframe">
+      <div class="mrowl"><span class="g">На отпуск</span><span class="amt small">500 000 ₽</span></div>
+      <div class="mrowl" style="min-height:14px;padding:0 10px;opacity:.3;"></div>
+      <div class="mrowl"><span class="g">Запас</span><span class="amt small">500 000 ₽</span></div>
+      <div style="position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:14px;background:#232B28;"><span style="font-size:13px;">Вклад удалён</span><span style="font:600 13px/16px var(--text);color:var(--brass2);">Вернуть</span></div>
+    </div>
+  </div>
+
+  <div class="mcol">
+    <h3>Скрыть и показать</h3><span class="id">B-44, U-56 · ничего не сдвигается</span>
+    <div class="mframe">
+      <span class="edge"></span>
+      <div class="between"><span class="muted">Подписки</span><span class="amt rowa">2 347<span class="k">,90 ₽</span></span></div>
+      <div class="between"><span class="muted">Валюта</span><span class="amt rowa">8 410 $</span></div>
+      <div class="between"><span class="muted">Счета</span><span class="amt rowa">184 320<span class="k">,50 ₽</span></span></div>
+    </div>
+    <div class="mstep"><span class="tm q">FAST 200</span>пыль ложится ровно на цифры</div>
+    <div class="mframe">
+      <span class="edge"></span>
+      <div class="between"><span class="muted">Подписки</span><span class="dustbox" style="width:104px;"></span></div>
+      <div class="between"><span class="muted">Валюта</span><span class="dustbox" style="width:72px;"></span></div>
+      <div class="between"><span class="muted">Счета</span><span class="dustbox" style="width:128px;"></span></div>
+    </div>
+    <div class="mstep"><span class="tm">NORMAL 300</span>цифры проступают на том же месте</div>
+    <div class="mframe">
+      <span class="edge"></span>
+      <div class="between"><span class="muted">Подписки</span><span class="amt rowa">2 347<span class="k">,90 ₽</span></span></div>
+      <div class="between"><span class="muted">Валюта</span><span class="amt rowa">8 410 $</span></div>
+      <div class="between"><span class="muted">Счета</span><span class="amt rowa">184 320<span class="k">,50 ₽</span></span></div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1880,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

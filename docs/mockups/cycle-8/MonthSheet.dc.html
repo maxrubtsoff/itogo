@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Месяц кэшбэка</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="top">
+    <h1>Платежи</h1>
+    <button class="chip" style="color: var(--fg);">Октябрь<svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px;color:var(--muted)"><path d="M6 9l6 6 6-6"></path></svg></button>
+  </div>
+  <div class="body" style="padding-top: 4px;">
+    <div class="tabs"><span class="on">Кэшбэк</span><span>Подписки</span></div>
+    <div class="panel" style="height: 150px;"></div>
+    <div class="panel" style="height: 120px;"></div>
+  </div>
+  <div class="veil"></div>
+  <div class="sheet" style="padding-bottom: 28px;">
+    <div class="handle"></div>
+    <h2>Месяц</h2>
+    <div class="sgroup">
+      <button class="srow"><span class="st"><b>Ноябрь</b><small>пока пусто</small></span></button>
+      <button class="srow on"><span class="st"><b>Октябрь</b><small>6 банков</small></span><svg class="ico ck" viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M5 12l5 5 9-10"></path></svg></button>
+      <button class="srow"><span class="st"><b>Сентябрь</b><small>5 банков</small></span></button>
+      <button class="srow"><span class="st"><b>Август</b><small>4 банка</small></span></button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

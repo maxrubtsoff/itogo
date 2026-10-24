@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Платежи · подписки</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="hdr"><h1>Платежи</h1></div>
+  <div class="body" style="padding-top: 0; gap: 12px;">
+    <div class="tabs"><span>Кэшбэк</span><span class="on">Подписки</span></div>
+    <div class="actrow">
+      <span class="what">6 подписок</span>
+      <button class="chip"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M4 7h16M7 12h10M10 17h4"></path></svg>по дате</button>
+      <button class="add" aria-label="Добавить подписку"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button>
+    </div>
+
+    <div class="panel glow" style="--gc: rgba(215,167,74,.16); padding: 20px; display: flex; flex-direction: column; gap: 6px;">
+      <div class="amt hero">2 347 ₽</div>
+      <div class="t-sm">в месяц · 28 164 ₽ в год</div>
+    </div>
+
+    <div class="panel list">
+      <div class="lrow"><span class="sv" style="background:#FC3F1D;">ЯП<span class="via b-t" style="color:#222;">Т</span></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span class="t-body ell">Яндекс Плюс</span><span class="t-sm">завтра</span></span><span class="amt rowa">399 ₽</span></div>
+      <div class="lrow"><span class="sv" style="background:#FF6600;">К<span class="via b-alfa">А</span></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span class="t-body ell">Кинопоиск</span><span class="t-sm">28 октября</span></span><span class="amt rowa">499 ₽</span></div>
+      <div class="lrow"><span class="sv" style="background:#2AABEE;">TG<span class="via b-t" style="color:#222;">Т</span></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span class="t-body ell">Telegram Premium</span><span class="t-sm">2 ноября</span></span><span class="amt rowa">299 ₽</span></div>
+      <div class="lrow"><span class="sv" style="background:#3A3F52;">МС<span class="via b-sber">С</span></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span class="t-body ell">Мобильная связь</span><span class="t-sm">5 ноября</span></span><span class="amt rowa">650 ₽</span></div>
+    </div>
+  </div>
+  <div class="bottombar">
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z"></path></svg>Обзор</span>
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16v13H4zM16 12h4"></path></svg>Капитал</span>
+    <span class="on"><svg class="ico" viewBox="0 0 24 24"><path d="M19 5 5 19M7 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path></svg>Платежи</span>
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-2-4-2 1-2-2V4h-4v2l-2 2-2-1-2 4 2 1v0l-2 1 2 4 2-1 2 2v2h4v-2l2-2 2 1 2-4z"></path></svg>Настройки</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

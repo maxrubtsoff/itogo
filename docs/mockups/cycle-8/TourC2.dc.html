@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Обучение · кэшбэк 2</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="top">
+    <h1>Платежи</h1>
+    <span class="tag v">Пример</span>
+  </div>
+  <div class="body" style="padding-top: 4px;">
+    <div class="tabs"><span class="on">Кэшбэк</span><span>Подписки</span></div>
+    <div class="panel" style="height: 120px;"></div>
+    <div class="panel" style="height: 120px;"></div>
+  </div>
+  <div class="veil"></div>
+
+  <div class="coach" style="top: 300px; z-index: 7;">
+    <div class="row" style="justify-content: space-between; align-items: flex-start;"><span class="ct">Со скрина быстрее</span><button class="skip" aria-label="Пропустить обучение" style="margin: -6px -6px 0 0; width: 32px; height: 32px; display: grid; place-items: center;"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+    <p>Вручную — если скрина под рукой нет.</p>
+    <div class="cf">
+      <div class="steps"><i></i><i class="on"></i><i></i><i></i><i></i></div>
+      <div class="acts"><button class="again"><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v5h5"></path></svg>Ещё раз</button><button class="go">Далее</button></div>
+    </div>
+  </div>
+
+  <div class="sheet" style="z-index: 5;">
+    <div class="handle"></div>
+    <h2>Добавить кэшбэк</h2>
+    <div class="brow">
+      <button class="tile" style="position: relative; border-color: var(--bedge); box-shadow: 0 0 0 3px rgba(215,167,74,.16);"><span class="tic"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h3l2-3h6l2 3h3v12H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path></svg></span><b>Со скринов</b></button>
+      <button class="tile"><span class="tic"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"></path></svg></span><b>Вручную</b></button>
+    </div>
+  </div>
+  <span class="finger" style="left: 76px; top: 742px;"></span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
