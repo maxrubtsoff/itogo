@@ -56,6 +56,7 @@ import ru.maxrubtsoff.bankagg.domain.repository.OcrEngine
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import ru.maxrubtsoff.bankagg.domain.repository.TextEmbedder
 import ru.maxrubtsoff.bankagg.domain.model.CategoryResolver
+import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.domain.model.JournalRetention
 import ru.maxrubtsoff.bankagg.domain.usecase.ClassifyScreenshot
 import ru.maxrubtsoff.bankagg.domain.usecase.RecognizeCashbackShot
@@ -165,6 +166,12 @@ class AppContainer(context: Context) {
     val getCapital by lazy {
         GetCapital(ledgerRepository, depositRepository, fxRepository, ratesRepository, cashRepository, settings, today)
     }
+
+    /**
+     * A fresh sandbox for a tour (U-54): the use-cases over example data in
+     * memory, nothing written anywhere. Built per tour, so a repeat starts clean.
+     */
+    fun sandbox(features: Features = Features.ALL): SandboxContainer = SandboxContainer(appContext, today, features)
 
     /** This process's lock session: unlocked yet, and when the app last went to the background. */
     val lockSession = LockSession()
