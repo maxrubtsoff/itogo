@@ -73,7 +73,9 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -287,6 +289,7 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             lifecycleScope.launch { container.settings.hideInRecents.collect { setRecentsScreenshotEnabled(!it) } }
         }
+        watchFlip()
         if (savedInstanceState == null) shared.value = sharedImages(intent)
         if (savedInstanceState == null) openRoute.value = intent?.getStringExtra(AppNotifier.EXTRA_OPEN)
         // A quick prefs read: the lock must be up before the first frame.
@@ -352,11 +355,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        (getSystemService(SENSOR_SERVICE) as SensorManager).unregisterListener(gravity)
-    }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         sharedImages(intent).takeIf { it.isNotEmpty() }?.let { shared.value = it }
@@ -377,18 +375,42 @@ class MainActivity : FragmentActivity() {
         (application as App).container.autoBackup.flush()
     }
 
-    override fun onResume() {
-        super.onResume()
-        val sensors = getSystemService(SENSOR_SERVICE) as SensorManager
+    /**
+     * The gravity sensor runs exactly while the app is on screen and «При
+     * перевороте телефона» is on (B-55). It used to be registered from a
+     * coroutine inside [onResume], guarded by
+     * `lifecycle.currentState.isAtLeast(RESUMED)` — but during `onResume` the
+     * lifecycle is still STARTED, so the guard was false and the sensor never
+     * started. Tied to the lifecycle it also follows the switch at once,
+     * without leaving the screen, and comes back after the lock screen.
+     */
+    private fun watchFlip() {
         val container = (application as App).container
-        // No disk wait on the main thread at every return (U-31): the sensor joins a moment later.
+        val sensors = getSystemService(SENSOR_SERVICE) as SensorManager
         lifecycleScope.launch {
-            if (!container.settings.hideOnFlip.first()) return@launch
-            val sensor = sensors.getDefaultSensor(Sensor.TYPE_GRAVITY) ?: sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-            if (sensor != null && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
-                sensors.registerListener(gravity, sensor, SensorManager.SENSOR_DELAY_GAME)
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                try {
+                    container.settings.hideOnFlip.collect { on ->
+                        val sensor = if (on) {
+                            sensors.getDefaultSensor(Sensor.TYPE_GRAVITY)
+                                ?: sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+                        } else null
+                        if (sensor != null) {
+                            sensors.registerListener(gravity, sensor, SensorManager.SENSOR_DELAY_GAME)
+                        } else {
+                            sensors.unregisterListener(gravity)
+                        }
+                    }
+                } finally {
+                    sensors.unregisterListener(gravity)
+                }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val container = (application as App).container
         // The midnight timer may sleep in Doze; re-read the date on return.
         container.today.refresh()
         // A return is when the tab animates: the background chores run at most every few
