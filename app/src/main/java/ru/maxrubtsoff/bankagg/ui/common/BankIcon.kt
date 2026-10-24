@@ -44,11 +44,12 @@ fun BankIcon(brand: BankBrand, size: Dp = 40.dp) {
     val context = LocalContext.current
     val cache = remember { (context.applicationContext as App).container.bankIcons }
     val icons by cache.icons.collectAsState()
-    // The app's icon first, then the user's own picture (F-22), then letters.
+    // The user's own picture first — it is their explicit choice (B-49) — then
+    // the installed app's icon, then letters.
     val own = remember(brand.logoFile) {
         brand.logoFile?.let { f -> runCatching { BitmapFactory.decodeFile(f) }.getOrNull() }
     }
-    val bitmap = icons[brand] ?: own
+    val bitmap = own ?: icons[brand.key]
     val shape = CircleShape
 
     if (bitmap != null) {

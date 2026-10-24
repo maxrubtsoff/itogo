@@ -81,7 +81,10 @@ class BankStore(
     }.also { cbr = it }
 
     private fun write(banks: List<BankBrand>) {
-        val defs = (readDefinitions().associateBy { it.key } + banks.filterNot { it.isKnown }.associateBy { it.key }).values
+        // Everything the user may have changed is stored, a known bank included:
+        // its picture and letters would otherwise be lost on the next read (B-49).
+        val changed = banks.filter { b -> b != BankBrand.known.firstOrNull { it.key == b.key } }
+        val defs = (readDefinitions().associateBy { it.key } + changed.associateBy { it.key }).values
         prefs.edit()
             .putString(KEY_MINE, JSONArray(banks.map { it.key }).toString())
             .putString(KEY_DEFS, JSONArray(defs.map(::toJson)).toString())

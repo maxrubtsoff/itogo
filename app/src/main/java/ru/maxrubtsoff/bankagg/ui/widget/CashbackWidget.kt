@@ -112,7 +112,12 @@ class CashbackWidget : GlanceAppWidget() {
         val iconPx = (20 * context.resources.displayMetrics.density).toInt().coerceAtLeast(16)
         val logos = HashMap<BankBrand, Logo>()
         fun logo(bank: BankBrand) = logos.getOrPut(bank) {
-            Logo((context.applicationContext as App).container.bankIcons.icons.value[bank] ?: InstalledApps.iconFor(context, bank, iconPx), bank.title.take(1).uppercase(), bank.primaryColor, bank.onPrimaryDark)
+            // The user's own picture first (B-49), then the app's icon.
+            val container = (context.applicationContext as App).container
+            val bitmap = bank.logoFile?.let { android.graphics.BitmapFactory.decodeFile(it) }
+                ?: container.bankIcons.icons.value[bank.key]
+                ?: InstalledApps.iconFor(context, bank, iconPx)
+            Logo(bitmap, bank.title.take(1).uppercase(), bank.primaryColor, bank.onPrimaryDark)
         }
         val rows = spot.allRows.map { r -> WidgetRow(r.title, logo(r.banks.first()), formatPercent(r.percent)) }
         val base = spot.base.map { g -> BaseChip(g.banks.map(::logo), formatPercent(g.percent)) }

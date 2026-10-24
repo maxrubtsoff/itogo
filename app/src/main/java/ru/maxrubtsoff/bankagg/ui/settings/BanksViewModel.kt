@@ -35,7 +35,7 @@ import java.util.UUID
 class BanksViewModel(
     private val banks: BankRepository,
     private val settings: SettingsRepository,
-    installedIcons: StateFlow<Map<BankBrand, Bitmap>>,
+    installedIcons: StateFlow<Map<String, Bitmap>>,
     private val logos: LogoMaker,
     private val candidateRepo: CandidateRepository,
     private val answers: NewBankAnswers,
@@ -67,7 +67,7 @@ class BanksViewModel(
 
     /** Known banks with an app on this phone that aren't added yet. */
     val onPhone: StateFlow<List<BankBrand>> = combine(installedIcons, banks.myBanks) { icons, my ->
-        BankBrand.known.filter { it in icons.keys && it !in my }
+        BankBrand.known.filter { it.key in icons.keys && it !in my }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** The largest banks not added yet (business apps aren't "popular"). */

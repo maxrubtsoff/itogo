@@ -108,8 +108,10 @@ class BankBrand(
         fun fromPackage(pkg: String): BankBrand =
             all.firstOrNull { pkg in it.packages } ?: UNKNOWN
 
+        // What the user changed about a bank comes first: a picture or letters
+        // put on a known bank must not be overwritten by its built-in look (B-49).
         fun fromKey(key: String): BankBrand =
-            known.firstOrNull { it.key == key } ?: BankDirectory.find(key) ?: if (key == UNKNOWN.key) UNKNOWN
+            BankDirectory.find(key) ?: known.firstOrNull { it.key == key } ?: if (key == UNKNOWN.key) UNKNOWN
             else UNKNOWN.let { BankBrand(key, "Банк", it.primaryColor, letters = "?") }
 
         /** The known bank with this CBR registration number, if any. */
