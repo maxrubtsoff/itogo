@@ -1,0 +1,129 @@
+package ru.maxrubtsoff.bankagg.ui.common
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
+import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
+import ru.maxrubtsoff.bankagg.ui.theme.Slitok
+import java.io.File
+
+/** "Распознаю 2 из 6…" while OCR runs over the batch. */
+@Composable
+fun BatchProgress(done: Int, total: Int) {
+    Panel(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Распознаю $done из $total…", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+            LinearProgressIndicator(
+                progress = { if (total == 0) 0f else done.toFloat() / total },
+                modifier = Modifier.fillMaxWidth(),
+                color = Slitok.Brass,
+                trackColor = Slitok.Line
+            )
+        }
+    }
+}
+
+/** A group's screenshots as small thumbnails; tapping one opens [onOpen]. */
+@Composable
+fun ShotThumbs(paths: List<Pair<String, String>>, onOpen: (String) -> Unit) {
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        paths.forEach { (id, path) ->
+            val shape = RoundedCornerShape(8.dp)
+            Box(
+                Modifier
+                    .size(width = 40.dp, height = 64.dp)
+                    .clip(shape)
+                    .background(Slitok.Inset)
+                    .border(1.dp, Slitok.Line, shape)
+                    .clickable { onOpen(id) }
+            ) {
+                if (path.isNotBlank() && File(path).exists()) {
+                    Image(
+                        rememberAsyncImagePainter(ShotImage(path)),
+                        contentDescription = "Скрин",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(64.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The screenshot large, and where it can go: another group ([targets], by label),
+ * a group of its own ([newLabel]), or out of the batch.
+ */
+@Composable
+fun MoveShotSheet(
+    path: String,
+    targets: List<String>,
+    newLabel: String,
+    onMove: (Int?) -> Unit,
+    onRemove: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    SlitokSheet(onDismiss) {
+        if (path.isNotBlank() && File(path).exists()) {
+            Image(
+                rememberAsyncImagePainter(ShotImage(path)),
+                contentDescription = "Скрин",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp).clip(RoundedCornerShape(12.dp))
+            )
+        }
+        Text("Перенести в…", style = MaterialTheme.typography.titleMedium)
+        Column {
+            targets.forEachIndexed { i, label -> SheetOption(Icons.AutoMirrored.Filled.ArrowForward, label) { onMove(i) } }
+            SheetOption(Icons.Filled.Add, newLabel) { onMove(null) }
+            SheetOption(Icons.Filled.DeleteOutline, "Убрать скрин", danger = true, onClick = onRemove)
+        }
+    }
+}
+
+@Composable
+private fun SheetOption(icon: ImageVector, label: String, danger: Boolean = false, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = if (danger) Slitok.Coral else Slitok.Muted)
+        Spacer(Modifier.width(14.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = if (danger) Slitok.Coral else Slitok.Fg)
+    }
+}

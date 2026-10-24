@@ -1,0 +1,287 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Дизайн-система Слиток</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+  /* Committed single dark look ("Слиток"): vault / precious-metal identity —
+     layered beveled panels, a brass signature, mint for positive, and a soft
+     glow behind the hero figure give the screens depth. */
+  :root{
+    --bg:#0a0f0e;              /* deep teal-charcoal base */
+    --bg-2:#0e1413;
+    --panel-top:#18211f;       /* card gradient top */
+    --panel-bot:#111917;       /* card gradient bottom */
+    --inset:#0c1211;           /* recessed track */
+    --fg:#eef3f0;
+    --muted:#8ea39b;
+    --faint:#56655f;
+    --line:rgba(255,255,255,.06);
+    --brass:#d7a74a;           /* signature accent = money */
+    --brass-2:#f0c878;
+    --mint:#59e2a6;            /* positive */
+    --coral:#ff8468;           /* expense, used sparingly */
+    --violet:#9a86f5;          /* deposits token */
+    --r-lg:22px; --r-md:16px; --r-sm:12px;
+    --elev:0 14px 34px -16px rgba(0,0,0,.85), 0 2px 0 rgba(255,255,255,.04) inset, 0 0 0 1px var(--line);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:
+      radial-gradient(130% 70% at 50% -10%, #122020 0%, var(--bg) 55%) fixed;
+    color:var(--fg);
+    font-family:"Golos Text",system-ui,sans-serif;
+    padding-left:max(16px,env(safe-area-inset-left,0px));
+    padding-right:max(16px,env(safe-area-inset-right,0px));
+    padding-block:30px 52px;
+    max-width:1040px; margin-inline:auto;
+    line-height:1.5;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- page header ---------- */
+  .brandmark{display:flex; align-items:center; gap:10px; color:var(--brass-2); font-family:"Unbounded"; font-weight:600; letter-spacing:.02em; font-size:.95rem}
+  .coin{width:26px; height:26px; border-radius:50%;
+    background:radial-gradient(60% 60% at 35% 30%, var(--brass-2), var(--brass) 55%, #9c7629);
+    box-shadow:0 2px 6px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.15) inset}
+  h1{font-family:"Unbounded"; font-weight:700; font-size:clamp(1.9rem,6vw,2.9rem); margin:.5rem 0 .25rem; letter-spacing:-.01em; text-wrap:balance; line-height:1.02}
+  .sub{color:var(--muted); max-width:58ch; margin:0}
+
+  /* ---------- design legend ---------- */
+  .legend{display:flex; flex-wrap:wrap; gap:22px; align-items:center; margin:22px 0 4px; padding:16px 18px;
+    background:linear-gradient(var(--panel-top),var(--panel-bot)); border-radius:var(--r-md); box-shadow:var(--elev)}
+  .legend .grp{display:flex; flex-direction:column; gap:7px}
+  .legend .lbl{font-size:.7rem; color:var(--faint); letter-spacing:.06em}
+  .swatches{display:flex; gap:7px}
+  .sw{width:26px; height:26px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.18)}
+  .legend .type b{font-family:"Unbounded"; font-weight:600; font-size:1.05rem; color:var(--fg)}
+  .legend .type span{color:var(--muted); font-size:.85rem}
+
+  /* ---------- phone grid ---------- */
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:26px; margin-top:28px}
+  .phone{position:relative; border-radius:38px; padding:8px; background:linear-gradient(160deg,#20292700,#0000 40%),#05090880;
+    box-shadow:0 30px 60px -24px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.05), 0 0 0 7px #05090855;
+    max-width:330px; width:100%; margin-inline:auto}
+  .screen{background:linear-gradient(180deg,var(--bg-2),var(--bg)); border-radius:31px; overflow:hidden; padding:16px 16px 22px; display:flex; flex-direction:column; gap:15px}
+  .cap{font-size:.72rem; color:var(--faint); letter-spacing:.05em; text-align:center; margin-top:10px}
+  .topbar{display:flex; align-items:center; justify-content:space-between; font-size:.74rem; color:var(--muted)}
+  .topbar .t{font-weight:600; color:var(--fg)}
+  .chev{width:30px; height:30px; border-radius:10px; display:grid; place-items:center; background:var(--inset); box-shadow:inset 0 0 0 1px var(--line); color:var(--brass-2); font-size:1rem}
+
+  /* hero with glow */
+  .hero{position:relative; padding:6px 2px 2px}
+  .hero::before{content:""; position:absolute; inset:-30px -10px auto; height:150px;
+    background:radial-gradient(60% 80% at 30% 20%, rgba(215,167,74,.22), transparent 70%); filter:blur(6px); z-index:0; pointer-events:none}
+  .hero > *{position:relative; z-index:1}
+  .hero .k{font-size:.82rem; color:var(--muted)}
+  .hero .big{font-family:"Unbounded"; font-weight:700; font-size:2.2rem; letter-spacing:-.02em; line-height:1.05; margin-top:3px}
+  .hero .big.sm{font-size:1.9rem}
+  .delta{color:var(--mint); font-weight:500; font-size:.86rem; margin-top:5px; display:inline-flex; gap:6px; align-items:center}
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--mint); box-shadow:0 0 8px var(--mint)}
+  .split{display:flex; gap:10px; margin-top:12px}
+  .pill{flex:1; background:var(--inset); border-radius:var(--r-sm); padding:9px 11px; box-shadow:inset 0 0 0 1px var(--line)}
+  .pill .k{font-size:.68rem; color:var(--faint)}
+  .pill .v{font-weight:600; font-size:.98rem; margin-top:1px}
+
+  .h{font-size:.9rem; font-weight:600; color:var(--fg); display:flex; justify-content:space-between; align-items:center}
+  .h a{color:var(--brass-2); font-size:.78rem; font-weight:500}
+
+  .panel{background:linear-gradient(var(--panel-top),var(--panel-bot)); border-radius:var(--r-md); box-shadow:var(--elev); overflow:hidden}
+  .row{display:flex; align-items:center; gap:12px; padding:12px 14px}
+  .row + .row{border-top:1px solid var(--line)}
+  .tok{width:36px; height:36px; border-radius:50%; flex:0 0 auto; display:grid; place-items:center; font-weight:700; font-size:.82rem; color:#0b0f0e;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 2px 6px rgba(0,0,0,.5)}
+  .tok.tb{background:radial-gradient(70% 70% at 35% 30%,#ffe6a6,var(--brass) 70%)}
+  .tok.af{background:radial-gradient(70% 70% at 35% 30%,#ff9a86,#e14b4b 70%); color:#fff}
+  .tok.sb{background:radial-gradient(70% 70% at 35% 30%,#7ff0b0,#16a35a 70%); color:#06231a}
+  .tok.dp{background:radial-gradient(70% 70% at 35% 30%,#c6b8ff,var(--violet) 70%); color:#140f33}
+  .row .nm{flex:1; min-width:0; font-size:.9rem}
+  .row .nm small{display:block; color:var(--muted); font-size:.73rem}
+  .row .amt{font-weight:600; font-size:.92rem}
+  .row .amt.pos{color:var(--mint)}
+
+  /* segmented control */
+  .seg{display:flex; background:var(--inset); border-radius:999px; padding:4px; gap:3px; box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+  .seg .s{flex:1; text-align:center; font-size:.78rem; padding:.42em; border-radius:999px; color:var(--muted); font-weight:500}
+  .seg .s.on{color:#1a130a; background:linear-gradient(var(--brass-2),var(--brass)); box-shadow:0 2px 6px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.4)}
+
+  /* summary tiles */
+  .tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .tile{background:linear-gradient(var(--panel-top),var(--panel-bot)); border-radius:var(--r-sm); padding:12px; box-shadow:var(--elev)}
+  .tile .k{font-size:.68rem; color:var(--faint)}
+  .tile .v{font-family:"Unbounded"; font-weight:600; font-size:1.05rem; margin-top:4px}
+  .tile.wide{grid-column:1/-1; display:flex; align-items:baseline; justify-content:space-between}
+  .tile.wide .v{font-size:1.25rem}
+
+  /* bar chart */
+  .chart{padding:14px 14px 10px}
+  .bars{display:flex; align-items:flex-end; gap:8px; height:110px}
+  .bars .b{flex:1; border-radius:6px 6px 4px 4px; background:linear-gradient(180deg,#2e3f3a,#1b2623); box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .bars .b.now{background:linear-gradient(180deg,var(--brass-2),var(--brass)); box-shadow:0 0 16px -2px rgba(215,167,74,.6), inset 0 1px 0 rgba(255,255,255,.5)}
+  .bars .b.fut{background:repeating-linear-gradient(135deg,#1a2522,#1a2522 5px,#141d1b 5px,#141d1b 10px)}
+  .xax{display:flex; gap:8px; margin-top:7px; font-size:.62rem; color:var(--faint)}
+  .xax span{flex:1; text-align:center}
+
+  .kv{display:flex; justify-content:space-between; align-items:center; padding:11px 14px; font-size:.87rem}
+  .kv + .kv{border-top:1px solid var(--line)}
+  .kv .k{color:var(--muted)}
+  .kv .v{font-weight:600}
+
+  /* cashback */
+  .best{background:
+      radial-gradient(120% 140% at 85% 0%, rgba(215,167,74,.28), transparent 55%),
+      linear-gradient(var(--panel-top),var(--panel-bot));
+    border-radius:var(--r-md); padding:14px; box-shadow:var(--elev)}
+  .best .k{font-size:.72rem; color:var(--brass-2)}
+  .best .cat{font-family:"Unbounded"; font-weight:600; font-size:1.25rem; margin-top:3px}
+  .best .meta{color:var(--muted); font-size:.82rem; margin-top:2px}
+  .pct{margin-left:auto; font-family:"Unbounded"; font-weight:700; color:var(--brass-2)}
+  .cbrow{display:flex; align-items:center; gap:12px; padding:11px 14px}
+  .cbrow + .cbrow{border-top:1px solid var(--line)}
+  .cbrow .nm{flex:1; min-width:0; font-size:.9rem}
+  .cbrow .nm small{display:block; color:var(--muted); font-size:.73rem}
+
+  .foot{margin-top:34px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted)}
+  .foot b{color:var(--fg)}
+
+  @media (prefers-reduced-motion:no-preference){
+    .hero::before{animation:breath 6s ease-in-out infinite}
+    @keyframes breath{0%,100%{opacity:.75}50%{opacity:1}}
+  }
+</style>
+
+<div class="brandmark"><span class="coin"></span>Слиток</div>
+<h1>Своя дизайн-система</h1>
+<p class="sub">Тёмная, с объёмом: слоистые панели с бевелом и мягкими тенями, латунный акцент для денег, мятный — для начислений, и свечение за главной цифрой. Одна система на все экраны — ниже «Обзор», вклады и кэшбэк из скриншотов.</p>
+
+<div class="legend">
+  <div class="grp">
+    <span class="lbl">Палитра</span>
+    <div class="swatches">
+      <span class="sw" style="background:#0a0f0e"></span>
+      <span class="sw" style="background:#18211f"></span>
+      <span class="sw" style="background:#d7a74a"></span>
+      <span class="sw" style="background:#59e2a6"></span>
+      <span class="sw" style="background:#9a86f5"></span>
+    </div>
+  </div>
+  <div class="grp type">
+    <span class="lbl">Типографика</span>
+    <div><b>Unbounded</b> <span>· заголовки и суммы</span></div>
+    <span style="color:var(--muted);font-size:.85rem">Golos Text · интерфейс</span>
+  </div>
+  <div class="grp">
+    <span class="lbl">Объём</span>
+    <span style="color:var(--muted);font-size:.85rem;max-width:22ch">Бевел + тень + свечение,<br>тактильные контролы</span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- ===== Обзор ===== -->
+  <div>
+    <div class="phone"><div class="screen">
+      <div class="topbar"><span class="t">9:41</span><span>Обзор</span></div>
+      <div class="hero">
+        <div class="k">Общий капитал</div>
+        <div class="big num">1 312 745 ₽</div>
+        <div class="delta"><span class="dot"></span>за месяц +42 180 ₽</div>
+        <div class="split">
+          <div class="pill"><div class="k">Счета</div><div class="v num">219 409 ₽</div></div>
+          <div class="pill"><div class="k">Вклады</div><div class="v num">1 093 336 ₽</div></div>
+        </div>
+      </div>
+      <div class="h">По банкам</div>
+      <div class="panel">
+        <div class="row"><div class="tok tb">Т</div><div class="nm">Т-Банк<small>Личный</small></div><div class="amt num">109 410 ₽</div></div>
+        <div class="row"><div class="tok af">А</div><div class="nm">Альфа-Банк<small>Личный</small></div><div class="amt num">107 590 ₽</div></div>
+        <div class="row"><div class="tok sb">С</div><div class="nm">Сбербанк<small>Личный</small></div><div class="amt num">2 409 ₽</div></div>
+        <div class="row"><div class="tok dp">В</div><div class="nm">Вклад · Т-Банк<small>до 30 ноября</small></div><div class="amt num">1 093 336 ₽</div></div>
+      </div>
+    </div></div>
+    <div class="cap">Обзор</div>
+  </div>
+
+  <!-- ===== Вклады (сводка) ===== -->
+  <div>
+    <div class="phone"><div class="screen">
+      <div class="topbar"><span class="t">9:41</span><span>Вклады</span></div>
+      <div class="seg"><span class="s on">Актуальные</span><span class="s">История</span></div>
+      <div class="tiles">
+        <div class="tile wide"><div><div class="k">Всего во вкладах</div></div><div class="v num">1 093 336 ₽</div></div>
+        <div class="tile"><div class="k">Ближайшее закрытие</div><div class="v">30 нояб</div></div>
+        <div class="tile"><div class="k">В среднем в месяц</div><div class="v num">13 334 ₽</div></div>
+      </div>
+      <div class="h">Действующие</div>
+      <div class="panel">
+        <div class="row"><div class="tok dp">Т</div><div class="nm">Накопительный<small>Т-Банк · 16% · до 30 ноября</small></div><div class="amt num">1 093 336 ₽</div></div>
+      </div>
+      <div class="panel">
+        <div class="kv"><span class="k">Начислено за всё время</span><span class="v num" style="color:var(--mint)">+93 336 ₽</span></div>
+        <div class="kv"><span class="k">Вложено</span><span class="v num">1 000 000 ₽</span></div>
+      </div>
+    </div></div>
+    <div class="cap">Вклады — сводка</div>
+  </div>
+
+  <!-- ===== Карточка вклада ===== -->
+  <div>
+    <div class="phone"><div class="screen">
+      <div class="topbar"><span class="chev">‹</span><span>Накопительный</span><span style="width:30px"></span></div>
+      <div class="hero">
+        <div class="k">Сейчас на вкладе</div>
+        <div class="big sm num">1 093 336 ₽</div>
+        <div class="delta"><span class="dot"></span>30 ноября зачислим ещё 13 400 ₽</div>
+      </div>
+      <div class="panel chart">
+        <div class="bars">
+          <div class="b" style="height:44%"></div>
+          <div class="b" style="height:54%"></div>
+          <div class="b" style="height:64%"></div>
+          <div class="b" style="height:75%"></div>
+          <div class="b" style="height:86%"></div>
+          <div class="b now" style="height:97%"></div>
+          <div class="b fut" style="height:100%"></div>
+        </div>
+        <div class="xax"><span>Май</span><span>Июн</span><span>Июл</span><span>Авг</span><span>Сен</span><span>Окт</span><span>Ноя</span></div>
+      </div>
+      <div class="panel">
+        <div class="kv"><span class="k">Ставка</span><span class="v">16% годовых</span></div>
+        <div class="kv"><span class="k">Начислено</span><span class="v num" style="color:var(--mint)">+93 336 ₽</span></div>
+        <div class="kv"><span class="k">Открыт</span><span class="v">1 мая 2026</span></div>
+        <div class="kv"><span class="k">Закроется</span><span class="v">30 ноября 2026</span></div>
+      </div>
+    </div></div>
+    <div class="cap">Карточка вклада</div>
+  </div>
+
+  <!-- ===== Кэшбэк ===== -->
+  <div>
+    <div class="phone"><div class="screen">
+      <div class="topbar"><span class="t">9:41</span><span>Кэшбэк · октябрь</span></div>
+      <div class="best">
+        <div class="k">Лучшее в этом месяце</div>
+        <div style="display:flex; align-items:center">
+          <div>
+            <div class="cat">Супермаркеты</div>
+            <div class="meta">Альфа-Банк</div>
+          </div>
+          <div class="pct">10%</div>
+        </div>
+      </div>
+      <div class="h">Все категории <a>+ скрин</a></div>
+      <div class="panel">
+        <div class="cbrow"><div class="tok tb">Т</div><div class="nm">Рестораны<small>Т-Банк</small></div><div class="pct" style="font-size:1rem">5%</div></div>
+        <div class="cbrow"><div class="tok tb">Т</div><div class="nm">АЗС<small>Т-Банк</small></div><div class="pct" style="font-size:1rem">5%</div></div>
+        <div class="cbrow"><div class="tok sb">С</div><div class="nm">Такси<small>Сбербанк</small></div><div class="pct" style="font-size:1rem">3%</div></div>
+        <div class="cbrow"><div class="tok af">А</div><div class="nm">Аптеки<small>Альфа-Банк</small></div><div class="pct" style="font-size:1rem">7%</div></div>
+      </div>
+      <div class="cap" style="text-align:left;color:var(--faint);margin-top:2px">Загрузи скриншот условий — категории и проценты распознаются сами</div>
+    </div></div>
+    <div class="cap">Кэшбэк из скриншотов</div>
+  </div>
+
+</div>
+
+<div class="foot">
+  Это одно направление — тёмное, с характером и объёмом. Скажи, что поправить (акцент, насколько «тяжёлые» тени, типографика), или подтверди — и я перенесу систему во все экраны приложения и в анимации переходов. Макет вкладов и кэшбэка здесь, чтобы заранее увидеть, как лягут новые разделы из дорожной карты.
+</div>

@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.keystore binary
+*.onnx binary
+*.traineddata binary
+*.ttf binary
+*.png binary
+*.jar binary

@@ -1,0 +1,6 @@
+# Automatic HTTPS via Let's Encrypt for your domain.
+# DOMAIN is taken from the .env file (e.g. bankagg.duckdns.org).
+{$DOMAIN} {
+    encode gzip
+    reverse_proxy api:8000
+}

@@ -1,0 +1,1035 @@
+<title>Слиток · дизайн-система Itogo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&family=Unbounded:wght@300..900&display=swap">
+<style>
+/* Офлайн: файлы шрифтов из приложения (открытие из репозитория). В браузере без них — Google Fonts. */
+@font-face { font-family: "UnboundedApp"; src: url("../../app/src/main/res/font/unbounded_wght.ttf") format("truetype"); font-weight: 200 900; }
+@font-face { font-family: "GolosApp"; src: url("../../app/src/main/res/font/golos_text_wght.ttf") format("truetype"); font-weight: 400 900; }
+
+/* Слиток — одна тёмная тема (CLAUDE.md: без light/dynamic). 1 px здесь = 1 dp в приложении.
+   Раскладка: витрина-каталог — слева оглавление, справа разделы; демо-полосы шириной телефона. */
+:root {
+  color-scheme: dark;
+  /* поверхности */
+  --bg: #0A0F0E; --bg2: #0E1413; --panel-top: #18211F; --panel-bottom: #111917; --inset: #0C1211;
+  /* текст */
+  --fg: #EEF3F0; --muted: #8EA39B; --faint: #56655F; --line: rgba(255,255,255,.08);
+  /* акценты */
+  --brass: #D7A74A; --brass2: #F0C878; --on-brass: #14120E;
+  --brass-tint: rgba(215,167,74,.12); --brass-pill: rgba(215,167,74,.15); --brass-line: rgba(215,167,74,.33); --brass-edge: rgba(215,167,74,.55);
+  --mint: #59E2A6; --coral: #FF8468; --violet: #9A86F5; --violet-light: #BBA6FF; --violet-text: #C9B8FF;
+  --sky: #6CC4E8; --sand: #CBB89A;
+  --scrim: rgba(5,8,7,.72);
+  /* шрифты */
+  --display: "UnboundedApp", "Unbounded", "Arial Black", system-ui, sans-serif;
+  --text: "GolosApp", "Golos Text", "Segoe UI", system-ui, sans-serif;
+  /* радиусы (предложение: пять ступеней вместо девяти) */
+  --r-tag: 8px; --r-chip: 12px; --r-ctl: 16px; --r-card: 20px; --r-sheet: 28px;
+  --panel-shadow: 0 12px 28px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; animation: none !important; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 14px/20px var(--text); -webkit-font-smoothing: antialiased; }
+svg.i { width: 22px; height: 22px; fill: currentColor; flex: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, [tabindex]:focus-visible, input:focus-visible { outline: 2px solid var(--brass2); outline-offset: 2px; }
+
+.wrap { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; max-width: 1240px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; display: flex; flex-direction: column; gap: 2px; }
+nav.toc .brand { font: 700 22px/26px var(--display); letter-spacing: -.3px; margin-bottom: 4px; }
+nav.toc .sub { color: var(--muted); font-size: 12px; line-height: 16px; margin-bottom: 18px; }
+nav.toc a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 10px; font-size: 13px; }
+nav.toc a:hover { color: var(--brass2); background: var(--brass-tint); }
+nav.toc .grp { color: var(--faint); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin: 14px 10px 4px; }
+main { min-width: 0; display: flex; flex-direction: column; gap: 64px; }
+@media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } nav.toc { position: static; flex-direction: row; flex-wrap: wrap; } nav.toc .grp, nav.toc .sub { display: none; } nav.toc .brand { width: 100%; } }
+
+header.hero { display: flex; flex-direction: column; gap: 14px; }
+header.hero h1 { font: 700 44px/48px var(--display); letter-spacing: -1px; margin: 0; text-wrap: balance; }
+header.hero h1 span { background: linear-gradient(180deg, var(--brass2), var(--brass)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+header.hero p { margin: 0; color: var(--muted); font-size: 16px; line-height: 24px; max-width: 64ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: 13px; }
+
+section { display: flex; flex-direction: column; gap: 20px; scroll-margin-top: 24px; }
+section > h2 { font: 600 24px/30px var(--display); margin: 0; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+section > h2 code { font: 500 12px/16px ui-monospace, Consolas, monospace; color: var(--faint); }
+section > p.lead { margin: -8px 0 0; color: var(--muted); max-width: 70ch; font-size: 15px; line-height: 22px; }
+h3 { font: 600 15px/20px var(--text); margin: 0; color: var(--fg); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rules { margin: 0; padding-left: 18px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; max-width: 72ch; }
+.rules b { color: var(--fg); font-weight: 600; }
+.code { font: 500 12px/16px ui-monospace, Consolas, monospace; color: var(--brass2); background: var(--inset); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+
+/* метки статуса предложения */
+.st { font: 600 11px/14px var(--text); letter-spacing: .04em; padding: 3px 8px; border-radius: var(--r-tag); white-space: nowrap; }
+.st.new { color: var(--mint); background: rgba(89,226,166,.12); }
+.st.chg { color: var(--brass2); background: var(--brass-pill); }
+.st.keep { color: var(--muted); background: rgba(142,163,155,.12); }
+.st.gone { color: var(--coral); background: rgba(255,132,104,.12); }
+
+/* сетки демо */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+.card { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card .note { color: var(--muted); font-size: 13px; line-height: 18px; margin: 0; }
+.card .note b { color: var(--fg); font-weight: 600; }
+.stage { background: var(--bg); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.cap { color: var(--faint); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+
+/* ---- компоненты Слитка ---- */
+.panel { background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom)); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--panel-shadow); }
+.glow { position: relative; overflow: hidden; }
+.glow::before { content: ""; position: absolute; width: 150%; aspect-ratio: 1; left: -45%; top: -55%; background: radial-gradient(closest-side, var(--gc, rgba(215,167,74,.2)), transparent); pointer-events: none; }
+.glow > * { position: relative; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 12px 20px; border-radius: var(--r-ctl);
+  font: 600 15px/20px var(--text); white-space: nowrap; transition: transform .12s, filter .12s; user-select: none; }
+.btn:active, .btn.pressed { transform: scale(.97); filter: brightness(.92); }
+.btn[disabled] { opacity: .45; cursor: default; transform: none; filter: none; }
+.btn.brass { background: linear-gradient(180deg, var(--brass2), var(--brass)); color: var(--on-brass); box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+.btn.plate { background: linear-gradient(180deg, var(--panel-top), var(--inset)); color: var(--brass2); border: 1px solid var(--line); }
+.btn.danger { background: rgba(255,132,104,.08); color: var(--coral); border: 1px solid rgba(255,132,104,.4); }
+.btn.ghost { min-height: 44px; padding: 10px 14px; color: var(--brass2); }
+.btn.ghost.quiet { color: var(--muted); }
+.btn.full { width: 100%; }
+.btn.add { width: 44px; min-height: 44px; height: 44px; padding: 0; border-radius: 14px; background: linear-gradient(180deg, var(--brass2), var(--brass)); color: var(--on-brass); }
+.btn.icon { width: 44px; min-height: 44px; height: 44px; padding: 0; border-radius: 14px; color: var(--muted); }
+.btn.icon.on { color: var(--brass2); }
+.btnrow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btnrow .btn { min-width: 0; }
+.btnrow.col { grid-template-columns: 1fr; }
+
+.tile { height: 104px; border-radius: var(--r-card); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
+  background: linear-gradient(180deg, var(--panel-top), var(--inset)); border: 1px solid var(--line); text-align: left; transition: transform .12s; }
+.tile:active { transform: scale(.97); }
+.tile .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--brass-tint); color: var(--brass2); display: grid; place-items: center; }
+.tile .t { font: 600 15px/20px var(--text); }
+
+.field { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; border-radius: var(--r-ctl); background: var(--inset); border: 1px solid var(--line); color: var(--fg); }
+.field input { all: unset; flex: 1; min-width: 0; font: 400 16px/22px var(--text); color: var(--fg); }
+.field input::placeholder { color: var(--faint); }
+.field.focus { border-color: var(--brass-line); }
+.field.err { border-color: rgba(255,132,104,.6); }
+.field.off { opacity: .45; }
+.field .sfx { color: var(--muted); font: 600 18px/22px var(--display); }
+.field.amount input { font: 600 20px/26px var(--display); }
+.field .lead { color: var(--muted); }
+.flabel { color: var(--muted); font-size: 12px; line-height: 16px; margin-bottom: 6px; display: block; }
+.ferr { color: var(--coral); font-size: 12px; line-height: 16px; margin-top: 6px; }
+
+.sw { width: 52px; height: 32px; border-radius: 16px; background: var(--inset); border: 1px solid var(--line); position: relative; flex: none; transition: background .18s, border-color .18s; }
+.sw::after { content: ""; position: absolute; left: 5px; top: 5px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: transform .18s, background .18s; }
+.sw[aria-checked="true"] { background: var(--brass); border-color: var(--brass); }
+.sw[aria-checked="true"]::after { transform: translateX(20px); background: var(--on-brass); }
+.sw[disabled] { opacity: .45; cursor: default; }
+.lrow { display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 16px; }
+.lrow + .lrow { border-top: 1px solid var(--line); }
+.lrow .lt { flex: 1; min-width: 0; }
+.lrow .lt > b { display: block; font: 400 16px/22px var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lrow .lt > span { display: block; color: var(--muted); font-size: 12px; line-height: 16px; }
+/* строка вклада: иконка по центру высоты, две строки на одной сетке, полоса срока */
+.deprow { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.deprow .bk { width: 36px; height: 36px; font-size: 13px; }
+.dmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.dl1, .dl2 { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.dl2 { color: var(--muted); font-size: 12px; line-height: 16px; }
+.dname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl2 > :last-child { flex: none; }
+.dmain .bar { margin-top: 2px; }
+.lrow .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.lrow .chev { color: var(--faint); }
+
+.chip { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: var(--r-chip); background: var(--inset); border: 1px solid var(--line);
+  color: var(--muted); font: 500 14px/18px var(--text); white-space: nowrap; transition: background .15s, color .15s, border-color .15s; }
+.chip[aria-pressed="true"] { background: var(--brass-pill); border-color: var(--brass-line); color: var(--brass2); }
+.chip.bank { height: 44px; padding: 0 16px 0 4px; border-radius: 22px; }
+.chip.bank .bk { width: 36px; height: 36px; font-size: 11px; }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: var(--r-tag); font: 600 12px/16px var(--text); white-space: nowrap; }
+.tag.n { color: var(--muted); background: rgba(142,163,155,.12); }
+.tag.m { color: var(--mint); background: rgba(89,226,166,.12); }
+.tag.b { color: var(--brass2); background: var(--brass-pill); }
+.tag.c { color: var(--coral); background: rgba(255,132,104,.12); }
+.tag.v { color: var(--violet-text); background: rgba(154,134,245,.14); }
+
+.tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: var(--r-ctl); background: var(--inset); border: 1px solid var(--line); }
+.tabs button { padding: 9px 6px; border-radius: 12px; color: var(--muted); font: 500 14px/18px var(--text); white-space: nowrap; transition: background .15s, color .15s; }
+.tabs button[aria-selected="true"] { background: var(--brass-pill); color: var(--brass2); }
+
+.bk { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 600 12px/1 var(--text); color: #fff; flex: none;
+  border: 1px solid rgba(255,255,255,.13); box-shadow: 0 3px 8px rgba(0,0,0,.45); }
+.stack { display: flex; }
+.stack .bk { width: 34px; height: 34px; font-size: 10px; margin-left: -9px; border: 2px solid var(--panel-top); }
+.stack .bk:first-child { margin-left: 0; }
+
+.bar { height: 7px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 99px; }
+
+/* суммы */
+.amt { font-family: var(--display); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.2px; white-space: nowrap; }
+.amt .k { font-size: .7em; opacity: .55; letter-spacing: 0; }
+/* U-56: в мелких ступенях копейки того же размера, чуть тусклее */
+.amt.rowa .k, .amt.small .k, .amt.inl .k { font-size: 1em; opacity: .75; }
+.amt.inl { font-family: var(--text); font-weight: 500; letter-spacing: 0; }
+.amt.old .k { font-size: .7em; opacity: .55; }
+/* B-44: пыль на месте цифр, наложением: показ 300, скрытие 200 */
+.money { transition: color .3s cubic-bezier(.2,0,0,1), background-color .3s; }
+.money.dust { transition-duration: .2s; }
+.amt.hero { font-size: 34px; line-height: 38px; font-weight: 700; letter-spacing: -.5px; }
+.amt.large { font-size: 22px; line-height: 26px; }
+.amt.rowa { font-size: 16px; line-height: 20px; }
+.amt.small { font-size: 13px; line-height: 16px; }
+.amt.inc { color: var(--mint); }
+.amt.neg { color: var(--coral); }
+.dust { color: transparent !important; border-radius: 6px; background-image: radial-gradient(circle, rgba(238,243,240,.75) .9px, transparent 1.3px), radial-gradient(circle, rgba(238,243,240,.4) .7px, transparent 1.1px);
+  background-size: 6px 6px, 4px 4px; background-position: 0 0, 2px 3px; }
+.dust .k { opacity: 1; }
+
+/* палитра */
+.sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.swatch { border-radius: 16px; border: 1px solid var(--line); overflow: hidden; background: var(--bg2); }
+.swatch .chipc { height: 64px; }
+.swatch .meta { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+.swatch .meta b { font: 600 13px/18px var(--text); }
+.swatch .meta code { font: 500 11px/14px ui-monospace, Consolas, monospace; color: var(--faint); }
+.swatch .meta span { color: var(--muted); font-size: 12px; line-height: 16px; }
+
+.typeline { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--line); }
+.typeline .tn { color: var(--muted); font-size: 12px; line-height: 16px; }
+.typeline .tn code { display: block; color: var(--faint); font: 500 11px/14px ui-monospace, Consolas, monospace; }
+@media (max-width: 520px) { .typeline { grid-template-columns: 1fr; gap: 4px; } }
+
+/* шторка, диалог, меню */
+.phone { position: relative; width: 100%; max-width: 360px; height: 460px; border-radius: 28px; overflow: hidden; background: var(--bg); border: 1px solid var(--line); margin: 0 auto; }
+.phone .under { padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+.phone .veil { position: absolute; inset: 0; background: var(--scrim); }
+.phone .gesture { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); width: 108px; height: 4px; border-radius: 2px; background: rgba(238,243,240,.55); z-index: 3; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--panel-top); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 12px 20px 30px; display: flex; flex-direction: column; gap: 14px; z-index: 2; }
+.sheet .handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(238,243,240,.25); align-self: center; }
+.sheet h4, .dialog h4 { font: 600 18px/22px var(--display); margin: 0; }
+.dialog { position: absolute; left: 20px; right: 20px; top: 50%; transform: translateY(-50%); z-index: 2; padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 12px; }
+.dialog p { margin: 0; color: var(--muted); font-size: 14px; line-height: 20px; }
+.menu { position: absolute; z-index: 2; width: 220px; padding: 6px; border-radius: 18px; display: flex; flex-direction: column; }
+.menu button { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 12px; font: 500 15px/20px var(--text); color: var(--fg); text-align: left; }
+.menu button:hover { background: rgba(255,255,255,.04); }
+.menu button svg.i { width: 20px; height: 20px; color: var(--muted); }
+.menu button.danger, .menu button.danger svg.i { color: var(--coral); }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 8px; }
+.lifted { position: absolute; z-index: 2; left: 12px; right: 12px; }
+.snack { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; background: var(--panel-top); border: 1px solid var(--line); box-shadow: var(--panel-shadow); }
+.snack span { flex: 1; }
+/* добавлено по макетам цикла 7 */
+.status { display: inline-flex; align-items: center; gap: 8px; font: 600 14px/18px var(--text); }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.selrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px; text-align: left; }
+.selrow .ph { width: 36px; height: 36px; border-radius: 50%; border: 1.5px dashed var(--faint); flex: none; }
+.selrow .t { flex: 1; min-width: 0; font: 400 16px/22px var(--text); }
+.vchip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 12px; background: var(--inset); border: 1px solid var(--line); font: 400 14px/18px var(--text); white-space: nowrap; }
+.vchip b { font: 600 13px/16px var(--display); color: var(--brass2); }
+.coach { padding: 16px; border-radius: 20px; background: #F3EEE3; color: #14120E; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 16px 40px rgba(0,0,0,.6); }
+.coach .ct { font: 600 16px/20px var(--text); }
+.coach p { margin: 0; font: 400 14px/20px var(--text); color: #3B372E; }
+.coach .cf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.coach .steps { display: flex; gap: 4px; }
+.coach .steps i { width: 6px; height: 6px; border-radius: 50%; background: rgba(20,18,14,.2); }
+.coach .steps i.on { width: 16px; border-radius: 3px; background: #14120E; }
+.coach .go { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 12px; background: #14120E; color: #F3EEE3; font: 600 14px/18px var(--text); }
+.coach .skip { font: 600 14px/18px var(--text); color: #6B6556; }
+.spotrow { position: relative; z-index: 2; border-radius: 16px; outline: 2px solid var(--brass2); outline-offset: 3px; box-shadow: 0 0 0 9999px var(--scrim); }
+
+.bottombar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px; border-radius: 26px; }
+.bottombar button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0; border-radius: 18px; color: var(--muted); font: 500 12px/16px var(--text); }
+.bottombar button[aria-selected="true"] { color: var(--brass2); background: var(--brass-pill); }
+
+.empty { padding: 22px 20px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.empty h4 { margin: 0; font: 600 18px/22px var(--display); }
+.art { width: 72px; height: 64px; }
+.parts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.part { border-radius: var(--r-card); padding: 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; border: 1.5px solid var(--line);
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom)); transition: transform .12s, border-color .15s; }
+.part:active { transform: scale(.97); }
+.part b { font: 600 15px/20px var(--text); }
+.part span { color: var(--muted); font-size: 12px; line-height: 16px; }
+.part.main { border-color: var(--brass-line); background: linear-gradient(160deg, rgba(215,167,74,.16), var(--panel-top) 60%); }
+
+.motion { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
+.mcell { border-radius: 16px; border: 1px solid var(--line); background: var(--bg2); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.mini { height: 120px; border-radius: 12px; background: var(--bg); position: relative; overflow: hidden; border: 1px solid var(--line); }
+.mini .scr { position: absolute; inset: 8px; border-radius: 8px; background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom)); border: 1px solid var(--line); display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+.mini .scr.b { background: linear-gradient(180deg, #1c2622, #121a18); color: var(--brass2); }
+@keyframes inR { 0%, 25% { transform: translateX(110%); } 55%, 100% { transform: translateX(0); } }
+@keyframes outL { 0%, 25% { transform: translateX(0); } 55%, 100% { transform: translateX(-30%); opacity: .4; } }
+.mini.go .a { animation: outL 2.6s ease-in-out infinite; }
+.mini.go .b { animation: inR 2.6s ease-in-out infinite; }
+/* U-55: шкала движения */
+.mscale { display: flex; flex-direction: column; gap: 10px; }
+.mtrack { position: relative; height: 28px; border-radius: 10px; background: var(--inset); border: 1px solid var(--line); overflow: hidden; }
+.mtrack .dot { position: absolute; top: 5px; left: 5px; width: 16px; height: 16px; border-radius: 6px; background: linear-gradient(180deg, var(--brass2), var(--brass)); transition-property: transform; transition-timing-function: cubic-bezier(.2,0,0,1); }
+.mtrack.run .dot { transform: translateX(calc(var(--w, 220px) - 28px)); }
+.mrow { display: grid; grid-template-columns: 92px 1fr; gap: 10px; align-items: center; }
+.mrow .mn { font: 500 12px/16px ui-monospace, Consolas, monospace; color: var(--muted); }
+.mrow .mn b { display: block; color: var(--fg); font: 600 13px/18px var(--text); }
+/* B-54: текст не переносится внутри слова */
+.wrapdemo { width: 150px; margin: 6px 0 8px; padding: 12px; border-radius: 14px; background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom)); border: 1px solid var(--line); font: 600 15px/20px var(--display); }
+.wrapdemo.bad { display: flex; gap: 8px; align-items: flex-start; }
+.wrapdemo.bad > span { width: 44px; flex: none; word-break: break-all; }
+.wrapdemo.bad .stack { margin-top: 0; }
+.wrapdemo .stack { display: flex; margin-top: 8px; }
+.wrapdemo .stack i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--panel-top); margin-left: -6px; background: var(--sky); }
+.wrapdemo .stack i:first-child { margin-left: 0; background: var(--brass); }
+.wrapdemo .stack i:nth-child(2) { background: var(--violet); }
+.wrapdemo .stack em { font: 600 11px/22px var(--text); color: var(--muted); margin-left: 6px; font-style: normal; }
+
+.dodont { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .dodont { grid-template-columns: 1fr; } }
+.dd { border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 20px; border: 1px solid var(--line); background: var(--bg2); }
+.dd .cap { display: block; margin-bottom: 4px; }
+.dd.ok .cap { color: var(--mint); }
+.dd.no .cap { color: var(--coral); }
+.dd.no { color: var(--muted); }
+
+table.tt { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 18px; }
+table.tt th { text-align: left; color: var(--faint); font-weight: 500; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+table.tt td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--muted); }
+table.tt td:first-child { color: var(--fg); white-space: nowrap; }
+.scroll-x { overflow-x: auto; }
+footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-add" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
+  <symbol id="i-photo" viewBox="0 0 24 24"><path d="M19 7v3h-2V7h-3V5h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+  <symbol id="i-del" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14c1.1 0 2 .9 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></symbol>
+  <symbol id="i-pct" viewBox="0 0 24 24"><path d="M7.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm0-5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM16.5 13a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM5.41 20 4 18.59 18.59 4 20 5.41 5.41 20z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V9h14v11z"/></symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></symbol>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Разделы">
+  <div class="brand">Слиток</div>
+  <div class="sub">Дизайн-система Itogo · утверждена в цикле 7, дополнена в цикле 8</div>
+  <div class="grp">Основа</div>
+  <a href="#principles">Принципы</a>
+  <a href="#color">Цвет</a>
+  <a href="#type">Шрифты</a>
+  <a href="#money">Суммы</a>
+  <a href="#shape">Отступы и радиусы</a>
+  <a href="#icons">Иконки</a>
+  <div class="grp">Компоненты</div>
+  <a href="#surfaces">Поверхности</a>
+  <a href="#buttons">Кнопки</a>
+  <a href="#fields">Поля ввода</a>
+  <a href="#choice">Выбор</a>
+  <a href="#lists">Строки и прогресс</a>
+  <a href="#overlays">Шторка, диалог, меню</a>
+  <a href="#empty">Пустое состояние</a>
+  <a href="#nav">Навигация</a>
+  <div class="grp">Механика</div>
+  <a href="#motion">Переходы и поведение</a>
+  <a href="#words">Тексты</a>
+  <a href="#map">Компоненты в коде</a>
+</nav>
+
+<main>
+<header class="hero">
+  <h1>Слиток — <span>дизайн-система</span> Itogo</h1>
+  <p>Эталон для всех экранов приложения: цвета, шрифты, суммы, компоненты и правила поведения. Экран собирается только из того, что есть здесь. Нужного нет — сначала элемент добавляется сюда, потом на экран. Размеры в пикселях равны dp в приложении.</p>
+  <div class="legend">
+    <span class="st keep">как есть</span> оставляем
+    <span class="st chg">изменено</span> меняем существующее
+    <span class="st new">новое</span> добавляем в систему
+    <span class="st gone">убираем</span> больше не используем
+  </div>
+</header>
+
+<!-- ============ ПРИНЦИПЫ ============ -->
+<section id="principles">
+  <h2>Принципы</h2>
+  <div class="grid">
+    <div class="card"><h3>Одна главная цифра</h3><p class="note">На экране одна-две крупные суммы, остальные тише или за раскрытием. Копейки тусклее рублей, в крупных суммах ещё и мельче. Если цифру можно не показывать — не показываем.</p></div>
+    <div class="card"><h3>Цвет — только со смыслом</h3><p class="note">Латунь — главное действие и выбранное. Мята — доход и начисления. Коралл — опасное. Остальные суммы — обычным цветом текста. Одна величина везде одного цвета.</p></div>
+    <div class="card"><h3>Один путь к действию</h3><p class="note">Каждое действие доступно одним способом. Долгое нажатие — только для быстрого действия, которого нет на поверхности.</p></div>
+    <div class="card"><h3>Без поясняющих подписей</h3><p class="note">Если элементу нужна подпись «нажмите, чтобы…», элемент переделывается. Объяснения живут только в обучении.</p></div>
+    <div class="card"><h3>Приложение решает само</h3><p class="note">Что можно определить автоматически, определяется автоматически. Человеку остаётся одно касание на исправление.</p></div>
+    <div class="card"><h3>Ошибка — после попытки</h3><p class="note">Красное появляется только когда человек попробовал сохранить и что-то не так. Пустая форма спокойна.</p></div>
+  </div>
+</section>
+
+<!-- ============ ЦВЕТ ============ -->
+<section id="color">
+  <h2>Цвет <code>ui/theme/Color.kt · Slitok</code></h2>
+  <p class="lead">Одна тёмная тема. Значения не меняются, меняются правила применения <span class="st chg">изменено</span>: латунь больше не красит суммы.</p>
+  <h3>Поверхности и текст</h3>
+  <div class="sw-grid">
+    <div class="swatch"><div class="chipc" style="background:var(--bg)"></div><div class="meta"><b>Фон</b><code>Bg #0A0F0E</code><span>Фон экрана.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:linear-gradient(180deg,var(--panel-top),var(--panel-bottom))"></div><div class="meta"><b>Панель</b><code>PanelTop → PanelBottom</code><span>Карточки, шторки, меню, нижняя панель.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:var(--inset)"></div><div class="meta"><b>Углубление</b><code>Inset #0C1211</code><span>Поля, переключатели, вкладки.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:var(--fg)"></div><div class="meta"><b>Текст</b><code>Fg #EEF3F0</code><span>Основной текст и все суммы, кроме дохода.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:var(--muted)"></div><div class="meta"><b>Тихий текст</b><code>Muted #8EA39B</code><span>Подписи, второстепенное, неактивные вкладки.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:var(--faint)"></div><div class="meta"><b>Едва</b><code>Faint #56655F</code><span>Подсказка в пустом поле, стрелки строк.</span></div></div>
+  </div>
+  <h3>Акценты — по смыслу</h3>
+  <div class="sw-grid">
+    <div class="swatch"><div class="chipc" style="background:linear-gradient(180deg,var(--brass2),var(--brass))"></div><div class="meta"><b>Латунь</b><code>Brass / Brass2</code><span>Главная кнопка, «+», выбранная вкладка и плашка, переключатель «вкл». Не для сумм.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:var(--mint)"></div><div class="meta"><b>Мята</b><code>Mint #59E2A6</code><span>Доход, начисления, кэшбэк в рублях, «+X сегодня». Только суммы со знаком «+».</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:var(--coral)"></div><div class="meta"><b>Коралл</b><code>Coral #FF8468</code><span>Удалить, убрать, ошибка после попытки сохранить, расход.</span></div></div>
+  </div>
+  <h3>Части капитала — метки, не суммы</h3>
+  <div class="sw-grid">
+    <div class="swatch"><div class="chipc" style="background:var(--brass)"></div><div class="meta"><b>Счета</b><code>Brass</code><span>Точка, полоса, свечение героя.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:linear-gradient(90deg,var(--violet),var(--violet-light))"></div><div class="meta"><b>Вклады</b><code>Violet → VioletLight</code><span>Полоса срока, свечение героя.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:var(--sky)"></div><div class="meta"><b>Валюта</b><code>Sky #6CC4E8</code><span>Точка, полоса.</span></div></div>
+    <div class="swatch"><div class="chipc" style="background:var(--sand)"></div><div class="meta"><b>Наличные</b><code>Sand #CBB89A</code><span>Точка, полоса.</span></div></div>
+  </div>
+  <div class="card">
+    <h3>Правило сумм <span class="st chg">изменено</span> <span class="tag n">B-34</span></h3>
+    <div class="stage">
+      <div class="row" style="justify-content:space-between">
+        <div><div class="cap">Вложено</div><div class="amt large">4,27 млн</div></div>
+        <div><div class="cap">Доход сейчас</div><div class="amt large inc">+270 292</div></div>
+        <div><div class="cap">К выдаче</div><div class="amt large">4,69 млн</div></div>
+      </div>
+    </div>
+    <p class="note">Было: «Вложено» латунью в одном месте и белым в другом, «К выдаче» наоборот. Стало: все суммы — текстом, доход — мятой. Цвет части капитала — только в точке, полосе и свечении.</p>
+  </div>
+</section>
+
+<!-- ============ ШРИФТЫ ============ -->
+<section id="type">
+  <h2>Шрифты <code>ui/theme/Type.kt · AppTypography</code></h2>
+  <p class="lead">Unbounded — заголовки и суммы. Golos Text — всё остальное. Оба шрифта вшиты в приложение, работают без сети.</p>
+  <div class="card">
+    <h3>Найдено при аудите <span class="st chg">изменено</span> <span class="tag n">U-40 / A18</span></h3>
+    <p class="note">Стили <b>titleSmall</b> (все кнопки, карточка банка — 26 мест), <b>headlineMedium</b> и <b>labelSmall</b> не заданы в теме, и Android подставляет системный шрифт. Поэтому кнопки и суммы в карточке банка выглядят «другим шрифтом». Все стили задаются явно, ниже — полная шкала.</p>
+  </div>
+  <div>
+    <div class="typeline"><div class="tn">Экран<code>headlineSmall · Unbounded 22/26 600</code></div><div style="font:600 22px/26px var(--display)">Обзор</div></div>
+    <div class="typeline"><div class="tn">Шторка, диалог<code>titleLarge · Unbounded 18/22 600</code></div><div style="font:600 18px/22px var(--display)">Добавить вклад</div></div>
+    <div class="typeline"><div class="tn">Заголовок блока<code>titleMedium · Golos 16/20 600</code></div><div style="font:600 16px/20px var(--text)">Кэшбэк · октябрь</div></div>
+    <div class="typeline"><div class="tn">Кнопка <span class="st new">новое</span><code>titleSmall · Golos 15/20 600</code></div><div style="font:600 15px/20px var(--text)">Сохранить</div></div>
+    <div class="typeline"><div class="tn">Строка списка<code>bodyLarge · Golos 16/22 400</code></div><div style="font:400 16px/22px var(--text)">Накопительный счёт</div></div>
+    <div class="typeline"><div class="tn">Текст<code>bodyMedium · Golos 14/20 400</code></div><div style="font:400 14px/20px var(--text)">Последняя копия — сегодня в 23:31</div></div>
+    <div class="typeline"><div class="tn">Подпись<code>bodySmall · Golos 12/16 400</code></div><div style="font:400 12px/16px var(--text);color:var(--muted)">осталось 39 дней · до 01.12</div></div>
+    <div class="typeline"><div class="tn">Вкладка, плашка<code>labelLarge · Golos 14/18 500</code></div><div style="font:500 14px/18px var(--text)">По категориям</div></div>
+    <div class="typeline"><div class="tn">Метка<code>labelMedium · Golos 12/16 500</code></div><div style="font:500 12px/16px var(--text)">Платежи</div></div>
+    <div class="typeline"><div class="tn">Мелкая метка <span class="st new">новое</span><code>labelSmall · Golos 11/14 600</code></div><div style="font:600 11px/14px var(--text);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)">Популярные</div></div>
+  </div>
+</section>
+
+<!-- ============ СУММЫ ============ -->
+<section id="money">
+  <h2>Суммы <span class="st new">новое</span> <code>ui/theme/Type · amount*</code></h2>
+  <p class="lead">Четыре ступени вместо девяти разных стилей. Все суммы — Unbounded, цифры одной ширины. Копейки — по ступени <span class="tag n">U-56</span>: в крупных (Hero, Large) мельче и приглушены, в мелких (Row, Small, сумма в тексте) того же размера и чуть тусклее. Нулевые копейки не показываются.</p>
+  <div class="grid">
+    <div class="card">
+      <div class="stage">
+        <div class="cap">amountHero · 34/38 700</div>
+        <div class="amt hero">4 522 208<span class="k">,94 ₽</span></div>
+        <div class="cap">amountLarge · 22/26 600</div>
+        <div class="amt large">1 000 000 ₽</div>
+        <div class="cap">amountRow · 16/20 600</div>
+        <div class="amt rowa">26 148<span class="k">,55 ₽</span></div>
+        <div class="cap">amountSmall · 13/16 600</div>
+        <div class="amt small inc">+18 083<span class="k">,24 ₽</span></div>
+      </div>
+      <p class="note"><b>Hero</b> — главная сумма экрана. <b>Large</b> — сводки и итоги. <b>Row</b> — суммы в строках списков. <b>Small</b> — доход и вторичные суммы в строке.</p>
+    </div>
+    <div class="card">
+      <h3>Копейки по ступени <span class="st chg">изменено</span> <span class="tag n">U-56</span></h3>
+      <div class="stage">
+        <div class="cap">Крупные · 70% размера, 55% яркости</div>
+        <div class="amt large">98 262<span class="k">,55 ₽</span></div>
+        <div class="cap">Мелкие · тот же размер, 75% яркости</div>
+        <div class="row" style="justify-content:space-between"><span style="color:var(--muted)">Операции после</span><span class="amt rowa">−5 000<span class="k">,50 ₽</span></span></div>
+        <div class="row" style="justify-content:space-between"><span style="color:var(--muted)">Доход за месяц</span><span class="amt small inc">+1 713<span class="k">,92 ₽</span></span></div>
+        <div style="color:var(--muted)">Покупка <span class="amt inl" style="color:var(--fg)">1 073<span class="k">,40 ₽</span></span> в FAST-FUD</div>
+        <div class="cap">Было в мелких</div>
+        <div class="amt rowa old" style="opacity:.8">−5 000<span class="k">,50 ₽</span></div>
+      </div>
+      <p class="note">Граница — между Row и Large (19 sp, <span class="code">KopeckLook.forSize</span>). Сумма, уменьшенная, чтобы влезть, оставляет копейки своей ступени.</p>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3>Скрытые суммы</h3><button class="sw" id="hideSw" role="switch" aria-checked="false" aria-label="Скрыть суммы"></button></div>
+      <div class="stage" id="hideDemo">
+        <div class="amt hero money">4 522 208<span class="k">,94 ₽</span></div>
+        <div class="row" style="justify-content:space-between">
+          <span style="color:var(--muted)">В год</span><span class="amt rowa money">1 599 ₽</span>
+        </div>
+        <div class="row" style="justify-content:space-between">
+          <span style="color:var(--muted)">Доход</span><span class="amt small inc money">+1 713<span class="k">,92 ₽</span></span>
+        </div>
+      </div>
+      <p class="note">Скрываются <b>все</b> суммы, без исключений: только через <span class="code">MoneyText</span>/<span class="code">AmountText</span>. Сумма обычным <span class="code">Text</span> не скрывается — это ошибка (B-42). Пыль ложится ровно на цифры: при скрытии и показе ничего не сдвигается <span class="tag n">B-44</span>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ОТСТУПЫ И РАДИУСЫ ============ -->
+<section id="shape">
+  <h2>Отступы и радиусы</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Отступы</h3>
+      <div class="stage">
+        <div class="row" style="align-items:flex-end;gap:10px">
+          <div style="width:4px;height:24px;background:var(--brass)"></div>
+          <div style="width:8px;height:24px;background:var(--brass)"></div>
+          <div style="width:12px;height:24px;background:var(--brass)"></div>
+          <div style="width:16px;height:24px;background:var(--brass)"></div>
+          <div style="width:20px;height:24px;background:var(--brass)"></div>
+          <div style="width:24px;height:24px;background:var(--brass)"></div>
+        </div>
+        <div class="row" style="gap:10px;color:var(--muted);font-size:12px"><span style="width:4px">4</span><span style="width:8px">8</span><span style="width:12px">12</span><span style="width:16px">16</span><span style="width:20px">20</span><span>24</span></div>
+      </div>
+      <p class="note">Поля экрана — <b>16</b>. Внутри панели — <b>16–20</b>. Между карточками — <b>12</b>, между элементами в карточке — <b>8–14</b>. Между блоками экрана — <b>24</b>.</p>
+    </div>
+    <div class="card">
+      <h3>Радиусы <span class="st chg">изменено</span></h3>
+      <div class="stage">
+        <div class="row" style="gap:10px;align-items:flex-end">
+          <div style="width:40px;height:40px;border:1.5px solid var(--brass-line);border-radius:8px"></div>
+          <div style="width:44px;height:44px;border:1.5px solid var(--brass-line);border-radius:12px"></div>
+          <div style="width:52px;height:52px;border:1.5px solid var(--brass-line);border-radius:16px"></div>
+          <div style="width:60px;height:60px;border:1.5px solid var(--brass-line);border-radius:20px"></div>
+          <div style="width:68px;height:68px;border:1.5px solid var(--brass-line);border-radius:28px"></div>
+        </div>
+        <div class="row" style="gap:10px;color:var(--muted);font-size:12px"><span style="width:40px">8</span><span style="width:44px">12</span><span style="width:52px">16</span><span style="width:60px">20</span><span>28</span></div>
+      </div>
+      <p class="note">Сейчас в коде девять радиусов (11, 12, 14, 16, 18, 20, 22, 26, 28). Остаётся пять: <b>8</b> метка · <b>12</b> плашка, вкладка · <b>16</b> кнопка, поле · <b>20</b> карточка, плитка, меню · <b>28</b> шторка, нижняя панель.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ИКОНКИ ============ -->
+<section id="icons">
+  <h2>Иконки</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Плоские — действия</h3>
+      <div class="stage"><div class="row" style="color:var(--muted)">
+        <svg class="i"><use href="#i-add"/></svg><svg class="i"><use href="#i-edit"/></svg><svg class="i"><use href="#i-photo"/></svg><svg class="i"><use href="#i-search"/></svg>
+        <svg class="i"><use href="#i-eye"/></svg><svg class="i"><use href="#i-del"/></svg><svg class="i"><use href="#i-up"/></svg><svg class="i"><use href="#i-cal"/></svg>
+        <svg class="i"><use href="#i-bell"/></svg><svg class="i"><use href="#i-more"/></svg><svg class="i"><use href="#i-chev"/></svg>
+      </div></div>
+      <p class="note">Material Filled, 22 px (в меню 20). Цвет — тихий текст; латунь — только у главного действия и выбранного; коралл — у «Удалить».</p>
+    </div>
+    <div class="card">
+      <h3>Объёмные — разделы <span class="st chg">шире применение</span></h3>
+      <div class="stage"><div class="row" style="gap:16px">
+        <svg class="art" viewBox="0 0 72 64" aria-label="Счета"><defs><linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F0C878"/><stop offset="1" stop-color="#9C7224"/></linearGradient></defs><rect x="10" y="20" width="52" height="34" rx="7" fill="#000" opacity=".35"/><rect x="8" y="14" width="52" height="34" rx="7" fill="url(#ga)"/><rect x="8" y="22" width="52" height="7" fill="#14120E" opacity=".55"/><rect x="14" y="36" width="16" height="5" rx="2.5" fill="#FFF3D6" opacity=".7"/></svg>
+        <svg class="art" viewBox="0 0 72 64" aria-label="Вклады"><defs><linearGradient id="gv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BBA6FF"/><stop offset="1" stop-color="#5B46B8"/></linearGradient></defs><rect x="15" y="12" width="44" height="44" rx="9" fill="#000" opacity=".35"/><rect x="13" y="8" width="44" height="44" rx="9" fill="url(#gv)"/><circle cx="35" cy="30" r="10" fill="#1A1433" opacity=".55"/><circle cx="35" cy="30" r="6" fill="none" stroke="#E6DDFF" stroke-width="2"/><rect x="34" y="21" width="2" height="5" fill="#E6DDFF"/></svg>
+        <svg class="art" viewBox="0 0 72 64" aria-label="Валюта"><defs><linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9E3F7"/><stop offset="1" stop-color="#2E86AE"/></linearGradient></defs><ellipse cx="36" cy="50" rx="20" ry="6" fill="#000" opacity=".3"/><ellipse cx="36" cy="44" rx="18" ry="6" fill="#2E86AE"/><ellipse cx="36" cy="38" rx="18" ry="6" fill="url(#gs)"/><ellipse cx="36" cy="30" rx="18" ry="6" fill="#2E86AE"/><ellipse cx="36" cy="24" rx="18" ry="6" fill="url(#gs)"/><text x="36" y="28" text-anchor="middle" font-size="9" font-weight="700" fill="#0C3346" font-family="Arial">$</text></svg>
+        <svg class="art" viewBox="0 0 72 64" aria-label="Наличные"><defs><linearGradient id="gc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E7D9BF"/><stop offset="1" stop-color="#9C8865"/></linearGradient></defs><rect x="12" y="22" width="50" height="28" rx="5" fill="#000" opacity=".3" transform="rotate(-8 37 36)"/><rect x="10" y="18" width="50" height="28" rx="5" fill="#8E7B5B" transform="rotate(-8 35 32)"/><rect x="12" y="20" width="50" height="28" rx="5" fill="url(#gc)"/><circle cx="37" cy="34" r="7" fill="none" stroke="#5E4F35" stroke-width="2"/></svg>
+      </div></div>
+      <p class="note">Рисунки частей капитала (сейчас — только в шторке «В общий капитал»). Применяются ещё в пустом Обзоре, пустых разделах и обучении (F-30). Их 19 цветов переезжают в палитру (U-40 / A12).</p>
+    </div>
+    <div class="card">
+      <h3>Иконки банков</h3>
+      <div class="stage">
+        <div class="row">
+          <span class="bk" style="background:#2B47B0">ВТБ</span>
+          <span class="bk" style="background:#2F55B3">ГПБ</span>
+          <span class="bk" style="background:#D8452F">МКБ</span>
+          <span class="bk" style="background:#F07A2B">ПСБ</span>
+          <div class="stack" style="margin-left:12px"><span class="bk" style="background:#2B47B0">ВТБ</span><span class="bk" style="background:#D8452F">МКБ</span><span class="bk" style="background:#F07A2B">ПСБ</span><span class="bk" style="background:var(--inset);color:var(--muted)">+4</span></div>
+        </div>
+      </div>
+      <p class="note">Иконка приложения банка, а если её нет — буквы на цвете банка. Круг 40 (в строке 36, в шапке 24), тонкое кольцо и тень. <span class="code">BankIcon</span>, <span class="code">BankStack</span> — как есть.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ПОВЕРХНОСТИ ============ -->
+<section id="surfaces">
+  <h2>Поверхности</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Panel <span class="st keep">как есть</span></h3>
+      <div class="stage"><div class="panel" style="padding:16px"><div style="font:600 16px/20px var(--text)">Кэшбэк · октябрь</div><div style="color:var(--muted);margin-top:4px">6 банков · 23 категории</div></div></div>
+      <p class="note">Любая карточка. Градиент, тонкая рамка, мягкая тень. Радиус 20. Голый <span class="code">Card</span> не используется.</p>
+    </div>
+    <div class="card">
+      <h3>Panel со свечением — герой</h3>
+      <div class="stage"><div class="panel glow" style="padding:18px;--gc:rgba(154,134,245,.22)">
+        <div class="amt hero">4 522 208<span class="k">,94 ₽</span></div>
+        <div style="color:var(--muted);margin-top:6px"><span class="amt small inc">+1 713<span class="k">,92 ₽</span></span> сегодня</div>
+      </div></div>
+      <p class="note">Только главный блок экрана. Свечение — цветом части (вклады — фиолет). Один герой на экран.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ КНОПКИ ============ -->
+<section id="buttons">
+  <h2>Кнопки <code>ui/common/Buttons.kt</code></h2>
+  <p class="lead">Набор «Слитки». Высота 52, радиус 16, текст в одну строку. Нажатие — лёгкое сжатие. Выключенная — 45% прозрачности.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>BrassButton — главное действие <span class="st keep">как есть</span></h3>
+      <div class="stage">
+        <button class="btn brass full"><svg class="i"><use href="#i-check"/></svg>Сохранить</button>
+        <div class="btnrow"><button class="btn brass pressed">Нажато</button><button class="btn brass" disabled>Выключено</button></div>
+      </div>
+      <p class="note">Одна на экран или шторку.</p>
+    </div>
+    <div class="card">
+      <h3>PlateButton — второе действие <span class="st keep">как есть</span></h3>
+      <div class="stage">
+        <button class="btn plate full"><svg class="i"><use href="#i-edit"/></svg>Вручную</button>
+        <div class="btnrow"><button class="btn plate pressed">Нажато</button><button class="btn plate" disabled>Выключено</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>DangerButton — опасное <span class="st chg">реже</span></h3>
+      <div class="stage"><button class="btn danger full"><svg class="i"><use href="#i-del"/></svg>Удалить</button></div>
+      <p class="note">Только в подтверждении и в шторке действия. Не стоит большой кнопкой внизу экрана: «Убрать банк» уходит в меню «⋮» сверху (U-43).</p>
+    </div>
+    <div class="card">
+      <h3>GhostButton — тихая <span class="st new">новое</span></h3>
+      <div class="stage"><div class="row"><button class="btn ghost">Восстановить из копии</button><button class="btn ghost quiet">Пропустить</button></div></div>
+      <p class="note">Вместо стандартного <span class="code">TextButton</span> (A5). Латунная — действие, тихая — отказ («Пропустить», «Не подписка», «Отмена»).</p>
+    </div>
+    <div class="card">
+      <h3>Кнопки-значки</h3>
+      <div class="stage"><div class="row">
+        <button class="btn add" aria-label="Добавить"><svg class="i"><use href="#i-add"/></svg></button>
+        <button class="btn icon" aria-label="Скрыть суммы"><svg class="i"><use href="#i-eye"/></svg></button>
+        <button class="btn icon on" aria-label="Изменить"><svg class="i"><use href="#i-edit"/></svg></button>
+        <button class="btn icon" aria-label="Ещё"><svg class="i"><use href="#i-more"/></svg></button>
+      </div></div>
+      <p class="note"><b>«+»</b> (<span class="code">AddButton</span>) — добавить в список, всегда открывает шторку «Со скринов / Вручную». Значки 44×44 — в шапке экрана и в строке.</p>
+    </div>
+    <div class="card">
+      <h3>TileButton — плитка выбора <span class="st keep">как есть</span></h3>
+      <div class="stage"><div class="btnrow">
+        <button class="tile"><span class="ic"><svg class="i"><use href="#i-photo"/></svg></span><span class="t">Со скринов</span></button>
+        <button class="tile"><span class="ic"><svg class="i"><use href="#i-edit"/></svg></span><span class="t">Вручную</span></button>
+      </div></div>
+      <p class="note">Выбор из 2–4 путей в шторке. Высота 104.</p>
+    </div>
+    <div class="card">
+      <h3>ButtonRow — ряд кнопок <span class="st new">новое</span> <span class="tag n">B-38</span></h3>
+      <div class="stage">
+        <div class="btnrow"><button class="btn brass">Сохранить</button><button class="btn plate">Восстановить</button></div>
+        <div class="cap">не влезает — столбиком</div>
+        <div class="btnrow col"><button class="btn brass">Сохранить сейчас</button><button class="btn plate">Восстановить из файла</button></div>
+      </div>
+      <p class="note">Кнопки в ряду всегда одной высоты, текст не переносится. Не помещается — ряд сам становится столбиком.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ПОЛЯ ============ -->
+<section id="fields">
+  <h2>Поля ввода <span class="st new">новое</span> <code>SlitokField · AmountField</code></h2>
+  <p class="lead">Восемь своих полей (A2) заменяются двумя общими. Высота 52, радиус 16, фон-углубление. Фокус — латунная рамка. Ошибка — коралловая рамка и строка под полем, только после попытки сохранить.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>SlitokField — текст</h3>
+      <div class="stage">
+        <div><label class="flabel" for="f1">Название</label><div class="field"><input id="f1" placeholder="Например, «Подушка»"></div></div>
+        <div><label class="flabel" for="f2">В фокусе</label><div class="field focus"><input id="f2" value="Накопительный"></div></div>
+        <div><label class="flabel" for="f3">Ошибка</label><div class="field err"><input id="f3" value=""></div><div class="ferr">Впишите название</div></div>
+        <div><label class="flabel" for="f4">Выключено</label><div class="field off"><input id="f4" value="Альфа-Банк" disabled></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>AmountField — сумма и процент</h3>
+      <div class="stage">
+        <div><label class="flabel" for="f5">Сумма</label><div class="field amount focus"><input id="f5" value="1 000 000" inputmode="decimal"><span class="sfx">₽</span></div></div>
+        <div><label class="flabel" for="f6">Ставка</label><div class="field amount"><input id="f6" value="11,45" inputmode="decimal"><span class="sfx">%</span></div></div>
+        <div><label class="flabel" for="f7">Дата открытия</label><div class="field"><svg class="i lead"><use href="#i-cal"/></svg><input id="f7" value="12 сентября 2026" readonly></div></div>
+      </div>
+      <p class="note">Сумма — Unbounded, единица справа тихим цветом. Дата открывает <b>SlitokDatePicker</b> в шторке <span class="st new">новое</span> вместо стандартного окна Android (A4).</p>
+    </div>
+    <div class="card">
+      <h3>Поиск и пароль</h3>
+      <div class="stage">
+        <div class="field focus"><svg class="i" style="color:var(--brass2)"><use href="#i-search"/></svg><input id="f8" placeholder="Банк" aria-label="Поиск банка"></div>
+        <div><label class="flabel" for="f9">Пароль для копии</label><div class="field"><input id="f9" type="password" value="секретный"><button class="btn icon" style="width:32px;height:32px;min-height:32px" aria-label="Показать пароль"><svg class="i"><use href="#i-eye"/></svg></button></div></div>
+      </div>
+      <p class="note"><span class="code">SearchField</span> — как есть. Пароль — вариант <span class="code">SlitokField</span> со значком «показать».</p>
+    </div>
+    <div class="card">
+      <h3>SelectRow — выбор одного <span class="st new">новое</span></h3>
+      <div class="stage">
+        <button class="panel selrow"><span class="ph"></span><span class="t" style="color:var(--muted)">Выберите банк</span><svg class="i" style="color:var(--faint);width:18px;height:18px"><use href="#i-chev"/></svg></button>
+        <button class="panel selrow"><span class="bk" style="background:#1E5BFF;width:36px;height:36px">O</span><span class="t">Ozon Банк</span><svg class="i" style="color:var(--faint);width:18px;height:18px"><use href="#i-chev"/></svg></button>
+      </div>
+      <p class="note">Поле формы, где выбирается одно значение из списка (банк, валюта). Касание открывает шторку с поиском и списком, выбранное отмечено галочкой. Без «+» — «+» только там, где добавляется несколько.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ВЫБОР ============ -->
+<section id="choice">
+  <h2>Выбор</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>SlitokSwitch <span class="st new">новое</span></h3>
+      <div class="panel" style="padding:4px 0">
+        <div class="lrow"><svg class="i" style="color:var(--muted)"><use href="#i-bell"/></svg><div class="lt"><b>Собирать уведомления</b></div><button class="sw" role="switch" aria-checked="true" aria-label="Собирать уведомления"></button></div>
+        <div class="lrow"><div class="lt"><b>Напомнить о списании</b><span>за 3 дня</span></div><button class="sw" role="switch" aria-checked="false" aria-label="Напомнить о списании"></button></div>
+        <div class="lrow"><div class="lt"><b>Скрывать в недавних</b></div><button class="sw" role="switch" aria-checked="false" disabled aria-label="Скрывать в недавних"></button></div>
+      </div>
+      <p class="note">Один цвет «включено» на всё приложение — латунь (сейчас четыре разных, A1). Вся строка нажимается, не только переключатель.</p>
+    </div>
+    <div class="card">
+      <h3>SlitokChip — плашка выбора <span class="st new">новое</span></h3>
+      <div class="stage">
+        <div class="row" data-group="chips1">
+          <button class="chip" aria-pressed="true">Пн</button><button class="chip" aria-pressed="false">Вт</button><button class="chip" aria-pressed="true">Ср</button><button class="chip" aria-pressed="false">Чт</button><button class="chip" aria-pressed="false">Пт</button>
+        </div>
+        <div class="row" data-group="chips2">
+          <button class="chip bank" aria-pressed="true"><span class="bk" style="background:#2B47B0">ВТБ</span>ВТБ</button>
+          <button class="chip bank" aria-pressed="false"><span class="bk" style="background:#F07A2B">ПСБ</span>ПСБ</button>
+        </div>
+      </div>
+      <p class="note">Заменяет <span class="code">ModeChip</span>, <span class="code">DayChip</span>, <span class="code">BankChip</span>, <span class="code">HintChip</span> (A7). Вариант с иконкой банка — выбор банка, название не обрезается посреди слова.</p>
+    </div>
+    <div class="card">
+      <h3>SlitokTag — метка статуса <span class="st new">новое</span></h3>
+      <div class="stage"><div class="row">
+        <span class="tag m">Распознано</span><span class="tag n">Не распознано</span><span class="tag b">вручную</span><span class="tag n">до восстановления</span><span class="tag v">11,45%</span><span class="tag c">Ошибка</span>
+      </div></div>
+      <p class="note">Заменяет <span class="code">StatusPill</span>, <span class="code">DepositStatusPill</span>, <span class="code">StatusChip</span>, <span class="code">Badge</span>, <span class="code">RateChip</span>, <span class="code">MoreBadge</span>. «Не распознано» — нейтральная: это не ошибка человека (B-35). Коралловая — только настоящая ошибка.</p>
+    </div>
+    <div class="card">
+      <h3>Status — состояние строкой <span class="st new">новое</span></h3>
+      <div class="stage">
+        <div><span class="status" style="color:var(--mint)">Распознано 3 из 4</span><div style="color:var(--muted);font-size:12px;line-height:16px;margin-top:4px">Процент одной категории не прочитался</div></div>
+        <div><span class="status" style="color:var(--muted)">Скрин не прочитался</span><div style="color:var(--muted);font-size:12px;line-height:16px;margin-top:4px">Заполните по скрину</div></div>
+      </div>
+      <p class="note">Когда за состоянием идёт пояснение: точка и текст начинаются от того же края, что и строка ниже. Метка-плашка (SlitokTag) — когда пояснения нет, например в строке списка.</p>
+    </div>
+    <div class="card">
+      <h3>Плашка со значением <span class="st new">новое</span></h3>
+      <div class="stage"><div class="row" style="gap:8px">
+        <span class="vchip">Искусство <b>25%</b></span><span class="vchip">Отели <b>5%</b></span><span class="vchip">Медицинские услуги <b>3%</b></span><span class="vchip" style="border-style:dashed">На всё <b>1%</b></span>
+      </div></div>
+      <p class="note">Категории кэшбэка банка в «Платежах»: плашки переносятся на новую строку, название всегда целиком. Пунктир — базовый кэшбэк.</p>
+    </div>
+    <div class="card">
+      <h3>Вкладки-переключатель <span class="st keep">как есть</span></h3>
+      <div class="stage">
+        <div class="tabs" role="tablist" data-group="tabs1"><button role="tab" aria-selected="true">Кэшбэк</button><button role="tab" aria-selected="false">Подписки</button></div>
+        <div class="tabs" role="tablist" data-group="tabs2"><button role="tab" aria-selected="false">Счета</button><button role="tab" aria-selected="true">Вклады</button><button role="tab" aria-selected="false">Валюта</button><button role="tab" aria-selected="false">Наличные</button></div>
+      </div>
+      <p class="note"><span class="code">PagerTabs</span>. Разделы под ним листаются свайпом. На экране — не больше одного такого переключателя (U-47).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ СТРОКИ ============ -->
+<section id="lists">
+  <h2>Строки и прогресс</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Строка списка</h3>
+      <div class="panel" style="padding:4px 0">
+        <div class="lrow"><span class="dot" style="background:var(--brass)"></span><div class="lt"><b>Счёт</b></div><span class="amt rowa">26 148<span class="k">,55 ₽</span></span><svg class="i chev"><use href="#i-chev"/></svg></div>
+        <div class="lrow"><span class="dot" style="background:var(--violet)"></span><div class="lt"><b>5 вкладов</b></div><span class="amt rowa">2 770 000 ₽</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+        <div class="lrow"><span class="dot" style="background:var(--mint)"></span><div class="lt"><b>Кэшбэк · октябрь</b></div><span style="color:var(--muted)">4 категории</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+      </div>
+      <p class="note">Высота от 56. Подпись в одну строку с многоточием (A15). Сумма — amountRow. Стрелка — если строка открывает экран.</p>
+    </div>
+    <div class="card">
+      <h3>Строка вклада</h3>
+      <div class="panel" style="padding:4px 0">
+        <div class="deprow">
+          <span class="bk" style="background:#D8452F">А</span>
+          <div class="dmain">
+            <div class="dl1"><span class="amt rowa">1 000 000 ₽</span><span class="amt small inc">+18 083<span class="k">,24 ₽</span></span></div>
+            <div class="dl2"><span class="dname">11,45% · Накопительный максимальный доход</span><span>9 дн.</span></div>
+            <div class="bar" style="height:3px"><i style="width:82%;background:linear-gradient(90deg,var(--violet),var(--violet-light))"></i></div>
+          </div>
+        </div>
+        <div class="deprow" style="border-top:1px solid var(--line)">
+          <span class="bk" style="background:#2B47B0">ВТБ</span>
+          <div class="dmain">
+            <div class="dl1"><span class="amt rowa">500 000 ₽</span><span class="amt small inc">+9 439<span class="k">,89 ₽</span></span></div>
+            <div class="dl2"><span class="dname">13,61% · Подушка</span><span>103 дн.</span></div>
+            <div class="bar" style="height:3px"><i style="width:36%;background:linear-gradient(90deg,var(--violet),var(--violet-light))"></i></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Пример компоновки. Окончательный вид строки и карточки вклада — в макетах U-36.</p>
+    </div>
+    <div class="card">
+      <h3>StatTile — подпись и сумма <span class="st new">новое</span></h3>
+      <div class="stage"><div class="btnrow">
+        <div class="panel" style="padding:14px"><div style="color:var(--muted);font-size:12px">Доход за срок</div><div class="amt large inc" style="margin-top:4px">+41 900 ₽</div></div>
+        <div class="panel" style="padding:14px"><div style="color:var(--muted);font-size:12px">До закрытия</div><div class="amt large" style="margin-top:4px">39 дн.</div></div>
+      </div></div>
+      <p class="note">Заменяет четыре своих <span class="code">Tile</span> (A8).</p>
+    </div>
+    <div class="card">
+      <h3>Полоса прогресса</h3>
+      <div class="stage">
+        <div class="bar"><i style="width:64%;background:linear-gradient(90deg,var(--violet),var(--violet-light))"></i></div>
+        <div class="bar" style="height:3px"><i style="width:38%;background:var(--brass)"></i></div>
+      </div>
+      <p class="note">Цвет — по части капитала. 7 — в карточке, 3 — в строке. Без подписи «N%».</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ПОВЕРХ ЭКРАНА ============ -->
+<section id="overlays">
+  <h2>Шторка, диалог, меню</h2>
+  <p class="lead">Затемнение — на весь экран, включая полосу жестов внизу <span class="tag n">B-40</span>. Одна общая реализация.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>SlitokSheet — шторка <span class="st chg">в ui/common</span></h3>
+      <div class="phone">
+        <div class="under"><div class="panel" style="height:90px"></div><div class="panel" style="height:70px"></div></div>
+        <div class="veil"></div>
+        <div class="sheet">
+          <div class="handle"></div>
+          <h4>Добавить вклад</h4>
+          <div class="btnrow">
+            <button class="tile"><span class="ic"><svg class="i"><use href="#i-photo"/></svg></span><span class="t">Со скринов</span></button>
+            <button class="tile"><span class="ic"><svg class="i"><use href="#i-edit"/></svg></span><span class="t">Вручную</span></button>
+          </div>
+        </div>
+        <div class="gesture"></div>
+      </div>
+      <p class="note">Всё, что выбирается или вводится поверх экрана. Заголовок — titleLarge белым (не латунью). Радиус 28.</p>
+    </div>
+    <div class="card">
+      <h3>SlitokDialog — подтверждение <span class="st new">новое</span></h3>
+      <div class="phone">
+        <div class="under"><div class="panel" style="height:90px"></div><div class="panel" style="height:70px"></div></div>
+        <div class="veil"></div>
+        <div class="dialog panel">
+          <h4>Убрать Альфа-Банк?</h4>
+          <p>Счёт и 5 вкладов останутся в капитале, новые уведомления этого банка собираться не будут.</p>
+          <div class="btnrow"><button class="btn plate">Отмена</button><button class="btn danger">Убрать</button></div>
+        </div>
+        <div class="gesture"></div>
+      </div>
+      <p class="note">Только для подтверждения необратимого. Вместо шести стандартных <span class="code">AlertDialog</span> (A3). Выбор из двух — шторкой.</p>
+    </div>
+    <div class="card">
+      <h3>Меню долгого нажатия <span class="st chg">изменено</span> <span class="tag n">U-44</span></h3>
+      <div class="phone">
+        <div class="under"><div class="panel" style="height:60px"></div><div class="panel" style="height:60px"></div><div class="panel" style="height:60px"></div></div>
+        <div class="veil"></div>
+        <div class="lifted" style="top:96px"><div class="panel lrow" style="border-radius:20px"><span class="dot" style="background:var(--sky)"></span><div class="lt"><b>Доллар США</b></div><span class="amt rowa">$ 1 200</span></div></div>
+        <div class="menu panel" style="left:24px;top:172px">
+          <button><svg class="i"><use href="#i-close"/></svg>Не учитывать в капитале</button>
+          <hr>
+          <button class="danger"><svg class="i"><use href="#i-del"/></svg>Удалить</button>
+        </div>
+        <div class="gesture"></div>
+      </div>
+      <p class="note">Компактнее: пункт 44 вместо 52, текст 15 вместо 16, иконки тихие (не латунные), коралл — только «Удалить». Нажатый элемент приподнят над затемнением. Где меню остаётся — по таблице U-45.</p>
+    </div>
+    <div class="card">
+      <h3>Подсказка обучения <span class="st new">новое</span> <span class="tag n">F-30</span></h3>
+      <div class="phone" style="height:330px">
+        <div class="under">
+          <div class="panel" style="height:56px"></div>
+          <div class="panel lrow spotrow"><div class="lt"><b>Аптеки</b></div><span class="field amount hint" style="min-height:40px;width:76px;padding:0 10px;border-color:var(--brass-edge)"><span class="sfx" style="margin-left:auto">%</span></span></div>
+          <div class="coach" style="position:relative;z-index:3">
+            <div class="row" style="justify-content:space-between;align-items:flex-start"><span class="ct">Такое бывает</span><button class="skip" aria-label="Закрыть обучение"><svg class="i" style="width:18px;height:18px"><use href="#i-close"/></svg></button></div>
+            <p>Если процент не прочитался, его можно вписать здесь вручную.</p>
+            <div class="cf"><div class="steps"><i></i><i></i><i class="on"></i><i></i></div><button class="go">Далее</button></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Только в обучении. Подсвечивается сам элемент (рамка и затемнение по его краям), рядом светлая карточка: заголовок, одна фраза, шаги, «Далее». Крестик закрывает всё обучение; на шаге с разрешением — «Позже» и «Разрешить».</p>
+    </div>
+    <div class="card">
+      <h3>Снекбар «Вернуть»</h3>
+      <div class="stage"><div class="snack"><span>Вклад удалён</span><button class="btn ghost" style="min-height:32px;padding:4px 8px">Вернуть</button></div></div>
+      <p class="note">Только после действия, которое жалко потерять: удаление данных, восстановление копии. Снятие банка без данных, переключатели — без снекбара (U-48).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ПУСТОЕ СОСТОЯНИЕ ============ -->
+<section id="empty">
+  <h2>Пустое состояние <span class="st new">новое</span></h2>
+  <p class="lead">Раздел без данных показывает, что сюда попадёт, и одно действие. Кнопка «Как это работает» — пока нет данных и обучение раздела не пройдено (F-30).</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Раздел</h3>
+      <div class="panel empty">
+        <svg class="art" viewBox="0 0 72 64" aria-hidden="true"><rect x="15" y="12" width="44" height="44" rx="9" fill="#000" opacity=".35"/><rect x="13" y="8" width="44" height="44" rx="9" fill="url(#gv)"/><circle cx="35" cy="30" r="10" fill="#1A1433" opacity=".55"/><circle cx="35" cy="30" r="6" fill="none" stroke="#E6DDFF" stroke-width="2"/><rect x="34" y="21" width="2" height="5" fill="#E6DDFF"/></svg>
+        <h4>Пока нет вкладов</h4>
+        <div class="btnrow" style="width:100%"><button class="btn brass"><svg class="i"><use href="#i-add"/></svg>Добавить</button><button class="btn plate"><svg class="i"><use href="#i-bulb"/></svg>Как это работает</button></div>
+      </div>
+      <p class="note">«Добавить» открывает ту же шторку «Со скринов / Вручную», что и «+» (U-38).</p>
+    </div>
+    <div class="card">
+      <h3>Пустой Обзор — плитки с объёмными иконками</h3>
+      <div class="parts">
+        <button class="part main"><svg class="art" viewBox="0 0 72 64" aria-hidden="true"><rect x="10" y="20" width="52" height="34" rx="7" fill="#000" opacity=".35"/><rect x="8" y="14" width="52" height="34" rx="7" fill="url(#ga)"/><rect x="8" y="22" width="52" height="7" fill="#14120E" opacity=".55"/><rect x="14" y="36" width="16" height="5" rx="2.5" fill="#FFF3D6" opacity=".7"/></svg><b>Счета</b><span>из уведомлений банков</span></button>
+        <button class="part"><svg class="art" viewBox="0 0 72 64" aria-hidden="true"><rect x="15" y="12" width="44" height="44" rx="9" fill="#000" opacity=".35"/><rect x="13" y="8" width="44" height="44" rx="9" fill="url(#gv)"/><circle cx="35" cy="30" r="10" fill="#1A1433" opacity=".55"/><circle cx="35" cy="30" r="6" fill="none" stroke="#E6DDFF" stroke-width="2"/><rect x="34" y="21" width="2" height="5" fill="#E6DDFF"/></svg><b>Вклад</b><span>со скрина или вручную</span></button>
+        <button class="part"><svg class="art" viewBox="0 0 72 64" aria-hidden="true"><ellipse cx="36" cy="50" rx="20" ry="6" fill="#000" opacity=".3"/><ellipse cx="36" cy="44" rx="18" ry="6" fill="#2E86AE"/><ellipse cx="36" cy="38" rx="18" ry="6" fill="url(#gs)"/><ellipse cx="36" cy="30" rx="18" ry="6" fill="#2E86AE"/><ellipse cx="36" cy="24" rx="18" ry="6" fill="url(#gs)"/></svg><b>Валюта</b><span>покупки по курсу</span></button>
+        <button class="part"><svg class="art" viewBox="0 0 72 64" aria-hidden="true"><rect x="10" y="18" width="50" height="28" rx="5" fill="#8E7B5B" transform="rotate(-8 35 32)"/><rect x="12" y="20" width="50" height="28" rx="5" fill="url(#gc)"/><circle cx="37" cy="34" r="7" fill="none" stroke="#5E4F35" stroke-width="2"/></svg><b>Наличные</b><span>одной суммой</span></button>
+      </div>
+      <p class="note">Вместо пяти одинаковых тёмных кнопок. Главная плитка (доступ к уведомлениям) — с латунной рамкой. Окончательно — в макете F-30.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ НАВИГАЦИЯ ============ -->
+<section id="nav">
+  <h2>Навигация</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Нижняя панель <span class="st keep">как есть</span></h3>
+      <div class="stage"><div class="panel bottombar" role="tablist" data-group="bb">
+        <button role="tab" aria-selected="true"><svg class="i"><use href="#i-dash"/></svg>Обзор</button>
+        <button role="tab" aria-selected="false"><svg class="i"><use href="#i-wallet"/></svg>Капитал</button>
+        <button role="tab" aria-selected="false"><svg class="i"><use href="#i-pct"/></svg>Платежи</button>
+        <button role="tab" aria-selected="false"><svg class="i"><use href="#i-gear"/></svg>Настройки</button>
+      </div></div>
+      <p class="note">Ровно четыре вкладки. Переход на вкладку — всегда сверху (B-36).</p>
+    </div>
+    <div class="card">
+      <h3>Шапка экрана <span class="st chg">изменено</span> <span class="tag n">U-57</span></h3>
+      <div class="stage">
+        <div class="row" style="flex-wrap:nowrap"><button class="btn icon" aria-label="Назад"><svg class="i" style="color:var(--fg)"><use href="#i-back"/></svg></button><div style="flex:1;font:600 18px/22px var(--display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Альфа-Банк</div><button class="btn icon" aria-label="Ещё"><svg class="i"><use href="#i-more"/></svg></button></div>
+      </div>
+      <p class="note"><span class="code">ScreenHeader</span>: полоса 64 под строкой состояния, заголовок по середине — на всех экранах на одной высоте. Вкладки — без «Назад», заголовок 22. Глубже — «Назад», заголовок 18, справа не больше двух значков; редкое и опасное — в «⋮».</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ МЕХАНИКА ============ -->
+<section id="motion">
+  <h2>Переходы и поведение</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3>Шкала движения <span class="st new">новое</span> <span class="tag n">U-55</span></h3><button class="btn ghost" id="motionRun" type="button">Запустить</button></div>
+      <div class="stage mscale" id="motionDemo">
+        <div class="mrow"><div class="mn"><b>Быстро</b>FAST · 200</div><div class="mtrack"><span class="dot" style="transition-duration:.2s"></span></div></div>
+        <div class="mrow"><div class="mn"><b>Обычно</b>NORMAL · 300</div><div class="mtrack"><span class="dot" style="transition-duration:.3s"></span></div></div>
+        <div class="mrow"><div class="mn"><b>Медленно</b>SLOW · 450</div><div class="mtrack"><span class="dot" style="transition-duration:.45s"></span></div></div>
+      </div>
+      <p class="note"><b>FAST</b> — меню, метка, скрытие сумм, уход. <b>NORMAL</b> — экран, карточка, строка, показ сумм. <b>SLOW</b> — рост графика, скан по скрину. Кривая прихода — <span class="code">Motion.Calm</span>, без отскока. Уход — на ступень быстрее прихода. Своих чисел в <span class="code">tween(…)</span> нет: только <span class="code">Motion</span>.</p>
+    </div>
+  </div>
+  <div class="motion">
+    <div class="mcell"><h3>Глубже — пролёт вправо <span class="tag n">B-41</span></h3><div class="mini go"><div class="scr a">Обзор</div><div class="scr b">Счета</div></div><p class="note" style="margin:0;color:var(--muted);font-size:13px">Новый экран въезжает справа. Назад — обратно влево. Вкладки нижней панели — в сторону вкладки. Всплытия и «вырастания» строки нет.</p></div>
+    <div class="mcell"><h3>«Назад» — откуда пришёл <span class="tag n">B-37</span></h3><p style="margin:0;color:var(--muted);font-size:13px">Банки → банк → счёт → «Назад» = банк. Переход в глубину кладётся поверх, а не сбрасывает путь.</p></div>
+    <div class="mcell"><h3>Вкладка — сверху <span class="tag n">B-36</span></h3><p style="margin:0;color:var(--muted);font-size:13px">С нижней панели вкладка открывается с начала. Повторное касание — сразу сверху, без прокрутки. «Назад» с деталей сохраняет место.</p></div>
+    <div class="mcell"><h3>Листание разделов <span class="tag n">B-43</span></h3><p style="margin:0;color:var(--muted);font-size:13px">Пейджер во всю ширину, отступы внутри страницы, между страницами зазор 24–32. Страницы не «склеены».</p></div>
+    <div class="mcell"><h3>Долгое нажатие <span class="tag n">U-45</span></h3><p style="margin:0;color:var(--muted);font-size:13px">Только быстрое действие, которого нет на поверхности: «учитывать в капитале», «удалить пополнение». Не дублирует карандаш или касание.</p></div>
+    <div class="mcell"><h3>«Убрать анимации» <span class="st chg">изменено</span></h3><p style="margin:0;color:var(--muted);font-size:13px">Системная настройка Android, учитывается в одном месте — <span class="code">Motion</span>. Включена — переходы мгновенные, пыль неподвижна. Касание всегда срабатывает сразу, анимация не задерживает действие.</p></div>
+  </div>
+</section>
+
+<!-- ============ ТЕКСТЫ ============ -->
+<section id="words">
+  <h2>Тексты</h2>
+  <p class="lead">Коротко, по делу, по-русски. Называть то, что человек видит, а не то, как устроено внутри.</p>
+  <div class="dodont">
+    <div class="dd ok"><span class="cap">Так</span>Пока нет вкладов</div>
+    <div class="dd no"><span class="cap">Не так</span>Здесь будут отображаться ваши вклады после их добавления</div>
+    <div class="dd ok"><span class="cap">Так</span>Процент не прочитался — допишите</div>
+    <div class="dd no"><span class="cap">Не так</span>Заполните или удалите строки, отмеченные красным</div>
+    <div class="dd ok"><span class="cap">Так</span>4 522 208 ₽ (без подписи)</div>
+    <div class="dd no"><span class="cap">Не так</span>Стоимость сейчас: 4 522 208 ₽</div>
+    <div class="dd ok"><span class="cap">Так</span>Сохранить</div>
+    <div class="dd no"><span class="cap">Не так</span>Нажмите, чтобы сохранить изменения</div>
+    <div class="dd ok"><span class="cap">Так · B-54</span><div class="wrapdemo">Ждём уведомления<div class="stack"><i></i><i></i><i></i><em>+6</em></div></div>Тесно — соседний элемент уходит отдельной строкой.</div>
+    <div class="dd no"><span class="cap">Не так</span><div class="wrapdemo bad"><span>Ждём уведомления</span><div class="stack"><i></i><i></i><i></i><em>+6</em></div></div>Перенос внутри слова — никогда.</div>
+  </div>
+</section>
+
+<!-- ============ КАРТА ============ -->
+<section id="map">
+  <h2>Компоненты в коде</h2>
+  <p class="lead">Всё живёт в <span class="code">ui/common</span> и <span class="code">ui/theme</span>. Вне их экраны не рисуют свои кнопки, поля, диалоги, переключатели, метки и цвета — это проверяет тест-страховка U-40.</p>
+  <div class="scroll-x">
+    <table class="tt">
+      <thead><tr><th>Компонент</th><th>Статус</th><th>Заменяет</th></tr></thead>
+      <tbody>
+        <tr><td>Panel, heroGlow</td><td><span class="st keep">как есть</span></td><td>голый Card (журнал уведомлений)</td></tr>
+        <tr><td>BrassButton, PlateButton, DangerButton, TileButton, AddButton</td><td><span class="st keep">как есть</span></td><td>—</td></tr>
+        <tr><td>GhostButton</td><td><span class="st new">новое</span></td><td>TextButton ×3, своя «+ Ещё категория»</td></tr>
+        <tr><td>ButtonRow</td><td><span class="st new">новое</span></td><td>5 рядов по weight(1f)</td></tr>
+        <tr><td>SlitokField, AmountField</td><td><span class="st new">новое</span></td><td>8 полей на BasicTextField</td></tr>
+        <tr><td>SlitokDatePicker</td><td><span class="st new">новое</span></td><td>DatePickerDialog ×3</td></tr>
+        <tr><td>SlitokSwitch</td><td><span class="st new">новое</span></td><td>Switch ×6 в четырёх расцветках</td></tr>
+        <tr><td>SlitokChip</td><td><span class="st new">новое</span></td><td>ModeChip, DayChip, BankChip, HintChip, ChipButton</td></tr>
+        <tr><td>SlitokTag</td><td><span class="st new">новое</span></td><td>StatusPill ×2, StatusChip, Badge, RateChip, MoreBadge</td></tr>
+        <tr><td>Status</td><td><span class="st new">новое</span></td><td>плашка статуса над пояснением (форма скрина)</td></tr>
+        <tr><td>SelectRow</td><td><span class="st new">новое</span></td><td>лента банков с обрезанными подписями в формах</td></tr>
+        <tr><td>ValueChip</td><td><span class="st new">новое</span></td><td>сетка категорий с обрезанными названиями в кэшбэке</td></tr>
+        <tr><td>CoachMark</td><td><span class="st new">новое</span></td><td>— (обучение F-30)</td></tr>
+        <tr><td>StatTile</td><td><span class="st new">новое</span></td><td>Tile ×2, PartTile, FeatureTile</td></tr>
+        <tr><td>SlitokDialog</td><td><span class="st new">новое</span></td><td>AlertDialog ×6</td></tr>
+        <tr><td>SlitokSheet</td><td><span class="st chg">переезд</span></td><td>из capital/CashSheet.kt в ui/common</td></tr>
+        <tr><td>LongPressMenu</td><td><span class="st chg">изменено</span></td><td>вид по U-44, затемнение по B-40</td></tr>
+        <tr><td>EmptyState</td><td><span class="st new">новое</span></td><td>свои пустые блоки разделов и Обзора</td></tr>
+        <tr><td>Шкала сумм amount*</td><td><span class="st new">новое</span></td><td>9 стилей и 24 ручных Unbounded</td></tr>
+        <tr><td>KopeckLook — копейки по ступени</td><td><span class="st chg">цикл 8</span></td><td>одно правило 70% / 55% на все размеры (U-56)</td></tr>
+        <tr><td>MoneyText, AmountText — пыль на месте цифр</td><td><span class="st chg">цикл 8</span></td><td>Crossfade с пылью «символы × 0,58 em» (B-44)</td></tr>
+        <tr><td>ScreenHeader — шапка экрана</td><td><span class="st new">цикл 8</span></td><td>TopAppBar ×19 и 8 своих шапок с разными отступами (U-57)</td></tr>
+        <tr><td>Motion — шкала движения</td><td><span class="st new">цикл 8</span></td><td>45…500 мс в каждом месте, свои проверки «Убрать анимации» (U-55)</td></tr>
+        <tr><td>titleSmall, headlineMedium, labelSmall</td><td><span class="st chg">задать</span></td><td>системный шрифт Android</td></tr>
+        <tr><td>Цвета рисунков частей</td><td><span class="st chg">в палитру</span></td><td>19 hex в PartArt.kt</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>Слиток · Itogo · цикл 7 (F-31, U-40), цикл 8 (U-56, U-55, B-44, B-54, U-57). После согласования: правила — в docs/design-system/README.md, витрина в отладочной сборке, ссылка из CLAUDE.md.</footer>
+</main>
+</div>
+
+<script>
+(function () {
+  // Переключатели и плашки — живые, чтобы было видно оба состояния.
+  document.querySelectorAll('.sw').forEach(function (s) {
+    if (s.id === 'hideSw') return;
+    s.addEventListener('click', function () { if (s.disabled) return; s.setAttribute('aria-checked', s.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); });
+  });
+  document.querySelectorAll('.chip').forEach(function (c) {
+    c.addEventListener('click', function () { c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); });
+  });
+  document.querySelectorAll('[role="tablist"]').forEach(function (list) {
+    list.querySelectorAll('[role="tab"]').forEach(function (t) {
+      t.addEventListener('click', function () {
+        list.querySelectorAll('[role="tab"]').forEach(function (o) { o.setAttribute('aria-selected', 'false'); });
+        t.setAttribute('aria-selected', 'true');
+      });
+    });
+  });
+  var hide = document.getElementById('hideSw');
+  hide.addEventListener('click', function () {
+    var on = hide.getAttribute('aria-checked') !== 'true';
+    hide.setAttribute('aria-checked', on ? 'true' : 'false');
+    document.querySelectorAll('#hideDemo .money').forEach(function (m) { m.classList.toggle('dust', on); });
+  });
+  var run = document.getElementById('motionRun');
+  run.addEventListener('click', function () {
+    document.querySelectorAll('#motionDemo .mtrack').forEach(function (t) {
+      t.style.setProperty('--w', t.clientWidth + 'px');
+      t.classList.toggle('run');
+    });
+  });
+})();
+</script>

@@ -1,0 +1,73 @@
+# фраза<TAB>ожидание<TAB>groupKey. GROUP: если стало группой — ключ обязан совпасть; ASIS: не должно стать группой; ANY: только отчёт.
+Медицинские услуги	GROUP	health
+Медицина	GROUP	health
+Здоровье и медицина	GROUP	health
+Стоматологии	GROUP	health
+Клиники и лаборатории	GROUP	health
+Врачи	GROUP	health
+Медицинские центры	GROUP	health
+Связь, интернет и ТВ	GROUP	mobile
+Мобильная связь	GROUP	mobile
+Сотовая связь и интернет	GROUP	mobile
+Кафе и рестораны	GROUP	cafe
+Рестораны и кафе	GROUP	restaurant
+Фастфуд	GROUP	cafe
+Кофейни	GROUP	cafe
+Бары и рестораны	GROUP	restaurant
+Супермаркеты	GROUP	groceries
+Продуктовые магазины	GROUP	groceries
+Гипермаркеты	GROUP	groceries
+Продукты питания	GROUP	groceries
+Топливо	GROUP	fuel
+АЗС	GROUP	fuel
+Автозаправочные станции	GROUP	fuel
+Ж/д билеты	GROUP	transport
+Общественный транспорт	GROUP	transport
+Такси	GROUP	taxi
+Каршеринг	GROUP	taxi
+Аптеки	GROUP	pharmacy
+Красота	GROUP	beauty
+Косметика и парфюмерия	GROUP	beauty
+Салоны красоты и СПА	GROUP	beauty
+Одежда и обувь	GROUP	clothing
+Обувь	GROUP	clothing
+Электроника и бытовая техника	GROUP	electronics
+Дом и ремонт	GROUP	home
+Строительные магазины	GROUP	home
+Товары для дома	GROUP	home
+Кино	GROUP	entertainment
+Театры и концерты	GROUP	entertainment
+Авиабилеты	GROUP	travel
+Отели	GROUP	travel
+Детские товары	GROUP	kids
+Зоотовары	GROUP	pets
+Спорттовары	GROUP	sport
+Фитнес-клубы	GROUP	sport
+Цветы	ANY	*
+Книги	ANY	*
+Цифровые товары	ANY	*
+Активный отдых	ANY	*
+Автоуслуги	ANY	*
+Доставка еды	ANY	*
+Образование	ANY	*
+Ювелирные изделия	ANY	*
+Lamoda	ASIS	*
+Пятёрочка	ASIS	*
+Перекрёсток	ASIS	*
+Магнит	ASIS	*
+Wildberries	ASIS	*
+Яндекс Маркет	ASIS	*
+Яндекс Еда	ASIS	*
+Ozon	ASIS	*
+М.Видео	ASIS	*
+Самокат	ASIS	*
+Кинопоиск	ASIS	*
+Л'Этуаль	ASIS	*
+Летуаль	ASIS	*
+ВкусВилл	ASIS	*
+Лента	ASIS	*
+Спортмастер	ASIS	*
+Детский мир	ASIS	*
+Леруа Мерлен	ASIS	*
+DNS	ASIS	*
+Золотое яблоко	ASIS	*

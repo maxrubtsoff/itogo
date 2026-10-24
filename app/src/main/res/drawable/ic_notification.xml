@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon of the app's own notifications: the app icon's ring, white (the system tints it). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:pathData="M12.00,4.50 A7.5,7.5 0,1,1 9.68,19.13" />
+    <path android:strokeColor="#99FFFFFF" android:strokeWidth="4" android:pathData="M9.68,19.13 A7.5,7.5 0,0,1 12.00,4.50" />
+</vector>

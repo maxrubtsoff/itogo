@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Network is used for one thing only: the public CBR exchange rates. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The app's own reminders (F-24); asked when the user turns one on. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      Explicitly declared bank packages. Lets the app read these apps' icons
+      and detect their installation WITHOUT the broad QUERY_ALL_PACKAGES
+      permission (which antivirus tools flag).
+    -->
+    <queries>
+        <package android:name="ru.sberbankmobile" />
+        <package android:name="ru.sberbankmobile_alpha" />
+        <package android:name="com.idamob.tinkoff.android" />
+        <package android:name="ru.tbank.mobile" />
+        <package android:name="ru.tinkoff.sme" />
+        <package android:name="ru.alfabank.mobile.android" />
+        <package android:name="ru.alfabank.oavdo.amc" />
+        <package android:name="com.yandex.bank" />
+        <package android:name="ru.lewis.dbo" />
+        <package android:name="ru.ozon.fintech.finance" />
+        <package android:name="by.bank.bsb.mobile" />
+        <package android:name="ru.vtb24.mobilebanking.android" />
+        <package android:name="ru.gazprombank.android.mobilebank.app" />
+        <package android:name="ru.raiffeisennews" />
+        <package android:name="logo.com.mbanking" />
+    </queries>
+
+    <application
+        android:name=".App"
+        android:allowBackup="false"
+        android:enableOnBackInvokedCallback="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.BankAgg"
+        tools:targetApi="31">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- "Поделиться" screenshots from a bank app or the gallery. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- Home-screen widget: cashback categories with percents. -->
+        <receiver
+            android:name=".ui.widget.CashbackWidgetReceiver"
+            android:exported="false"
+            android:label="@string/cashback_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/cashback_widget_info" />
+        </receiver>
+
+        <!-- Answers to «Похоже на банк» right from the notification (F-23). -->
+        <receiver
+            android:name=".data.notify.NewBankActionReceiver"
+            android:exported="false" />
+
+        <!-- «Отправить копию»: hands the password-sealed copy to the share sheet (U-30). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.share"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_paths" />
+        </provider>
+
+        <!-- Reads notifications posted by the selected bank apps. -->
+        <service
+            android:name=".service.BankNotificationListener"
+            android:exported="false"
+            android:label="@string/listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+    </application>
+</manifest>

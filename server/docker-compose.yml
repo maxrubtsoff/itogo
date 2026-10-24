@@ -1,0 +1,31 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      - API_TOKEN=${API_TOKEN}
+      - PORT=8000
+    volumes:
+      - ./data:/srv/data
+    # Bound to localhost; Caddy (below) terminates HTTPS and proxies in.
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      - DOMAIN=${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
