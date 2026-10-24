@@ -13,22 +13,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
-/** The collecting banks as overlapping icons, the rest as «+N». */
+/** The collecting banks as overlapping icons, the rest as «+N». [size] and [overlap] make a smaller stack (the settings tile). */
 @Composable
-fun BankStack(banks: List<BankBrand>, max: Int = 5) {
+fun BankStack(banks: List<BankBrand>, max: Int = 5, size: Dp = 38.dp, overlap: Dp = 10.dp) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         banks.take(max).forEachIndexed { i, b ->
             Box(
-                Modifier.offset(x = (-10 * i).dp).clip(CircleShape).background(Slitok.PanelTop).padding(2.dp)
-            ) { BankIcon(b, size = 38.dp) }
+                Modifier.offset(x = -overlap * i).clip(CircleShape).background(Slitok.PanelTop).padding(2.dp)
+            ) { BankIcon(b, size = size) }
         }
         if (banks.size > max) {
             Box(
-                Modifier.offset(x = (-10 * max).dp).size(42.dp).clip(CircleShape).background(Slitok.Inset),
+                Modifier.offset(x = -overlap * max).size(size + 4.dp).clip(CircleShape).background(Slitok.Inset),
                 contentAlignment = Alignment.Center
             ) { Text("+${banks.size - max}", style = MaterialTheme.typography.labelMedium, color = Slitok.Muted) }
         }

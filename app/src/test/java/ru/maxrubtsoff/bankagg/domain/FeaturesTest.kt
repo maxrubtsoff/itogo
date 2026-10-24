@@ -55,4 +55,9 @@ class FeaturesTest {
         assertTrue(f.showPayments)
         assertFalse(f.showCashback)
     }
+
+    @Test fun keptLabel_allOrCount() {
+        assertEquals("Всё", Features.ALL.keptLabel)
+        assertEquals("2 из 6", Features(setOf(Feature.DEPOSITS, Feature.CASH)).keptLabel)
+    }
 }

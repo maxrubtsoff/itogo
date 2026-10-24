@@ -75,6 +75,10 @@ data class Features(val enabled: Set<Feature>) {
     /** Without accounts «Обзор» may be hidden: the banner moves to «Платежи» (U-52). */
     val showNotifAccessOnPayments: Boolean get() = collectsNotifications && !has(Feature.ACCOUNTS)
 
+    /** How much is kept, in a word for the settings tile (U-59): «Всё» or «4 из 6». */
+    val keptLabel: String
+        get() = if (enabled.size == Feature.entries.size) "Всё" else "${enabled.size} из ${Feature.entries.size}"
+
     /** A tap switches a section; the last one can't be switched off. */
     fun toggle(f: Feature): Features = when {
         f !in enabled -> Features(enabled + f)
