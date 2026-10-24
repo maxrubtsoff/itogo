@@ -45,6 +45,7 @@ import ru.maxrubtsoff.bankagg.ui.common.LocalAmountsHidden
 import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.grayscale
+import ru.maxrubtsoff.bankagg.ui.common.Motion
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -367,7 +368,7 @@ private fun CompositionBar(snap: CapitalSnapshot, modifier: Modifier = Modifier)
 
 /** Whether the capital bar still has to grow in during this process (U-29). */
 private object BarIntro {
-    private var played = !android.animation.ValueAnimator.areAnimatorsEnabled()
+    private var played = !Motion.enabled
     fun pending(): Boolean = (!played).also { played = true }
 }
 

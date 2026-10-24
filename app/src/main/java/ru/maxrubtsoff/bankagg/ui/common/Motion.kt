@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -79,6 +80,8 @@ object Motion {
 fun Modifier.pressScale(): Modifier = composed {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) 0.97f else 1f, spring(stiffness = 900f), label = "press")
+    // With «Remove animations» on there is no press-in at all.
+    if (!Motion.enabled) return@composed this
     this
         .graphicsLayer { scaleX = scale; scaleY = scale }
         .pointerInput(Unit) {
@@ -90,6 +93,41 @@ fun Modifier.pressScale(): Modifier = composed {
             }
         }
 }
+
+/** One step of the shake, in ms. */
+private const val SHAKE_STEP_MS = 45
+
+/** Offsets (px) the shake passes through, ending at rest. */
+private val SHAKE_STEPS = listOf(10f, -8f, 6f, -4f, 0f)
+
+/** The same shake, wider — for the PIN dots, where a mistake must be unmissable. */
+private val SHAKE_STEPS_STRONG = listOf(18f, -14f, 10f, -6f, 0f)
+
+/**
+ * The «no» shake (a wrong PIN, a section that cannot be dropped): the one
+ * implementation, so it follows the motion scale and stays still with
+ * «Remove animations» on. Read [offset] in a graphicsLayer — see [errorShake].
+ */
+class ErrorShake internal constructor(private val steps: List<Float>) {
+    private val x = Animatable(0f)
+
+    /** Current horizontal offset in px. */
+    val offset: Float get() = x.value
+
+    /** Plays the shake; returns when it has settled. No movement when animations are off. */
+    suspend fun play() {
+        if (!Motion.enabled) return
+        for (s in steps) x.animateTo(s, Motion.tween(SHAKE_STEP_MS, Motion.Standard))
+    }
+}
+
+/** Remembers an [ErrorShake]; [strong] is the wider one. */
+@Composable
+fun rememberErrorShake(strong: Boolean = false): ErrorShake =
+    remember(strong) { ErrorShake(if (strong) SHAKE_STEPS_STRONG else SHAKE_STEPS) }
+
+/** Applies [shake] to the element: put it before the clipping/background modifiers. */
+fun Modifier.errorShake(shake: ErrorShake): Modifier = graphicsLayer { translationX = shake.offset }
 
 /** Draws the content without colour (the "off" state of a picture). */
 fun Modifier.grayscale(): Modifier = drawWithCache {

@@ -11,6 +11,7 @@ import ru.maxrubtsoff.bankagg.ui.common.AddSheet
 import ru.maxrubtsoff.bankagg.ui.deposits.rememberDepositShotsPicker
 import androidx.compose.runtime.mutableIntStateOf
 import ru.maxrubtsoff.bankagg.ui.common.LocalTabTaps
+import ru.maxrubtsoff.bankagg.ui.common.Motion
 import androidx.compose.material.icons.filled.Savings
 import ru.maxrubtsoff.bankagg.ui.common.TileButton
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
@@ -77,7 +78,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -248,7 +248,8 @@ private fun startRouteOf(features: Features): String =
 /** U-31: icons, widget, reminders and rates on return — not more often than this. */
 private const val CHORES_EVERY_MS = 5 * 60_000L
 
-private val tabTween = tween<androidx.compose.ui.unit.IntOffset>(320, easing = FastOutSlowInEasing)
+/** The slide between screens: built on each transition, so «Remove animations» is read when it runs. */
+private fun tabTween() = Motion.tween<androidx.compose.ui.unit.IntOffset>(Motion.NORMAL, Motion.Standard)
 
 /** Slide direction between two bottom-bar tabs, 0 when either side is not a tab. */
 private fun tabDirection(from: NavDestination, to: NavDestination): Int =
@@ -620,23 +621,23 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             // right, back — it flies out to the right; between tabs — towards the tab.
             enterTransition = {
                 val dir = tabDirection(initialState.destination, targetState.destination)
-                slideInHorizontally(tabTween) { (if (dir == 0) 1 else dir) * it }
+                slideInHorizontally(tabTween()) { (if (dir == 0) 1 else dir) * it }
             },
             exitTransition = {
                 when (val dir = tabDirection(initialState.destination, targetState.destination)) {
-                    0 -> slideOutHorizontally(tabTween) { -it / 4 } + fadeOut(tween(260))
-                    else -> slideOutHorizontally(tabTween) { -dir * it }
+                    0 -> slideOutHorizontally(tabTween()) { -it / 4 } + fadeOut(tween(260))
+                    else -> slideOutHorizontally(tabTween()) { -dir * it }
                 }
             },
             popEnterTransition = {
                 when (val dir = tabDirection(initialState.destination, targetState.destination)) {
-                    0 -> slideInHorizontally(tabTween) { -it / 4 } + fadeIn(tween(260))
-                    else -> slideInHorizontally(tabTween) { dir * it }
+                    0 -> slideInHorizontally(tabTween()) { -it / 4 } + fadeIn(tween(260))
+                    else -> slideInHorizontally(tabTween()) { dir * it }
                 }
             },
             popExitTransition = {
                 val dir = tabDirection(initialState.destination, targetState.destination)
-                slideOutHorizontally(tabTween) { -(if (dir == 0) -1 else dir) * it }
+                slideOutHorizontally(tabTween()) { -(if (dir == 0) -1 else dir) * it }
             }
         ) {
             // Top-level screens: apply the bottom-bar padding and the status-bar inset.

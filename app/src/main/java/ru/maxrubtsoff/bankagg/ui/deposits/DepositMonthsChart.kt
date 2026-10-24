@@ -5,7 +5,6 @@ import ru.maxrubtsoff.bankagg.ui.theme.Amounts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
-import android.animation.ValueAnimator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +40,7 @@ import ru.maxrubtsoff.bankagg.domain.model.AccrualMethod
 import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.DepositMath
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
+import ru.maxrubtsoff.bankagg.ui.common.Motion
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 import java.time.LocalDate
@@ -74,7 +74,7 @@ fun MonthsChart(deposit: Deposit, asOf: LocalDate) {
     if (bars.isEmpty()) return
     val sizes = remember(bars) { DepositMath.barSizes(bars, BAR_AREA.value) }
     // Bars grow up from zero when the chart first shows (U-19).
-    val grow = remember { Animatable(if (ValueAnimator.areAnimatorsEnabled()) 0f else 1f) }
+    val grow = remember { Animatable(if (Motion.enabled) 0f else 1f) }
     LaunchedEffect(Unit) { grow.animateTo(1f, tween(420)) }
     val nowIdx = bars.indexOfFirst { it.state == DepositMath.MonthState.CURRENT }.let { i ->
         when {
