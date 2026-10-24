@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
+import ru.maxrubtsoff.bankagg.domain.model.CashbackRows
 import ru.maxrubtsoff.bankagg.domain.model.CategoryGroups
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
@@ -91,6 +92,8 @@ fun CashbackLinesEditor(
         CategorySearchSheet(
             // The row's current name if it has one, otherwise what the screen said.
             initialQuery = current.text.ifBlank { current.sourceText },
+            // One category — one row (B-53).
+            taken = CashbackRows.taken(lines.map { it.text }, exceptIndex = idx),
             suggest = vm::suggest,
             resolve = vm::resolve,
             onPick = { name, key ->

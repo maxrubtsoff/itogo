@@ -41,6 +41,7 @@ import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.CategoryGroup
+import ru.maxrubtsoff.bankagg.domain.model.CashbackRows
 import ru.maxrubtsoff.bankagg.domain.model.CategoryGroups
 import ru.maxrubtsoff.bankagg.domain.model.Resolution
 import ru.maxrubtsoff.bankagg.ui.common.CategoryIcon
@@ -60,7 +61,9 @@ fun CategorySearchSheet(
     suggest: suspend (String) -> List<CategoryGroup>,
     resolve: suspend (String) -> Resolution,
     onPick: (displayName: String, groupKey: String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Categories already in other rows of this form — not offered again (B-53). */
+    taken: Set<String> = emptySet()
 ) {
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf(initialQuery) }
@@ -78,10 +81,13 @@ fun CategorySearchSheet(
     /** What "Оставить"/"Готово" saves: the text as typed; a known synonym only picks the icon. */
     fun keptName(): String = query.trim()
 
+    /** The typed name is already a row of this form: nothing to add (B-53). */
+    val typedIsTaken = CashbackRows.key(query) in taken && query.isNotBlank()
+
     var picked by remember { mutableStateOf(false) }
     fun keepTyped() {
         val text = query.trim()
-        if (text.isEmpty() || picked) return
+        if (text.isEmpty() || picked || typedIsTaken) return
         picked = true
         scope.launch {
             val r = resolve(text)
@@ -89,7 +95,9 @@ fun CategorySearchSheet(
         }
     }
 
-    val all = CategoryGroups.filter(query).filter { g -> similar.none { it.key == g.key } }
+    val all = CategoryGroups.filter(query)
+        .filter { g -> similar.none { it.key == g.key } }
+        .filterNot { g -> CashbackRows.key(g.name) in taken }
 
     SlitokSheet(onDismiss, scroll = false) {
         // The field lives in the sheet's own window: focus it once that is composed.
@@ -121,8 +129,9 @@ fun CategorySearchSheet(
                             if (k != null && k.groupKey != CategoryGroups.OTHER) CategoryIcon(CategoryGroups.byKey(k.groupKey).iconKey, size = 30.dp)
                             else Icon(Icons.Filled.Edit, contentDescription = null, tint = Slitok.Muted)
                         },
-                        label = "Оставить «${keptName()}»",
-                        muted = false,
+                        // Already a row of this form: nothing to add (B-53).
+                        label = if (typedIsTaken) "«${keptName()}» уже есть" else "Оставить «${keptName()}»",
+                        muted = typedIsTaken,
                         onClick = { keepTyped() }
                     )
                 }
