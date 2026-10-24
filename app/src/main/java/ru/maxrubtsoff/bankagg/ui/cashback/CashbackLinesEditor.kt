@@ -64,6 +64,10 @@ fun CashbackLinesEditor(
     val requesters = remember { mutableMapOf<String, FocusRequester>() }
     val focusManager = LocalFocusManager.current
 
+    // A removed row takes its focus requester with it.
+    val ids = lines.map { it.id }
+    LaunchedEffect(ids) { requesters.keys.retainAll(ids.toSet()) }
+
     // A tour types the percent the example screenshot left unread (F-32).
     val fill = LocalTourDrive.current?.fillPercent
     LaunchedEffect(fill) {
@@ -155,9 +159,14 @@ fun CashbackLinesEditor(
                 suggest = vm::suggest,
                 resolve = vm::resolve,
                 onPick = { name, key ->
-                    lines[idx] = current.copy(text = name, groupKey = key)
+                    // The list may have changed while the sheet was open (a tour types a percent): find the row by id now.
+                    val at = lines.indexOfFirst { it.id == p.id }
+                    if (at >= 0) {
+                        val row = lines[at]
+                        lines[at] = row.copy(text = name, groupKey = key)
+                        if (row.percentText.isBlank()) focusRow = row.id
+                    }
                     picking = null
-                    if (current.percentText.isBlank()) focusRow = current.id
                 },
                 onDismiss = { picking = null }
             )

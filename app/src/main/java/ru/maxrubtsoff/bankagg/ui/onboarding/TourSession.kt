@@ -119,7 +119,8 @@ class TourSession(
      * Plays the current step on the sandbox. Every step begins by setting right what
      * it changes, so it plays the same whether the person came to it by «Далее» or
      * by «Ещё раз». Nothing here goes on by itself: when the action is done the
-     * screen stands, and the next one waits for «Далее» (`waitForRead`, F-32).
+     * screen stands, and the next one waits for «Далее» (`waitForRead`, F-32) — unless the
+     * step says it doesn't wait.
      */
     suspend fun play() {
         val step = step
@@ -154,13 +155,27 @@ class TourSession(
             }
             TourAnim.BALANCE_CHANGE -> changeBalance()
         }
+        // Only a step that doesn't wait for the comment goes on by itself, after a moment to read.
+        if (step.advancesByItself && !isLast) {
+            delay(READ_MS)
+            next()
+        }
     }
+
+    /** A «Далее» that is being played (fillAndNext): a second press meanwhile does nothing. */
+    private var busy = false
 
     /** «Далее» on a step that does something first: types the missing percent, waits a moment, goes on. */
     suspend fun fillAndNext() {
-        drive.fillPercent = percentToText(TourSample.FILLED_PERCENT)
-        pause(700)
-        next()
+        if (busy || closing) return
+        busy = true
+        try {
+            drive.fillPercent = percentToText(TourSample.FILLED_PERCENT)
+            pause(700)
+            if (!closing) next()
+        } finally {
+            busy = false
+        }
     }
 
     /** The section's screen in plain view: no sheet, no check over it. */
@@ -250,6 +265,11 @@ class TourSession(
     /** A wait that is not a wait with «Убрать анимации». */
     private suspend fun pause(ms: Long) {
         if (Motion.enabled) delay(ms)
+    }
+
+    private companion object {
+        /** How long a comment that goes on by itself stays up after its action is played. */
+        const val READ_MS = 4000L
     }
 
     private suspend fun boundsOf(target: TourTarget): Rect? =

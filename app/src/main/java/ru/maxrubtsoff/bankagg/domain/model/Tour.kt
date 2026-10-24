@@ -95,7 +95,14 @@ data class TourStep(
     val anim: TourAnim = TourAnim.NONE,
     val waitForRead: Boolean = true,
     val highlight: TourHighlight = TourHighlight.of(target)
-)
+) {
+    /**
+     * The tour moves on by itself once the action is played and read: only a step
+     * that doesn't wait, and whose button is a plain «Далее» (a step that asks for
+     * access or types into a field always waits for the person).
+     */
+    val advancesByItself: Boolean get() = !waitForRead && action == TourAction.NEXT
+}
 
 /**
  * «Что такое Itogo» — the intro slides (F-29) are shown once, at the very first
@@ -115,7 +122,8 @@ object TourScript {
 
     fun steps(section: TourSection, features: Features, notificationAccess: Boolean): List<TourStep> = when (section) {
         TourSection.GENERAL -> buildList {
-            if (features.collectsNotifications && !notificationAccess) add(
+            // A step is there only if its part is on the screen the tour plays on: no part — no step.
+            if (!notificationAccess && accessBannerOnFirstTab(features)) add(
                 TourStep(
                     TourTarget.ACCESS_TILE,
                     "Счета соберутся сами",
@@ -125,10 +133,8 @@ object TourScript {
             )
             // Only the tabs that are really there, and the eye lives on «Обзор» (U-50).
             add(TourStep(TourTarget.BOTTOM_BAR, tabsTitle(features), tabsText(features)))
-            if (features.showOverview) add(
+            if (features.firstTab == AppTab.OVERVIEW) add(
                 TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз наверху Обзора прячет все суммы. То же — двумя пальцами вниз по экрану.", anim = TourAnim.TAP_ADD)
-            ) else add(
-                TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз в шапке прячет все суммы. То же — двумя пальцами вниз по экрану.", anim = TourAnim.TAP_ADD)
             )
         }
         // TourD1–D3: «+» → шторка → скрин читается → вклад встаёт в список.
@@ -163,7 +169,8 @@ object TourScript {
         TourSection.SUBSCRIPTIONS -> buildList {
             add(TourStep(TourTarget.FINDING, "Подписки находятся сами", "Одинаковые списания раз в месяц или год — приложение спросит, подписка ли это.", anim = TourAnim.REVEAL_FIELDS))
             add(TourStep(TourTarget.LIST_ROW, "Ближайшие списания", "Сколько и когда спишут. Напоминание — за день до списания."))
-            if (!notificationAccess) add(
+            // With accounts the banner sits on «Обзор», not on «Платежи» (U-52): nothing to point at here.
+            if (!notificationAccess && features.showNotifAccessOnPayments) add(
                 TourStep(TourTarget.ACCESS_TILE, "Нужны уведомления", "Без доступа к уведомлениям списания не видны и подписки не находятся.", TourAction.ALLOW_ACCESS)
             )
         }
@@ -175,6 +182,16 @@ object TourScript {
      */
     fun offerInSection(section: TourSection, features: Features, hasData: Boolean, done: Set<TourSection>): Boolean =
         (section.feature == null || features.has(section.feature)) && !hasData && section !in done
+
+    /**
+     * The general tour plays on the first tab; the access banner is on it only on «Обзор»
+     * (with accounts) or on «Платежи» (subscriptions without accounts, U-52).
+     */
+    internal fun accessBannerOnFirstTab(features: Features): Boolean = when (features.firstTab) {
+        AppTab.OVERVIEW -> features.showNotifAccessOnOverview
+        AppTab.PAYMENTS -> features.showNotifAccessOnPayments
+        else -> false
+    }
 
     /** «Четыре вкладки» only when there are four (U-50). */
     internal fun tabsTitle(features: Features): String = when (features.tabs.size) {

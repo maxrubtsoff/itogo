@@ -2,6 +2,7 @@ package ru.maxrubtsoff.bankagg.ui
 
 import ru.maxrubtsoff.bankagg.ui.common.rememberNotificationAccess
 import ru.maxrubtsoff.bankagg.util.Perms
+import androidx.navigation.NavBackStackEntry
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import ru.maxrubtsoff.bankagg.domain.model.TourTarget
@@ -603,17 +604,26 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
 
     // A tour begins once the screen it is about is standing still: if the person is elsewhere
     // (Настройки → Обучение), the app goes there first, as it always does, and the tour starts when it has arrived.
+    // It is the same screen only with the same section: «Капитал» on another part would end up
+    // under the fade-out in the wrong place. The jump to the right section is tried once.
+    var tourJumped by remember { mutableStateOf(false) }
     LaunchedEffect(pendingTour, backStack) {
         val section = pendingTour ?: return@LaunchedEffect
         if (tour != null) { pendingTour = null; return@LaunchedEffect }
-        val (pattern, route) = tourScreenOf(section, features)
+        val screen = tourScreenOf(section, features)
         val entry = backStack ?: return@LaunchedEffect
-        if (entry.destination.route != pattern) {
-            if (section == TourSection.GENERAL) openTab(route) else nav.navigate(route)
+        if (entry.destination.route != screen.pattern) {
+            if (section == TourSection.GENERAL) openTab(screen.route) else nav.navigate(screen.route)
+            return@LaunchedEffect
+        }
+        if (!screen.matches(entry) && !tourJumped) {
+            tourJumped = true
+            jumpTo(screen.route)
             return@LaunchedEffect
         }
         entry.lifecycle.currentStateFlow.first { it == Lifecycle.State.RESUMED }
         pendingTour = null
+        tourJumped = false
         tour = TourSession(section, features, notifAccess, container.sandbox(features))
     }
 
@@ -977,15 +987,30 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     }
 }
 
-/** The tab a tour plays on: its route pattern and the route to open it with. */
-private fun tourScreenOf(section: TourSection, features: Features): Pair<String, String> = when (section) {
-    TourSection.GENERAL -> startRouteOf(features).let { route -> topDests.first { it.route == route }.pattern to route }
-    TourSection.ACCOUNTS -> Routes.CAPITAL to Routes.capital(CapitalPart.ACCOUNTS)
-    TourSection.DEPOSITS -> Routes.CAPITAL to Routes.capital(CapitalPart.DEPOSITS)
-    TourSection.CURRENCY -> Routes.CAPITAL to Routes.capital(CapitalPart.CURRENCY)
-    TourSection.CASH -> Routes.CAPITAL to Routes.capital(CapitalPart.CASH)
-    TourSection.CASHBACK -> Routes.CASHBACK to Routes.CASHBACK_BASE
-    TourSection.SUBSCRIPTIONS -> Routes.CASHBACK to (Routes.CASHBACK_BASE + "?section=1")
+/**
+ * The tab a tour plays on: its route pattern, the route to open it with, and the
+ * section the tab must stand on ([capitalPart] of «Капитал», [paymentsSection] of «Платежи»; null — any).
+ */
+private class TourScreen(
+    val pattern: String,
+    val route: String,
+    val capitalPart: CapitalPart? = null,
+    val paymentsSection: Int? = null
+) {
+    fun matches(entry: NavBackStackEntry): Boolean =
+        entry.destination.route == pattern &&
+            (capitalPart == null || entry.arguments?.getString("section") == capitalPart.key) &&
+            (paymentsSection == null || (entry.arguments?.getInt("section") ?: 0) == paymentsSection)
+}
+
+private fun tourScreenOf(section: TourSection, features: Features): TourScreen = when (section) {
+    TourSection.GENERAL -> startRouteOf(features).let { route -> TourScreen(topDests.first { it.route == route }.pattern, route) }
+    TourSection.ACCOUNTS -> TourScreen(Routes.CAPITAL, Routes.capital(CapitalPart.ACCOUNTS), capitalPart = CapitalPart.ACCOUNTS)
+    TourSection.DEPOSITS -> TourScreen(Routes.CAPITAL, Routes.capital(CapitalPart.DEPOSITS), capitalPart = CapitalPart.DEPOSITS)
+    TourSection.CURRENCY -> TourScreen(Routes.CAPITAL, Routes.capital(CapitalPart.CURRENCY), capitalPart = CapitalPart.CURRENCY)
+    TourSection.CASH -> TourScreen(Routes.CAPITAL, Routes.capital(CapitalPart.CASH), capitalPart = CapitalPart.CASH)
+    TourSection.CASHBACK -> TourScreen(Routes.CASHBACK, Routes.CASHBACK_BASE, paymentsSection = 0)
+    TourSection.SUBSCRIPTIONS -> TourScreen(Routes.CASHBACK, Routes.CASHBACK_BASE + "?section=1", paymentsSection = 1)
 }
 
 /**
