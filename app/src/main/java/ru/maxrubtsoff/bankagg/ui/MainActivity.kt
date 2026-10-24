@@ -34,6 +34,7 @@ import ru.maxrubtsoff.bankagg.ui.settings.AddBankScreen
 import ru.maxrubtsoff.bankagg.ui.settings.BankEditorScreen
 import ru.maxrubtsoff.bankagg.ui.settings.BankCardScreen
 import androidx.compose.runtime.saveable.rememberSaveable
+import ru.maxrubtsoff.bankagg.domain.model.AppTab
 import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.ui.onboarding.OnboardingScreen
 import ru.maxrubtsoff.bankagg.ui.settings.FeaturesScreen
@@ -231,14 +232,18 @@ private object Routes {
 }
 
 /** A bottom-bar tab: [pattern] is the registered route, [route] what the bar navigates to. */
-private data class TopDest(val pattern: String, val route: String, val label: String, val icon: ImageVector)
+private data class TopDest(val tab: AppTab, val pattern: String, val route: String, val label: String, val icon: ImageVector)
 
 private val topDests = listOf(
-    TopDest(Routes.OVERVIEW, Routes.OVERVIEW, "Обзор", Icons.Filled.Dashboard),
-    TopDest(Routes.CAPITAL, Routes.CAPITAL_BASE, "Капитал", Icons.Filled.AccountBalanceWallet),
-    TopDest(Routes.CASHBACK, Routes.CASHBACK_BASE, "Платежи", Icons.Filled.Percent),
-    TopDest(Routes.SETTINGS, Routes.SETTINGS, "Настройки", Icons.Filled.Settings)
+    TopDest(AppTab.OVERVIEW, Routes.OVERVIEW, Routes.OVERVIEW, "Обзор", Icons.Filled.Dashboard),
+    TopDest(AppTab.CAPITAL, Routes.CAPITAL, Routes.CAPITAL_BASE, "Капитал", Icons.Filled.AccountBalanceWallet),
+    TopDest(AppTab.PAYMENTS, Routes.CASHBACK, Routes.CASHBACK_BASE, "Платежи", Icons.Filled.Percent),
+    TopDest(AppTab.SETTINGS, Routes.SETTINGS, Routes.SETTINGS, "Настройки", Icons.Filled.Settings)
 )
+
+/** The tab the app opens on: the first one the kept sections leave visible (U-50). */
+private fun startRouteOf(features: Features): String =
+    topDests.first { it.tab == features.firstTab }.route
 
 /** U-31: icons, widget, reminders and rates on return — not more often than this. */
 private const val CHORES_EVERY_MS = 5 * 60_000L
@@ -293,6 +298,8 @@ class MainActivity : FragmentActivity() {
         // A quick prefs read: the lock must be up before the first frame.
         val session = container.lockSession
         val pinOn = runBlocking { container.settings.lockPin() != null }
+        // Which tab the app opens on is decided before the first frame (U-50).
+        val startFeatures = runBlocking { container.settings.currentFeatures() }
         val coldStart = AppLock.isColdStart(freshScreen = savedInstanceState == null, unlockedInProcess = session.unlocked)
         if (coldStart) session.unlocked = false
         locked.value = AppLock.needsUnlock(pinOn, coldStart = coldStart, backgroundedAt = null, now = System.currentTimeMillis())
@@ -304,7 +311,7 @@ class MainActivity : FragmentActivity() {
                     val isLocked = locked.value
                     Box(if (isLocked) Modifier.clearAndSetSemantics { } else Modifier) {
                         AppRoot(
-                            container, factory,
+                            container, factory, startFeatures,
                             if (isLocked) emptyList() else shared.value,
                             if (isLocked) null else openRoute.value,
                             { openRoute.value = null }
@@ -431,7 +438,7 @@ class MainActivity : FragmentActivity() {
 
 @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
 @Composable
-private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: List<Uri>, openRoute: String?, onOpened: () -> Unit, onSharedTaken: () -> Unit) {
+private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFeatures: Features, shared: List<Uri>, openRoute: String?, onOpened: () -> Unit, onSharedTaken: () -> Unit) {
     val nav = rememberNavController()
     val capitalVm: CapitalViewModel = viewModel(factory = factory)
     val logVm: LogViewModel = viewModel(factory = factory)
@@ -486,14 +493,12 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
 
     val features by container.settings.features.collectAsStateWithLifecycle(initialValue = Features.ALL)
     val onboarded by container.settings.onboarded.collectAsStateWithLifecycle(initialValue = true)
-    // Only the tabs of sections the user keeps (F-21).
-    val tabs = topDests.filter { d ->
-        when (d.pattern) {
-            Routes.CAPITAL -> features.showCapital
-            Routes.CASHBACK -> features.showPayments
-            else -> true
-        }
-    }
+    // Only the tabs of sections the user keeps (F-21), and «Обзор» only while it
+    // has something to show (U-50).
+    val tabs = topDests.filter { it.tab in features.tabs }
+    // The root of the graph: the first visible tab at the moment the app starts
+    // (U-50). A section switched off later redirects instead (below).
+    val startRoute = remember { startRouteOf(startFeatures) }
     val banksVm: BanksViewModel = viewModel(factory = factory)
     // F-30: the tours taken; the general one opens once, right after the first setup.
     val tourKeys by container.settings.toursDone.collectAsStateWithLifecycle(initialValue = emptySet())
@@ -529,11 +534,23 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
             r == AppNotifier.OPEN_CASHBACK -> nav.navigate(Routes.CASHBACK_BASE)
             r == AppNotifier.OPEN_SUBSCRIPTIONS -> nav.navigate("cashback?section=1")
             r == AppNotifier.OPEN_NEW_BANKS -> nav.navigate(Routes.NEW_BANKS)
+            r == AppNotifier.OPEN_FEATURES -> nav.navigate(Routes.SETTINGS_FEATURES)
         }
     }
     val selectedPackages by settingsVm.selectedPackages.collectAsStateWithLifecycle()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
+
+    // A section switched off while the app is open: its tab is gone, so whoever
+    // stands on it moves to the first visible one (U-50, U-52).
+    val visibleRoutes = tabs.map { it.pattern }
+    LaunchedEffect(features, currentRoute) {
+        val onAHiddenTab = currentRoute in topDests.map { it.pattern } && currentRoute !in visibleRoutes
+        if (onAHiddenTab) {
+            val home = startRouteOf(features)
+            nav.navigate(home) { popUpTo(nav.graph.findStartDestination().id); launchSingleTop = true }
+        }
+    }
     val showBottomBar = currentRoute in topDests.map { it.pattern }
 
     // U-38: «Добавить вклад» anywhere opens the same «Со скринов / Вручную» sheet.
@@ -550,8 +567,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
     fun openTab(route: String) {
         // The start tab is the root of every stack: just return to it. Navigating
         // to it with restoreState would bring back the tab saved on top of it.
-        if (route == Routes.OVERVIEW) {
-            nav.popBackStack(Routes.OVERVIEW, inclusive = false)
+        if (route == startRoute) {
+            nav.popBackStack(startRoute, inclusive = false)
             return
         }
         nav.navigate(route) {
@@ -597,7 +614,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
         CompositionLocalProvider(LocalTabTaps provides tabTaps, LocalTourOffer provides tourOffer) {
         NavHost(
             navController = nav,
-            startDestination = Routes.OVERVIEW,
+            startDestination = startRoute,
             modifier = Modifier.fillMaxSize(),
             // One motion everywhere (B-41): deeper — the new screen flies in from the
             // right, back — it flies out to the right; between tabs — towards the tab.
@@ -873,6 +890,10 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                 })
             }
             composable(Routes.SETTINGS_LOG) {
+                // Accounts switched off while the log was open: it closes (U-51).
+                LaunchedEffect(features.showCaptureLog) {
+                    if (!features.showCaptureLog) nav.popBackStack()
+                }
                 LogScreen(logVm, onBack = { nav.popBackStack() })
             }
             composable(Routes.SETTINGS_PRIVACY) {

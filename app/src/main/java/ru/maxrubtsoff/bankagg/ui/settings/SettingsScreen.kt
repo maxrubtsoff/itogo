@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.domain.model.ReminderKinds
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
 @Composable
@@ -80,7 +81,8 @@ fun SettingsScreen(
             SettingsRow(
                 icon = Icons.Filled.Notifications,
                 title = "Уведомления",
-                subtitle = "Новые банки, вклады, кэшбэк",
+                // Built from what the user keeps (U-52).
+                subtitle = ReminderKinds.subtitle(features),
                 onClick = onOpenNotifications
             )
             HorizontalDivider(Modifier.padding(start = 56.dp), color = Slitok.Line)
@@ -97,7 +99,8 @@ fun SettingsScreen(
                 subtitle = lastBackup?.let { "Сохранена ${backupMoment(it)}" } ?: "Сохраняется сама",
                 onClick = onOpenBackup
             )
-            if (features.collectsNotifications) {
+            // The log explains how operations on accounts were read (U-51).
+            if (features.showCaptureLog) {
             HorizontalDivider(Modifier.padding(start = 56.dp), color = Slitok.Line)
             SettingsRow(
                 icon = Icons.AutoMirrored.Filled.ListAlt,

@@ -70,8 +70,13 @@ object TourScript {
                     TourAction.ALLOW_ACCESS
                 )
             )
-            add(TourStep(TourTarget.BOTTOM_BAR, "Четыре вкладки", "Обзор — всё вместе, Капитал — по частям, Платежи — кэшбэк и подписки, Настройки — остальное."))
-            add(TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз наверху Обзора прячет все суммы. То же — двумя пальцами вниз по экрану."))
+            // Only the tabs that are really there, and the eye lives on «Обзор» (U-50).
+            add(TourStep(TourTarget.BOTTOM_BAR, tabsTitle(features), tabsText(features)))
+            if (features.showOverview) add(
+                TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз наверху Обзора прячет все суммы. То же — двумя пальцами вниз по экрану.")
+            ) else add(
+                TourStep(TourTarget.HIDE_EYE, "Суммы можно скрыть", "Глаз в шапке прячет все суммы. То же — двумя пальцами вниз по экрану.")
+            )
         }
         TourSection.DEPOSITS -> listOf(
             TourStep(TourTarget.ADD_BUTTON, "Добавить вклад", "Плюс открывает два пути: скрин из банка или ввод вручную."),
@@ -109,6 +114,20 @@ object TourScript {
      */
     fun offerInSection(section: TourSection, features: Features, hasData: Boolean, done: Set<TourSection>): Boolean =
         (section.feature == null || features.has(section.feature)) && !hasData && section !in done
+
+    /** «Четыре вкладки» only when there are four (U-50). */
+    internal fun tabsTitle(features: Features): String = when (features.tabs.size) {
+        2 -> "Две вкладки"
+        3 -> "Три вкладки"
+        else -> "Четыре вкладки"
+    }
+
+    internal fun tabsText(features: Features): String = buildList {
+        if (features.showOverview) add("Обзор — всё вместе")
+        if (features.showCapital) add("Капитал — по частям")
+        if (features.showPayments) add("Платежи — кэшбэк и подписки")
+        add("Настройки — остальное")
+    }.joinToString(", ") + "."
 
     /** The tour after the first setup: once, unless it was taken or skipped. */
     fun startAfterSetup(done: Set<TourSection>): Boolean = TourSection.GENERAL !in done

@@ -48,7 +48,8 @@ suspend fun ru.maxrubtsoff.bankagg.di.AppContainer.checkReminders() {
     val filled = cashbackRepository.observeMonth(CashbackMonth.keyOf(today)).first().isNotEmpty()
     val hidden = this.settings.amountsHidden.first()
     val subs = subscriptionRepository.observeAll().first()
-    val due = Reminders.due(today, deposits, filled, settings, hidden, reminders.sent(), subs)
+    val features = this.settings.currentFeatures()
+    val due = Reminders.due(today, deposits, filled, settings, hidden, reminders.sent(), subs, features)
     due.forEach { notifier.show(it) }
     reminders.markSent(due.map { it.id })
 }

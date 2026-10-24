@@ -46,6 +46,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CashbackSpotlight
 import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetLayout
 import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import java.time.LocalDate
+import ru.maxrubtsoff.bankagg.data.notify.AppNotifier
 import ru.maxrubtsoff.bankagg.ui.MainActivity
 import ru.maxrubtsoff.bankagg.ui.cashback.formatPercent
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
@@ -92,7 +93,9 @@ class CashbackWidget : GlanceAppWidget() {
         val base: List<BaseChip>,
         val banks: List<BankBlock>,
         val missing: Boolean,
-        val nextHint: String?
+        val nextHint: String?,
+        /** Cashback isn't kept at all: the widget says so and opens «Что храним» (U-52). */
+        val cashbackOff: Boolean = false
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -106,6 +109,9 @@ class CashbackWidget : GlanceAppWidget() {
         val repo = App.instance.container.cashbackRepository
         val today = LocalDate.now()
         val key = CashbackMonth.keyOf(today)
+        if (!App.instance.container.settings.currentFeatures().showCashback) {
+            return Model(CashbackMonth.shortLabel(key), emptyList(), 0, emptyList(), emptyList(), false, null, cashbackOff = true)
+        }
         val items = repo.observeMonth(key).first()
         val hasNext = repo.observeMonth(CashbackMonth.nextKey(key)).first().isNotEmpty()
         val spot = CashbackSpotlight.build(items, hasNext, today)
@@ -151,7 +157,14 @@ class CashbackWidget : GlanceAppWidget() {
                 .fillMaxSize()
                 .cornerRadius(24.dp)
                 .background(ColorProvider(Slitok.PanelBottom))
-                .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java)))
+                .clickable(
+                    actionStartActivity(
+                        Intent(LocalContext.current, MainActivity::class.java).apply {
+                            // Cashback switched off: the tap goes to «Что храним» (U-52).
+                            if (model.cashbackOff) putExtra(AppNotifier.EXTRA_OPEN, AppNotifier.OPEN_FEATURES)
+                        }
+                    )
+                )
                 .padding(CashbackWidgetLayout.PADDING.dp)
         ) {
             Row(
@@ -172,6 +185,10 @@ class CashbackWidget : GlanceAppWidget() {
             Spacer(GlanceModifier.height((CashbackWidgetLayout.HEADER - 18f).dp))
 
             when {
+                model.cashbackOff -> Text(
+                    "Кэшбэк выключен · включить в «Что храним»",
+                    style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 13.sp)
+                )
                 model.rows.isEmpty() && !hasBase -> Text(
                     if (model.missing) "Кэшбэк на ${model.month.lowercase()} не добавлен" else "Нет кэшбэка в этом месяце",
                     style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 13.sp)

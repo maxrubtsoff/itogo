@@ -124,6 +124,9 @@ class AppNotifier(context: Context) {
         const val OPEN_CASHBACK = "cashback"
         const val OPEN_NEW_BANKS = "new_banks"
         const val OPEN_SUBSCRIPTIONS = "subscriptions"
+
+        /** «Что храним» — where a widget of a switched-off section leads (U-52). */
+        const val OPEN_FEATURES = "features"
         private const val CH_DEPOSITS = "deposits"
         private const val CH_CASHBACK = "cashback"
         private const val CH_BANKS = "banks"
