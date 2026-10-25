@@ -2,6 +2,9 @@
 
 package ru.maxrubtsoff.bankagg.ui.cashback
 
+import ru.maxrubtsoff.bankagg.domain.model.TourSample
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.TagTone
 import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
 import androidx.compose.material.icons.filled.Lightbulb
@@ -16,7 +19,7 @@ import ru.maxrubtsoff.bankagg.ui.common.reorderable
 import androidx.compose.ui.layout.LookaheadScope
 import ru.maxrubtsoff.bankagg.ui.common.cascade
 import ru.maxrubtsoff.bankagg.ui.common.rememberCascade
-import ru.maxrubtsoff.bankagg.ui.common.AddButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
 import ru.maxrubtsoff.bankagg.ui.common.AddSheet
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import ru.maxrubtsoff.bankagg.ui.common.SectionPager
@@ -26,7 +29,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.mutableIntStateOf
 import ru.maxrubtsoff.bankagg.ui.common.PagerTabs
 import androidx.compose.animation.core.animateFloatAsState
@@ -37,6 +39,7 @@ import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.domain.model.SortOrder
 import ru.maxrubtsoff.bankagg.ui.common.SortControl
 import ru.maxrubtsoff.bankagg.ui.common.SortSheet
+import ru.maxrubtsoff.bankagg.ui.common.Motion
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
 import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import androidx.compose.foundation.combinedClickable
@@ -110,6 +113,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import ru.maxrubtsoff.bankagg.ui.common.ShotImage
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
@@ -126,8 +130,8 @@ import java.io.File
 
 
 /**
- * The cashback of a month (U-47), a page of «Платежи»: the month and the view
- * (by bank / by category) are chosen in the tab's title row.
+ * The cashback of a month (U-47), a page of «Платежи»: the month, the view
+ * (by bank / by category) and the «+» are in the section's row of actions (U-58).
  */
 @Composable
 fun CashbackScreen(
@@ -138,7 +142,8 @@ fun CashbackScreen(
     onOpenShot: (String) -> Unit,
     onOpenBatch: (List<String>) -> Unit,
     onEditBank: (monthKey: String, BankBrand) -> Unit,
-    onAddManual: (monthKey: String) -> Unit = {}
+    onAddManual: (monthKey: String) -> Unit = {},
+    onByCategory: (Boolean) -> Unit = {}
 ) {
     val anchor = remember { CashbackMonth.currentKey() }
     val currentKey = CashbackMonth.keyForOffset(anchor, monthOffset)
@@ -146,6 +151,12 @@ fun CashbackScreen(
     val hintNextMonth = remember { CashbackMonth.shouldOfferNextMonth() }
 
     var adding by remember { mutableStateOf(false) }
+    var pickingMonth by rememberSaveable { mutableStateOf(false) }
+    // The month in view is read once: the line under the actions and the page share it.
+    // null — not loaded yet (no «Кэшбэка пока нет» flash); keyed, so a stale month never shows.
+    val loaded by remember(currentKey) { vm.monthItems(currentKey).map { currentKey to it } }
+        .collectAsStateWithLifecycle(initialValue = null)
+    val monthItems = loaded?.takeIf { it.first == currentKey }?.second
 
     // Photo picker — adds a shot to the month in view, then opens it for review.
     // One screenshot opens for review; several go to the batch check.
@@ -160,6 +171,13 @@ fun CashbackScreen(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionActions(
+            summary = remember(monthItems) { monthItems?.let { CashbackSummary.caption(it) }.orEmpty() },
+            lead = { MonthChip(CashbackMonth.shortLabel(currentKey)) { pickingMonth = true } },
+            controls = { ViewToggle(byCategory, onByCategory) },
+            onAdd = { adding = true },
+            addDescription = "Добавить кэшбэк"
+        )
         if (isCurrentMonth && hintNextMonth) {
             NextMonthHint(
                 nextLabel = CashbackMonth.shortLabel(CashbackMonth.nextKey(currentKey)),
@@ -167,28 +185,34 @@ fun CashbackScreen(
             )
         }
         // The next month slides in from the side it lies on.
+        // contentKey: only the month moves the page; new items of the same month just recompose it.
         AnimatedContent(
-            targetState = currentKey,
+            targetState = MonthData(currentKey, monthItems),
+            contentKey = { it.key },
             transitionSpec = {
-                val dir = if (targetState > initialState) 1 else -1
-                (slideInHorizontally(tween(260)) { w -> dir * w / 5 } + fadeIn(tween(200))) togetherWith
-                    (slideOutHorizontally(tween(260)) { w -> -dir * w / 8 } + fadeOut(tween(160)))
+                val dir = if (targetState.key > initialState.key) 1 else -1
+                (slideInHorizontally(Motion.tween(Motion.NORMAL, Motion.Standard)) { w -> dir * w / 5 } + fadeIn(Motion.tween(Motion.NORMAL))) togetherWith
+                    (slideOutHorizontally(Motion.tween(Motion.FAST, Motion.Standard)) { w -> -dir * w / 8 } + fadeOut(Motion.tween(Motion.FAST)))
             },
             modifier = Modifier.fillMaxWidth().weight(1f),
             label = "month"
-        ) { monthKey ->
+        ) { month ->
+            val monthKey = month.key
             MonthPage(
                 vm = vm,
                 monthKey = monthKey,
+                items = month.items,
                 byCategory = byCategory,
                 onEditBank = { brand -> onEditBank(monthKey, brand) },
                 onOpenShot = onOpenShot,
-                onAdd = { adding = true },
                 onDeleteShot = { vm.deleteShot(it.id) }
             )
         }
     }
 
+    if (pickingMonth) {
+        MonthSheet(anchor, monthOffset, onPick = { onMonthOffset(it); pickingMonth = false }, onDismiss = { pickingMonth = false })
+    }
     if (adding) {
         AddSheet(
             title = "Добавить кэшбэк",
@@ -198,6 +222,9 @@ fun CashbackScreen(
         )
     }
 }
+
+/** A month page's state: its key and the items (null until loaded). */
+private data class MonthData(val key: String, val items: List<CashbackItem>?)
 
 @Composable
 private fun NextMonthHint(nextLabel: String, onClick: () -> Unit) {
@@ -233,14 +260,13 @@ private fun CategoryPanel(
     order: SortOrder<CashbackSummary.Order>,
     onPick: (CashbackSummary.Order) -> Unit,
     onFlip: () -> Unit,
-    onAdd: () -> Unit,
     onEditBank: (BankBrand) -> Unit
 ) {
     val rows = remember(items, order) { CashbackSummary.sort(CashbackSummary.byCategory(items), order) }
     var open by rememberSaveable { mutableStateOf(setOf<String>()) }
     var sorting by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ListHeader(RuPlural.categories(rows.size), onAdd) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             SortControl(
                 label = orderTitle(order.sort).lowercase(),
                 reversed = order.reversed,
@@ -418,25 +444,24 @@ private fun PercentText(percent: Double, best: Boolean, small: Boolean = false) 
 private fun MonthPage(
     vm: CashbackViewModel,
     monthKey: String,
+    items: List<CashbackItem>?,
     byCategory: Boolean,
     onEditBank: (BankBrand) -> Unit,
     onOpenShot: (String) -> Unit,
-    onAdd: () -> Unit,
     onDeleteShot: (CashbackShot) -> Unit
 ) {
-    val items by remember(monthKey) { vm.monthItems(monthKey) }
-        .collectAsStateWithLifecycle(initialValue = emptyList())
     val shots by remember(monthKey) { vm.shots(monthKey) }
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
-    val byBrand = items.groupBy { it.brand }.toList().sortedBy { it.first.title }
+    val byBrand = remember(items) { items.orEmpty().groupBy { it.brand }.toList().sortedBy { it.first.title } }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (byBrand.isEmpty()) {
-            ListHeader("Кэшбэка пока нет", onAdd)
+        if (items == null) {
+            // Not loaded yet: nothing to show, nothing to offer.
+        } else if (byBrand.isEmpty()) {
             LocalTourOffer.current(TourSection.CASHBACK, false)?.let { tour ->
                 PlateButton(onClick = tour, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Lightbulb, contentDescription = null)
@@ -445,9 +470,8 @@ private fun MonthPage(
             }
         } else if (byCategory) {
             val order by vm.categoryOrder.collectAsStateWithLifecycle()
-            CategoryPanel(items, order, vm::pickCategoryOrder, vm::flipCategoryOrder, onAdd, onEditBank)
+            CategoryPanel(items.orEmpty(), order, vm::pickCategoryOrder, vm::flipCategoryOrder, onEditBank)
         } else {
-            ListHeader(RuPlural.banks(byBrand.size), onAdd)
             val play = rememberCascade("cashback-banks")
             byBrand.forEachIndexed { i, (brand, list) ->
                 Box(Modifier.cascade(i, play)) {
@@ -475,16 +499,6 @@ private fun MonthPage(
         ShotRail(shots = shots, onOpenShot = onOpenShot, onDeleteShot = onDeleteShot)
         }
         Spacer(Modifier.height(8.dp))
-    }
-}
-
-/** "4 банка … +": the same row as the deposits' list header. */
-@Composable
-private fun ListHeader(title: String, onAdd: () -> Unit, trailing: @Composable () -> Unit = {}) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        trailing()
-        AddButton("Добавить кэшбэк", onAdd)
     }
 }
 
@@ -605,7 +619,7 @@ private fun BankCashbackPanel(
     items: List<CashbackItem>,
     onEditBank: () -> Unit
 ) {
-    Panel(Modifier.fillMaxWidth()) {
+    Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.BANK_PANEL, active = brand == TourSample.BANK)) {
         Column(
             Modifier.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)

@@ -14,6 +14,9 @@ enum class Feature(val key: String, val capitalPart: CapitalPart?) {
     }
 }
 
+/** The tabs of the bottom bar, in the order they stand there (U-50). */
+enum class AppTab { OVERVIEW, CAPITAL, PAYMENTS, SETTINGS }
+
 /**
  * The switched-on sections and what follows from them. Not the same as
  * "counts in the total capital" (F-12): there a part is shown but not summed;
@@ -34,6 +37,27 @@ data class Features(val enabled: Set<Feature>) {
     val showPayments: Boolean get() = showCashback || showSubscriptions
 
     /**
+     * The «Обзор» tab shows the parts of the capital and the cashback card:
+     * without both there is nothing on it, so it is hidden (U-50).
+     */
+    val showOverview: Boolean get() = showCapital || showCashback
+
+    /** The tabs of the bottom bar, in order; «Настройки» is always there. */
+    val tabs: List<AppTab>
+        get() = buildList {
+            if (showOverview) add(AppTab.OVERVIEW)
+            if (showCapital) add(AppTab.CAPITAL)
+            if (showPayments) add(AppTab.PAYMENTS)
+            add(AppTab.SETTINGS)
+        }
+
+    /** Where the app opens, and where anything pointing at a hidden tab goes. */
+    val firstTab: AppTab get() = tabs.first()
+
+    /** The capture log is about operations on accounts (U-51). */
+    val showCaptureLog: Boolean get() = has(Feature.ACCOUNTS)
+
+    /**
      * Accounts and subscriptions come from bank notifications (subscriptions are
      * found by repeated charges): the listener, access request and log live with them.
      */
@@ -41,6 +65,19 @@ data class Features(val enabled: Set<Feature>) {
 
     /** Banks are needed by anything tied to a bank: accounts, deposits, cashback. */
     val needsBanks: Boolean get() = has(Feature.ACCOUNTS) || has(Feature.DEPOSITS) || has(Feature.CASHBACK)
+
+    /** «Новые банки» on the «Обзор»: only where the user curates banks, and the tab exists (U-52). */
+    val showNewBanksPrompt: Boolean get() = collectsNotifications && needsBanks
+
+    /** The notification-access banner sits on «Обзор» while accounts keep that tab (U-52). */
+    val showNotifAccessOnOverview: Boolean get() = collectsNotifications && has(Feature.ACCOUNTS)
+
+    /** Without accounts «Обзор» may be hidden: the banner moves to «Платежи» (U-52). */
+    val showNotifAccessOnPayments: Boolean get() = collectsNotifications && !has(Feature.ACCOUNTS)
+
+    /** How much is kept, in a word for the settings tile (U-59): «Всё» or «4 из 6». */
+    val keptLabel: String
+        get() = if (enabled.size == Feature.entries.size) "Всё" else "${enabled.size} из ${Feature.entries.size}"
 
     /** A tap switches a section; the last one can't be switched off. */
     fun toggle(f: Feature): Features = when {

@@ -56,4 +56,17 @@ class RemindersTest {
         assertTrue(Reminders.due(LocalDate.of(2026, 11, 10), emptyList(), false, on, false, emptySet()).isEmpty())
         assertTrue(Reminders.due(nov1, emptyList(), false, on, false, setOf("cb:2026-11")).isEmpty())
     }
+
+    // F-33: the reminder carries the subscription's own look for the big icon.
+    @Test fun subscriptionReminder_carriesItsLook() {
+        val mine = ru.maxrubtsoff.bankagg.domain.model.BrandDecor(0xFF123456, "НФ")
+        val plain = ru.maxrubtsoff.bankagg.domain.model.Subscription(
+            "s1", "Netflix", 59_900, ru.maxrubtsoff.bankagg.domain.model.Period.MONTHLY, LocalDate.of(2026, 11, 2), remind = true
+        )
+        val today = LocalDate.of(2026, 11, 1)
+        val byDefault = Reminders.due(today, emptyList(), true, on, false, emptySet(), listOf(plain)).single()
+        assertEquals(plain.look, byDefault.decor)
+        val own = Reminders.due(today, emptyList(), true, on, false, emptySet(), listOf(plain.copy(decor = mine))).single()
+        assertEquals(mine, own.decor)
+    }
 }

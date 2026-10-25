@@ -2,6 +2,9 @@
 
 package ru.maxrubtsoff.bankagg.ui.deposits
 
+import ru.maxrubtsoff.bankagg.domain.model.TourSample
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import androidx.compose.material.icons.filled.Lightbulb
 import ru.maxrubtsoff.bankagg.domain.model.TourSection
@@ -18,7 +21,7 @@ import ru.maxrubtsoff.bankagg.ui.common.sharedCard
 import ru.maxrubtsoff.bankagg.ui.common.cascade
 import ru.maxrubtsoff.bankagg.ui.common.rememberCascade
 import ru.maxrubtsoff.bankagg.ui.common.RollingAmount
-import ru.maxrubtsoff.bankagg.ui.common.AddButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
 import ru.maxrubtsoff.bankagg.ui.common.AddSheet
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
@@ -126,17 +129,9 @@ fun DepositsSection(
             .verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (pending.isNotEmpty()) PendingShots(pending.size, onOpenPending)
-        if (state.isEmpty) {
-            EmptyState(onAdd, LocalTourOffer.current(TourSection.DEPOSITS, false))
-        } else {
-            HeroSummary(state.summary)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    RuPlural.deposits(state.active.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
+        SectionActions(
+            summary = if (state.isEmpty) "Вкладов пока нет" else RuPlural.deposits(state.active.size),
+            controls = {
                 if (state.active.size > 1) {
                     SortControl(
                         label = sortTitle(state.order.sort).lowercase(),
@@ -145,10 +140,16 @@ fun DepositsSection(
                         onFlip = vm::flipSort,
                         onOpen = { sorting = true }
                     )
-                    Spacer(Modifier.width(8.dp))
                 }
-                AddButton("Добавить вклад", onAdd)
-            }
+            },
+            onAdd = onAdd,
+            addDescription = "Добавить вклад"
+        )
+        if (pending.isNotEmpty()) PendingShots(pending.size, onOpenPending)
+        if (state.isEmpty) {
+            EmptyState(onAdd, LocalTourOffer.current(TourSection.DEPOSITS, false))
+        } else {
+            HeroSummary(state.summary)
             if (state.active.isNotEmpty()) {
                 if (state.order.sort == DepositSort.BANK) {
                     val groups = remember(state.active, state.order) {
@@ -298,7 +299,7 @@ private fun DepositList(
                 Column(Modifier.reorderable(this@LookaheadScope)) {
                 if (i > 0) HorizontalDivider(Modifier.padding(start = if (withBank) 62.dp else 16.dp), color = Slitok.Line)
                 // U-45: no long-press menu — changing, topping up and deleting live in the deposit's card.
-                Box(Modifier.cascade(i, play)) { DepositRow(item, today, withBank) { onOpenDeposit(id) } }
+                Box(Modifier.cascade(i, play).tourTarget(TourTarget.LIST_ROW, active = id == TourSample.HOLIDAY_ID, radius = 16.dp)) { DepositRow(item, today, withBank) { onOpenDeposit(id) } }
                 }
                 }
             }

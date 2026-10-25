@@ -24,6 +24,7 @@ import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CashbackBatch
 import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
 import ru.maxrubtsoff.bankagg.domain.model.CashbackDraft
+import ru.maxrubtsoff.bankagg.domain.model.CashbackRows
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMerge
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
 import ru.maxrubtsoff.bankagg.domain.model.CashbackShot
@@ -133,12 +134,16 @@ class CashbackViewModel(
 
     // ---- shots: upload, recognise, save-all, delete ----
 
-    /** A draft row in an editor: display text, its group, percent text, and the OCR line it came from. */
+    /**
+     * A draft row in an editor: display text, its group, percent text, and the OCR line it came from.
+     * [id] is the row's own name, so a list can keep it in place while others come and go (B-52).
+     */
     data class DraftLine(
         val text: String,
         val groupKey: String,
         val percentText: String,
-        val sourceText: String = ""
+        val sourceText: String = "",
+        val id: String = UUID.randomUUID().toString()
     ) {
         val iconKey: String get() = CategoryGroups.byKey(groupKey).iconKey
         val isComplete: Boolean get() = CashbackDraft.isComplete(text, percentText)
@@ -206,9 +211,11 @@ class CashbackViewModel(
     }
 
     /** A group's rows as editor lines. */
-    fun draftLines(lines: List<ShotLine>): List<DraftLine> = lines.map { l ->
-        DraftLine(text = l.text, groupKey = l.groupKey, percentText = l.percent?.let(::percentToText) ?: "", sourceText = l.sourceText)
-    }
+    fun draftLines(lines: List<ShotLine>): List<DraftLine> = merged(
+        lines.map { l ->
+            DraftLine(text = l.text, groupKey = l.groupKey, percentText = l.percent?.let(::percentToText) ?: "", sourceText = l.sourceText)
+        }
+    )
 
     /** Drops the shots of a saved group. */
     fun discardShots(ids: List<String>) {
@@ -252,14 +259,20 @@ class CashbackViewModel(
     fun observeShot(id: String): Flow<CashbackShot?> = shotRepo.observe(id)
 
     /** A shot's stored draft rows as editable lines (no OCR — a shot is recognised once, in [addShot]). */
-    fun draftLines(shot: CashbackShot): List<DraftLine> = shot.lines.map { l ->
-        DraftLine(
-            text = l.text,
-            groupKey = l.groupKey,
-            percentText = l.percent?.let(::percentToText) ?: "",
-            sourceText = l.sourceText
-        )
-    }
+    fun draftLines(shot: CashbackShot): List<DraftLine> = merged(
+        shot.lines.map { l ->
+            DraftLine(
+                text = l.text,
+                groupKey = l.groupKey,
+                percentText = l.percent?.let(::percentToText) ?: "",
+                sourceText = l.sourceText
+            )
+        }
+    )
+
+    /** A screenshot that read one category twice gives one row (B-53). */
+    private fun merged(lines: List<DraftLine>): List<DraftLine> =
+        CashbackRows.merge(lines, name = { it.text }, percent = { CashbackDraft.percent(it.percentText) })
 
     /** Drops a shot and its image once its rows are saved. */
     fun discardShot(id: String) {
@@ -309,7 +322,8 @@ class CashbackViewModel(
 
     /** Draft rows → cashback items (the editors only allow saving when every row is complete). */
     private fun toItems(monthKey: String, brand: BankBrand, lines: List<DraftLine>): List<CashbackItem> =
-        lines.mapNotNull { l ->
+        // Duplicates can't be saved, whatever the form let through (B-53).
+        merged(lines).mapNotNull { l ->
             val pct = CashbackDraft.percent(l.percentText)
             if (l.text.isBlank() || pct == null) null
             else newItem(monthKey, brand, l.text, l.groupKey, pct)

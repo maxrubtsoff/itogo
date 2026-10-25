@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Обучение · счета 2</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+.roll{position:relative;display:inline-flex;flex-direction:column;align-items:flex-end;overflow:hidden;height:20px}
+.roll .old{position:absolute;top:-14px;right:0;opacity:.3}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="top"><h1>Капитал</h1><span class="tag v">Пример</span></div>
+  <div class="body" style="padding-top: 4px;">
+    <div class="tabs"><span class="on">Счета</span><span>Вклады</span><span>Валюта</span><span>Наличные</span></div>
+    <div class="panel glow" style="--gc: rgba(215,167,74,.2); padding: 20px; display: flex; flex-direction: column; gap: 6px;">
+      <div class="amt hero">183 247<span class="k">,10 ₽</span></div>
+      <div class="t-sm">3 счёта</div>
+    </div>
+    <div class="panel list" style="position: relative; z-index: 5;">
+      <div class="lrow fresh" style="border-radius: 20px 20px 0 0; background: rgba(215,167,74,.06);"><span class="bk s36" style="background:#3A6B5A;">Б</span><span class="grow" style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span class="t-body ell">Банк-пример</span><span class="t-sm">−1 073,40 ₽ · FAST-FUD</span></span><span class="roll"><span class="amt rowa old">98 262<span class="k">,55 ₽</span></span><span class="amt rowa">97 189<span class="k">,15 ₽</span></span></span></div>
+      <div class="lrow"><span class="bk s36 b-t">Т</span><span class="grow" style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span class="t-body ell">Т-Банк</span><span class="t-sm">··0912</span></span><span class="amt rowa">61 057<span class="k">,95 ₽</span></span></div>
+      <div class="lrow"><span class="bk s36 b-ozon">O</span><span class="grow" style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span class="t-body ell">Ozon Банк</span><span class="t-sm">··2326</span></span><span class="amt rowa">25 000 ₽</span></div>
+    </div>
+  </div>
+  <div class="veil" style="z-index: 4; background: rgba(5,8,7,.55);"></div>
+
+  <div class="coach" style="top: 600px; z-index: 7;">
+    <div class="row" style="justify-content: space-between; align-items: flex-start;"><span class="ct">Баланс обновился</span></div>
+    <p>Остаток взят из уведомления, покупка — в истории счёта.</p>
+    <div class="cf">
+      <div class="steps"><i></i><i class="on"></i></div>
+      <div class="acts"><button class="again"><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v5h5"></path></svg>Ещё раз</button><button class="go">Понятно</button></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

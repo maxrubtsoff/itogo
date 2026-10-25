@@ -7,6 +7,12 @@ import ru.maxrubtsoff.bankagg.domain.model.Features
 
 /** User settings: tracked banks, what counts in capital, small remembered choices. */
 interface SettingsRepository : PinStore {
+
+    /** Which parser version the log was last re-read with (B-45, B-46). */
+    suspend fun repairedParserVersion(): Int
+
+    suspend fun setRepairedParserVersion(version: Int)
+
     val selectedPackages: Flow<Set<String>>
     suspend fun setSelectedPackages(packages: Set<String>)
     suspend fun currentSelectedPackages(): Set<String>
@@ -50,6 +56,11 @@ interface SettingsRepository : PinStore {
     suspend fun setHideBySwipe(on: Boolean)
 
     /** F-30: the tours already taken (or skipped). */
+    /** «Что такое Itogo» has been shown once (B-50). */
+    suspend fun introShown(): Boolean = true
+
+    suspend fun markIntroShown() {}
+
     val toursDone: Flow<Set<String>> get() = kotlinx.coroutines.flow.flowOf(emptySet())
     suspend fun markTourDone(key: String) {}
 

@@ -16,7 +16,7 @@ import androidx.room.RoomDatabase
         FxOperationEntity::class, FxRateEntity::class, CashEntity::class, SubscriptionEntity::class,
         DepositTopUpEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,6 +41,16 @@ abstract class AppDatabase : RoomDatabase() {
         // destructive fallback rather than migrated. From v10 on, real data lives
         // here, so each new version comes with a migration that keeps it.
         // v11: an account can be left out of the capital (U-18).
+        /** F-33: a subscription's own look — four nullable columns, nothing is lost. */
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `subscriptions` ADD COLUMN `colorArgb` INTEGER")
+                db.execSQL("ALTER TABLE `subscriptions` ADD COLUMN `letters` TEXT")
+                db.execSQL("ALTER TABLE `subscriptions` ADD COLUMN `textColorArgb` INTEGER")
+                db.execSQL("ALTER TABLE `subscriptions` ADD COLUMN `logoFile` TEXT")
+            }
+        }
+
         /** F-27: subscriptions. */
         private val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -90,7 +100,7 @@ abstract class AppDatabase : RoomDatabase() {
                         .apply { passphrase?.let { openHelperFactory(SupportOpenHelperFactory(it)) } }
                         // Data is rebuilt from notifications and protected by backup,
                         // so a schema bump rebuilds rather than crashing on update.
-                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                         .fallbackToDestructiveMigration()
                         .build()
                         .also { instance = it }

@@ -2,6 +2,7 @@ package ru.maxrubtsoff.bankagg.domain
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.DepositParser
 import org.junit.Test
@@ -31,8 +32,9 @@ class DepositParserTest {
     }
 
     @Test
-    fun without_keywords_smaller_is_deposit_larger_is_payout() {
-        val r = DepositParser.parse("600 000\n660 000")
+    fun without_captions_smaller_is_deposit_larger_is_payout() {
+        // Numbers alone are read only on a screen that is about a deposit (B-47).
+        val r = DepositParser.parse("Вклад\n600 000\n660 000")
         assertEquals(60_000_000L, r.draft.principal?.minor)
         assertEquals(66_000_000L, r.draft.exitAmount?.minor)
     }
@@ -40,7 +42,7 @@ class DepositParserTest {
     @Test
     fun ignores_small_numbers_like_a_bare_rate() {
         // No grouped thousands and no 4+ digit amount → nothing to read as money.
-        val r = DepositParser.parse("Ставка 7,5%")
+        val r = DepositParser.parse("Вклад\nСтавка 7,5%")
         assertNull(r.draft.principal)
         assertEquals(750, r.draft.rateBp)
     }
@@ -80,5 +82,27 @@ class DepositParserTest {
         val r = DepositParser.parse("2026 год\nСумма при открытии вклада\n1 300 000 ₽")
         assertEquals(130_000_000L, r.draft.principal?.minor)
         assertNull(r.draft.exitAmount)
+    }
+
+    @Test
+    fun a_screen_without_a_deposit_isNotRead() {
+        // The capture log: a bank name and an amount from someone else's push (B-47).
+        val text = """
+            Журнал перехвата
+            Ozon Банк · разобрано
+            Покупка в FAST-FUD NUMI. 1073 RUR. Баланс 1983.15 ₽
+            Альфа-Бизнес · не разобрано
+        """.trimIndent()
+
+        val r = DepositParser.parse(text)
+        assertNull(r.brand)
+        assertNull(r.draft.principal)
+        assertTrue(r.draft.isEmpty)
+    }
+
+    @Test
+    fun an_annual_rate_is_enough_to_read_a_deposit() {
+        val r = DepositParser.parse("Баланс\n18% годовых\n1 300 000 \u20bd")
+        assertEquals(1800, r.draft.rateBp)
     }
 }

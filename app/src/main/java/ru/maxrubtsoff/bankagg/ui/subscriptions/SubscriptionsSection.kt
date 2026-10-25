@@ -1,7 +1,11 @@
 package ru.maxrubtsoff.bankagg.ui.subscriptions
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
 import ru.maxrubtsoff.bankagg.ui.common.GhostButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,7 +52,8 @@ import ru.maxrubtsoff.bankagg.domain.model.RuDays
 import ru.maxrubtsoff.bankagg.domain.model.Subscription
 import ru.maxrubtsoff.bankagg.domain.model.Subscriptions
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
-import ru.maxrubtsoff.bankagg.ui.common.BankIcon
+import ru.maxrubtsoff.bankagg.ui.common.BrandAvatar
+import ru.maxrubtsoff.bankagg.ui.common.squircle
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.Panel
@@ -69,9 +74,14 @@ fun SubscriptionsSection(vm: SubscriptionsViewModel, onOpen: (Subscription) -> U
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        SectionActions(
+            summary = if (state.active.isEmpty()) "Подписок пока нет" else RuPlural.subscriptions(state.active.size),
+            onAdd = { vm.newBlank(); onCreate() },
+            addDescription = "Добавить подписку"
+        )
         state.findings.firstOrNull()?.let { f ->
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Slitok.BrassTint)
+                Modifier.fillMaxWidth().tourTarget(TourTarget.FINDING, radius = 18.dp).clip(RoundedCornerShape(18.dp)).background(Slitok.BrassTint)
                     .border(1.dp, Slitok.BrassLine, RoundedCornerShape(18.dp))
                     .clickable { finding = f }.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -120,7 +130,7 @@ fun SubscriptionsSection(vm: SubscriptionsViewModel, onOpen: (Subscription) -> U
             Panel(Modifier.fillMaxWidth()) {
                 state.active.forEachIndexed { i, s ->
                     if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = Slitok.Line)
-                    SubscriptionRow(s, state.today) { onOpen(s) }
+                    Box(Modifier.tourTarget(TourTarget.LIST_ROW, active = i == 0, radius = 16.dp)) { SubscriptionRow(s, state.today) { onOpen(s) } }
                 }
             }
         }
@@ -148,14 +158,14 @@ private fun SubscriptionRow(s: Subscription, today: LocalDate, onClick: () -> Un
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        SubscriptionAvatar(s.title, s.brand)
+        BrandAvatar(s.look, squircle(36.dp), 36.dp, overlay = s.brand)
         Column(Modifier.weight(1f)) {
             Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val whenText = Subscriptions.whenText(next, today)
             MoneyText(
                 when {
                     raise != null -> "подорожала на ${Money.ofMinor(raise).format()} · $whenText"
-                    else -> listOfNotNull(whenText, s.brand?.title).joinToString(" · ")
+                    else -> whenText
                 }.nbsp(),
                 style = MaterialTheme.typography.bodySmall,
                 color = when {
@@ -167,18 +177,6 @@ private fun SubscriptionRow(s: Subscription, today: LocalDate, onClick: () -> Un
             )
         }
         MoneyText(Money.ofMinor(s.priceMinor).format(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
-    }
-}
-
-/** The bank's icon when known, otherwise the first letter on a plate. */
-@Composable
-internal fun SubscriptionAvatar(title: String, brand: BankBrand?, size: androidx.compose.ui.unit.Dp = 36.dp) {
-    if (brand != null) {
-        BankIcon(brand, size = size)
-    } else {
-        Box(Modifier.size(size).clip(RoundedCornerShape(10.dp)).background(Slitok.PanelTop).border(1.dp, Slitok.Line, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-            Text(title.take(1).uppercase(), style = MaterialTheme.typography.titleSmall, color = Slitok.Brass2)
-        }
     }
 }
 
@@ -223,7 +221,7 @@ private fun FindingSheet(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        SubscriptionAvatar(s.title, s.brand, size = 30.dp)
+                        BrandAvatar(s.look, squircle(30.dp), 30.dp)
                         Text(s.title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         MoneyText(Money.ofMinor(s.priceMinor).format(), style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, softWrap = false)
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Muted)

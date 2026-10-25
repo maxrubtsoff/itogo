@@ -14,41 +14,29 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,12 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,6 +58,9 @@ import ru.maxrubtsoff.bankagg.data.backup.BackupPassword
 import ru.maxrubtsoff.bankagg.domain.model.BackupRotation
 import ru.maxrubtsoff.bankagg.domain.model.CopyKind
 import ru.maxrubtsoff.bankagg.domain.model.RuDays
+import ru.maxrubtsoff.bankagg.ui.common.SheetIconTile
+import ru.maxrubtsoff.bankagg.ui.common.SheetList
+import ru.maxrubtsoff.bankagg.ui.common.SheetRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.Panel
@@ -228,32 +214,33 @@ fun SettingsBackupScreen(
             Spacer(Modifier.height(8.dp))
             if (copies.isEmpty()) {
                 Text("Копий на телефоне пока нет.", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, modifier = Modifier.padding(vertical = 12.dp))
-            }
-            copies.forEachIndexed { i, c ->
-                if (i > 0) HorizontalDivider(color = Slitok.Line)
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable { listOpen = false; confirm = c },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(copyMoment(c.day, c.time, today), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    when (c.kind) {
-                        CopyKind.MANUAL -> Badge("вручную", Slitok.Brass2, Slitok.BrassPill)
-                        CopyKind.BEFORE_RESTORE -> Badge("до восстановления", Slitok.Muted, Slitok.Line)
-                        CopyKind.AUTO -> Unit
+            } else {
+                SheetList {
+                    copies.forEach { c ->
+                        SheetRow(
+                            title = copyMoment(c.day, c.time, today),
+                            subtitle = RuDays.weekday(c.day),
+                            trailing = when (c.kind) {
+                                CopyKind.MANUAL -> ({ SlitokTag("вручную", TagTone.Brass) })
+                                CopyKind.BEFORE_RESTORE -> ({ SlitokTag("до восстановления", TagTone.Neutral) })
+                                CopyKind.AUTO -> null
+                            },
+                            onClick = { listOpen = false; confirm = c }
+                        )
                     }
                 }
             }
-            HorizontalDivider(color = Slitok.Line, modifier = Modifier.padding(vertical = 6.dp))
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable {
-                    listOpen = false
-                    pickFile.launch(arrayOf("application/octet-stream", "application/json", "text/*", "*/*"))
-                },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = Slitok.Brass2)
-                Text("Из файла…", style = MaterialTheme.typography.bodyLarge, color = Slitok.Brass2)
+            // A quiet action, not a brass one: the list above is the usual way.
+            SheetList {
+                SheetRow(
+                    "Из файла…",
+                    leading = { SheetIconTile(Icons.Filled.FolderOpen) },
+                    arrow = true,
+                    onClick = {
+                        listOpen = false
+                        pickFile.launch(arrayOf("application/octet-stream", "application/json", "text/*", "*/*"))
+                    }
+                )
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -358,11 +345,6 @@ private fun confirmOwner(context: android.content.Context, onOk: () -> Unit) {
                 .build()
         )
     }.onFailure { onOk() }
-}
-
-@Composable
-private fun Badge(text: String, color: androidx.compose.ui.graphics.Color, fill: androidx.compose.ui.graphics.Color) {
-    SlitokTag(text, if (color == Slitok.Brass2) TagTone.Brass else TagTone.Neutral)
 }
 
 /**

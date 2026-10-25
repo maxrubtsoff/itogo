@@ -1,9 +1,19 @@
 package ru.maxrubtsoff.bankagg.ui
 
+import ru.maxrubtsoff.bankagg.ui.common.rememberNotificationAccess
+import ru.maxrubtsoff.bankagg.util.Perms
+import androidx.navigation.NavBackStackEntry
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.TourTargets
 import ru.maxrubtsoff.bankagg.ui.showcase.ShowcaseScreen
 import androidx.compose.ui.text.style.TextOverflow
 import ru.maxrubtsoff.bankagg.ui.onboarding.LocalTourOffer
-import ru.maxrubtsoff.bankagg.ui.onboarding.TourScreen
+import ru.maxrubtsoff.bankagg.ui.onboarding.TourCoach
+import ru.maxrubtsoff.bankagg.ui.onboarding.TourSandboxLayer
+import ru.maxrubtsoff.bankagg.ui.onboarding.TourSession
+import ru.maxrubtsoff.bankagg.ui.onboarding.TourView
 import ru.maxrubtsoff.bankagg.ui.onboarding.LearningScreen
 import ru.maxrubtsoff.bankagg.domain.model.TourSection
 import ru.maxrubtsoff.bankagg.domain.model.TourScript
@@ -11,6 +21,7 @@ import ru.maxrubtsoff.bankagg.ui.common.AddSheet
 import ru.maxrubtsoff.bankagg.ui.deposits.rememberDepositShotsPicker
 import androidx.compose.runtime.mutableIntStateOf
 import ru.maxrubtsoff.bankagg.ui.common.LocalTabTaps
+import ru.maxrubtsoff.bankagg.ui.common.Motion
 import androidx.compose.material.icons.filled.Savings
 import ru.maxrubtsoff.bankagg.ui.common.TileButton
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
@@ -27,13 +38,16 @@ import ru.maxrubtsoff.bankagg.data.notify.AppNotifier
 import ru.maxrubtsoff.bankagg.data.notify.checkReminders
 import ru.maxrubtsoff.bankagg.ui.settings.NotificationsScreen
 import ru.maxrubtsoff.bankagg.ui.settings.NewBanksScreen
+import ru.maxrubtsoff.bankagg.ui.common.LocalBankImages
 import ru.maxrubtsoff.bankagg.ui.common.LocalMyBanks
+import ru.maxrubtsoff.bankagg.ui.common.rememberBankImages
 import ru.maxrubtsoff.bankagg.ui.common.LocalAddBank
 import ru.maxrubtsoff.bankagg.ui.settings.BanksViewModel
 import ru.maxrubtsoff.bankagg.ui.settings.AddBankScreen
 import ru.maxrubtsoff.bankagg.ui.settings.BankEditorScreen
 import ru.maxrubtsoff.bankagg.ui.settings.BankCardScreen
 import androidx.compose.runtime.saveable.rememberSaveable
+import ru.maxrubtsoff.bankagg.domain.model.AppTab
 import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.ui.onboarding.OnboardingScreen
 import ru.maxrubtsoff.bankagg.ui.settings.FeaturesScreen
@@ -41,7 +55,6 @@ import ru.maxrubtsoff.bankagg.ui.common.ProvideDustClock
 import ru.maxrubtsoff.bankagg.ui.settings.SettingsPrivacyScreen
 import ru.maxrubtsoff.bankagg.ui.lock.LockScreen
 import ru.maxrubtsoff.bankagg.ui.lock.Biometrics
-import ru.maxrubtsoff.bankagg.ui.onboarding.IntroSlides
 import ru.maxrubtsoff.bankagg.ui.subscriptions.PaymentsScreen
 import ru.maxrubtsoff.bankagg.ui.subscriptions.SubscriptionCardScreen
 import ru.maxrubtsoff.bankagg.ui.subscriptions.SubscriptionFormScreen
@@ -73,10 +86,10 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -212,11 +225,8 @@ private object Routes {
     fun bankNew(name: String) = "settings/bank-new?name=${Uri.encode(name)}"
     const val SETTINGS_BACKUP = "settings/backup"
     const val SETTINGS_LOG = "settings/log"
-    const val INTRO = "settings/intro"
     const val LEARNING = "settings/learning"
     const val SHOWCASE = "debug/showcase"
-    const val TOUR = "tour/{section}"
-    fun tour(section: TourSection) = "tour/${section.key}"
     const val SETTINGS_PRIVACY = "settings/privacy"
     const val DEPOSITS_ADD = "deposits/add"
     const val DEPOSITS_SHOT = "deposits/shot/{shotId}"
@@ -231,19 +241,24 @@ private object Routes {
 }
 
 /** A bottom-bar tab: [pattern] is the registered route, [route] what the bar navigates to. */
-private data class TopDest(val pattern: String, val route: String, val label: String, val icon: ImageVector)
+private data class TopDest(val tab: AppTab, val pattern: String, val route: String, val label: String, val icon: ImageVector)
 
 private val topDests = listOf(
-    TopDest(Routes.OVERVIEW, Routes.OVERVIEW, "Обзор", Icons.Filled.Dashboard),
-    TopDest(Routes.CAPITAL, Routes.CAPITAL_BASE, "Капитал", Icons.Filled.AccountBalanceWallet),
-    TopDest(Routes.CASHBACK, Routes.CASHBACK_BASE, "Платежи", Icons.Filled.Percent),
-    TopDest(Routes.SETTINGS, Routes.SETTINGS, "Настройки", Icons.Filled.Settings)
+    TopDest(AppTab.OVERVIEW, Routes.OVERVIEW, Routes.OVERVIEW, "Обзор", Icons.Filled.Dashboard),
+    TopDest(AppTab.CAPITAL, Routes.CAPITAL, Routes.CAPITAL_BASE, "Капитал", Icons.Filled.AccountBalanceWallet),
+    TopDest(AppTab.PAYMENTS, Routes.CASHBACK, Routes.CASHBACK_BASE, "Платежи", Icons.Filled.Percent),
+    TopDest(AppTab.SETTINGS, Routes.SETTINGS, Routes.SETTINGS, "Настройки", Icons.Filled.Settings)
 )
+
+/** The tab the app opens on: the first one the kept sections leave visible (U-50). */
+private fun startRouteOf(features: Features): String =
+    topDests.first { it.tab == features.firstTab }.route
 
 /** U-31: icons, widget, reminders and rates on return — not more often than this. */
 private const val CHORES_EVERY_MS = 5 * 60_000L
 
-private val tabTween = tween<androidx.compose.ui.unit.IntOffset>(320, easing = FastOutSlowInEasing)
+/** The slide between screens: built on each transition, so «Remove animations» is read when it runs. */
+private fun tabTween() = Motion.tween<androidx.compose.ui.unit.IntOffset>(Motion.NORMAL, Motion.Standard)
 
 /** Slide direction between two bottom-bar tabs, 0 when either side is not a tab. */
 private fun tabDirection(from: NavDestination, to: NavDestination): Int =
@@ -287,11 +302,14 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             lifecycleScope.launch { container.settings.hideInRecents.collect { setRecentsScreenshotEnabled(!it) } }
         }
+        watchFlip()
         if (savedInstanceState == null) shared.value = sharedImages(intent)
         if (savedInstanceState == null) openRoute.value = intent?.getStringExtra(AppNotifier.EXTRA_OPEN)
         // A quick prefs read: the lock must be up before the first frame.
         val session = container.lockSession
         val pinOn = runBlocking { container.settings.lockPin() != null }
+        // Which tab the app opens on is decided before the first frame (U-50).
+        val startFeatures = runBlocking { container.settings.currentFeatures() }
         val coldStart = AppLock.isColdStart(freshScreen = savedInstanceState == null, unlockedInProcess = session.unlocked)
         if (coldStart) session.unlocked = false
         locked.value = AppLock.needsUnlock(pinOn, coldStart = coldStart, backgroundedAt = null, now = System.currentTimeMillis())
@@ -303,7 +321,7 @@ class MainActivity : FragmentActivity() {
                     val isLocked = locked.value
                     Box(if (isLocked) Modifier.clearAndSetSemantics { } else Modifier) {
                         AppRoot(
-                            container, factory,
+                            container, factory, startFeatures,
                             if (isLocked) emptyList() else shared.value,
                             if (isLocked) null else openRoute.value,
                             { openRoute.value = null }
@@ -352,11 +370,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        (getSystemService(SENSOR_SERVICE) as SensorManager).unregisterListener(gravity)
-    }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         sharedImages(intent).takeIf { it.isNotEmpty() }?.let { shared.value = it }
@@ -377,18 +390,42 @@ class MainActivity : FragmentActivity() {
         (application as App).container.autoBackup.flush()
     }
 
-    override fun onResume() {
-        super.onResume()
-        val sensors = getSystemService(SENSOR_SERVICE) as SensorManager
+    /**
+     * The gravity sensor runs exactly while the app is on screen and «При
+     * перевороте телефона» is on (B-55). It used to be registered from a
+     * coroutine inside [onResume], guarded by
+     * `lifecycle.currentState.isAtLeast(RESUMED)` — but during `onResume` the
+     * lifecycle is still STARTED, so the guard was false and the sensor never
+     * started. Tied to the lifecycle it also follows the switch at once,
+     * without leaving the screen, and comes back after the lock screen.
+     */
+    private fun watchFlip() {
         val container = (application as App).container
-        // No disk wait on the main thread at every return (U-31): the sensor joins a moment later.
+        val sensors = getSystemService(SENSOR_SERVICE) as SensorManager
         lifecycleScope.launch {
-            if (!container.settings.hideOnFlip.first()) return@launch
-            val sensor = sensors.getDefaultSensor(Sensor.TYPE_GRAVITY) ?: sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-            if (sensor != null && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
-                sensors.registerListener(gravity, sensor, SensorManager.SENSOR_DELAY_GAME)
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                try {
+                    container.settings.hideOnFlip.collect { on ->
+                        val sensor = if (on) {
+                            sensors.getDefaultSensor(Sensor.TYPE_GRAVITY)
+                                ?: sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+                        } else null
+                        if (sensor != null) {
+                            sensors.registerListener(gravity, sensor, SensorManager.SENSOR_DELAY_GAME)
+                        } else {
+                            sensors.unregisterListener(gravity)
+                        }
+                    }
+                } finally {
+                    sensors.unregisterListener(gravity)
+                }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val container = (application as App).container
         // The midnight timer may sleep in Doze; re-read the date on return.
         container.today.refresh()
         // A return is when the tab animates: the background chores run at most every few
@@ -411,7 +448,7 @@ class MainActivity : FragmentActivity() {
 
 @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
 @Composable
-private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: List<Uri>, openRoute: String?, onOpened: () -> Unit, onSharedTaken: () -> Unit) {
+private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFeatures: Features, shared: List<Uri>, openRoute: String?, onOpened: () -> Unit, onSharedTaken: () -> Unit) {
     val nav = rememberNavController()
     val capitalVm: CapitalViewModel = viewModel(factory = factory)
     val logVm: LogViewModel = viewModel(factory = factory)
@@ -466,14 +503,12 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
 
     val features by container.settings.features.collectAsStateWithLifecycle(initialValue = Features.ALL)
     val onboarded by container.settings.onboarded.collectAsStateWithLifecycle(initialValue = true)
-    // Only the tabs of sections the user keeps (F-21).
-    val tabs = topDests.filter { d ->
-        when (d.pattern) {
-            Routes.CAPITAL -> features.showCapital
-            Routes.CASHBACK -> features.showPayments
-            else -> true
-        }
-    }
+    // Only the tabs of sections the user keeps (F-21), and «Обзор» only while it
+    // has something to show (U-50).
+    val tabs = topDests.filter { it.tab in features.tabs }
+    // The root of the graph: the first visible tab at the moment the app starts
+    // (U-50). A section switched off later redirects instead (below).
+    val startRoute = remember { startRouteOf(startFeatures) }
     val banksVm: BanksViewModel = viewModel(factory = factory)
     // F-30: the tours taken; the general one opens once, right after the first setup.
     val tourKeys by container.settings.toursDone.collectAsStateWithLifecycle(initialValue = emptySet())
@@ -492,12 +527,16 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
     }
 
     val lastBackup by container.autoBackup.lastSaved.collectAsStateWithLifecycle()
+    // F-30, B-56: a tour plays on the screen it belongs to, over it; no route of its own.
+    var pendingTour by remember { mutableStateOf<TourSection?>(null) }
+    var tour by remember { mutableStateOf<TourSession?>(null) }
+    val notifAccess by rememberNotificationAccess()
     LaunchedEffect(onboarded, setupSeen) {
-        if (onboarded && setupSeen && TourScript.startAfterSetup(toursDone)) nav.navigate(Routes.tour(TourSection.GENERAL))
+        if (onboarded && setupSeen && TourScript.startAfterSetup(toursDone)) pendingTour = TourSection.GENERAL
     }
     val tourScope = rememberCoroutineScope()
     val tourOffer: (TourSection, Boolean) -> (() -> Unit)? = { section, hasData ->
-        if (TourScript.offerInSection(section, features, hasData, toursDone)) ({ nav.navigate(Routes.tour(section)) }) else null
+        if (TourScript.offerInSection(section, features, hasData, toursDone)) ({ pendingTour = section }) else null
     }
 
     // A tap on one of the app's notifications opens what it is about.
@@ -509,12 +548,24 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
             r == AppNotifier.OPEN_CASHBACK -> nav.navigate(Routes.CASHBACK_BASE)
             r == AppNotifier.OPEN_SUBSCRIPTIONS -> nav.navigate("cashback?section=1")
             r == AppNotifier.OPEN_NEW_BANKS -> nav.navigate(Routes.NEW_BANKS)
+            r == AppNotifier.OPEN_FEATURES -> nav.navigate(Routes.SETTINGS_FEATURES)
         }
     }
     val selectedPackages by settingsVm.selectedPackages.collectAsStateWithLifecycle()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showBottomBar = currentRoute in topDests.map { it.pattern }
+
+    // A section switched off while the app is open: its tab is gone, so whoever
+    // stands on it moves to the first visible one (U-50, U-52).
+    val visibleRoutes = tabs.map { it.pattern }
+    LaunchedEffect(features, currentRoute) {
+        val onAHiddenTab = currentRoute in topDests.map { it.pattern } && currentRoute !in visibleRoutes
+        if (onAHiddenTab) {
+            val home = startRouteOf(features)
+            nav.navigate(home) { popUpTo(nav.graph.findStartDestination().id); launchSingleTop = true }
+        }
+    }
+    val showBottomBar = currentRoute in topDests.map { it.pattern } && tour?.view != TourView.SHOT
 
     // U-38: «Добавить вклад» anywhere opens the same «Со скринов / Вручную» sheet.
     var addingDeposit by remember { mutableStateOf(false) }
@@ -530,8 +581,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
     fun openTab(route: String) {
         // The start tab is the root of every stack: just return to it. Navigating
         // to it with restoreState would bring back the tab saved on top of it.
-        if (route == Routes.OVERVIEW) {
-            nav.popBackStack(Routes.OVERVIEW, inclusive = false)
+        if (route == startRoute) {
+            nav.popBackStack(startRoute, inclusive = false)
             return
         }
         nav.navigate(route) {
@@ -551,10 +602,39 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
     /** A capital part on the Overview opens its section of «Капитал» — the same slide as every move deeper (B-41). */
     fun openPart(part: CapitalPart) = jumpTo(Routes.capital(part))
 
+    // A tour begins once the screen it is about is standing still: if the person is elsewhere
+    // (Настройки → Обучение), the app goes there first, as it always does, and the tour starts when it has arrived.
+    // It is the same screen only with the same section: «Капитал» on another part would end up
+    // under the fade-out in the wrong place. The jump to the right section is tried once.
+    var tourJumped by remember { mutableStateOf(false) }
+    LaunchedEffect(pendingTour, backStack) {
+        val section = pendingTour ?: return@LaunchedEffect
+        if (tour != null) { pendingTour = null; return@LaunchedEffect }
+        val screen = tourScreenOf(section, features)
+        val entry = backStack ?: return@LaunchedEffect
+        if (entry.destination.route != screen.pattern) {
+            if (section == TourSection.GENERAL) openTab(screen.route) else nav.navigate(screen.route)
+            return@LaunchedEffect
+        }
+        if (!screen.matches(entry) && !tourJumped) {
+            tourJumped = true
+            jumpTo(screen.route)
+            return@LaunchedEffect
+        }
+        entry.lifecycle.currentStateFlow.first { it == Lifecycle.State.RESUMED }
+        pendingTour = null
+        tourJumped = false
+        tour = TourSession(section, features, notifAccess, container.sandbox(features))
+    }
+
     val myBanks by container.banks.myBanks.collectAsStateWithLifecycle(initialValue = emptyList())
     val newBanks by container.bankCandidates.candidates.collectAsStateWithLifecycle(initialValue = emptyList())
     ProvideDustClock(running = hidden) {
-    CompositionLocalProvider(LocalMyBanks provides myBanks, LocalAddBank provides { nav.navigate(Routes.BANKS_ADD) }) {
+    // One subscription to the icon cache for the whole tree; an icon reads only its own entry (U-55/P3).
+    val bankImages = rememberBankImages()
+    CompositionLocalProvider(
+        LocalMyBanks provides myBanks, LocalAddBank provides { nav.navigate(Routes.BANKS_ADD) }, LocalBankImages provides bankImages
+    ) {
     CompositionLocalProvider(LocalAmountsHidden provides hidden, LocalRevealAmounts provides reveal) {
     Scaffold(
         modifier = Modifier.twoFingerSwipeDown(swipeOn, swipeDistance, toggleHidden),
@@ -570,36 +650,37 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
         },
         bottomBar = {
             if (showBottomBar) {
-                SlitokBottomBar(tabs, current = backStack?.destination, onSelect = { tabTaps++; openTab(it.route) })
+                SlitokBottomBar(tabs, current = backStack?.destination, tourTargets = tour?.targets, onSelect = { tabTaps++; openTab(it.route) })
             }
         }
     ) { padding ->
         CompositionLocalProvider(LocalTabTaps provides tabTaps, LocalTourOffer provides tourOffer) {
+        Box(Modifier.fillMaxSize()) {
         NavHost(
             navController = nav,
-            startDestination = Routes.OVERVIEW,
+            startDestination = startRoute,
             modifier = Modifier.fillMaxSize(),
             // One motion everywhere (B-41): deeper — the new screen flies in from the
             // right, back — it flies out to the right; between tabs — towards the tab.
             enterTransition = {
                 val dir = tabDirection(initialState.destination, targetState.destination)
-                slideInHorizontally(tabTween) { (if (dir == 0) 1 else dir) * it }
+                slideInHorizontally(tabTween()) { (if (dir == 0) 1 else dir) * it }
             },
             exitTransition = {
                 when (val dir = tabDirection(initialState.destination, targetState.destination)) {
-                    0 -> slideOutHorizontally(tabTween) { -it / 4 } + fadeOut(tween(260))
-                    else -> slideOutHorizontally(tabTween) { -dir * it }
+                    0 -> slideOutHorizontally(tabTween()) { -it / 4 } + fadeOut(Motion.tween(Motion.FAST))
+                    else -> slideOutHorizontally(tabTween()) { -dir * it }
                 }
             },
             popEnterTransition = {
                 when (val dir = tabDirection(initialState.destination, targetState.destination)) {
-                    0 -> slideInHorizontally(tabTween) { -it / 4 } + fadeIn(tween(260))
-                    else -> slideInHorizontally(tabTween) { dir * it }
+                    0 -> slideInHorizontally(tabTween()) { -it / 4 } + fadeIn(Motion.tween(Motion.NORMAL))
+                    else -> slideInHorizontally(tabTween()) { dir * it }
                 }
             },
             popExitTransition = {
                 val dir = tabDirection(initialState.destination, targetState.destination)
-                slideOutHorizontally(tabTween) { -(if (dir == 0) -1 else dir) * it }
+                slideOutHorizontally(tabTween()) { -(if (dir == 0) -1 else dir) * it }
             }
         ) {
             // Top-level screens: apply the bottom-bar padding and the status-bar inset.
@@ -633,12 +714,13 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                 TopLevel(padding) {
                     // «Платежи» (F-27): cashback and subscriptions.
                     PaymentsScreen(
-                        cashback = { monthOffset, byCategory, onMonthOffset ->
+                        cashback = { monthOffset, byCategory, onMonthOffset, onByCategory ->
                             CashbackScreen(
                                 cashbackVm,
                                 monthOffset = monthOffset,
                                 byCategory = byCategory,
                                 onMonthOffset = onMonthOffset,
+                                onByCategory = onByCategory,
                                 onOpenShot = { id -> nav.navigate(Routes.cashbackShot(id)) },
                                 onOpenBatch = { ids -> nav.navigate(Routes.cashbackBatch(ids)) },
                                 onEditBank = { month, brand -> nav.navigate(Routes.cashbackBankEdit(month, brand.key)) },
@@ -652,11 +734,11 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                                 onCreate = { nav.navigate(Routes.SUBSCRIPTION_EDIT) }
                             )
                         },
-                        onAddSubscription = { subscriptionsVm.newBlank(); nav.navigate(Routes.SUBSCRIPTION_EDIT) },
                         startSection = entry.arguments?.getInt("section") ?: 0,
                         initialOffset = entry.arguments?.getInt("offset") ?: 0,
                         showCashback = features.showCashback,
-                        showSubscriptions = features.showSubscriptions
+                        showSubscriptions = features.showSubscriptions,
+                        showNotifAccess = features.showNotifAccessOnPayments
                     )
                 }
             }
@@ -687,7 +769,10 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                         onOpenPendingShots = { nav.navigate(Routes.DEPOSITS_ADD) },
                         onOpenCurrency = { code -> nav.navigate(Routes.currency(code)) },
                         selectedPackages = selectedPackages,
-                        onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) }
+                        onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
+                        onAddBank = { nav.navigate(Routes.BANKS_ADD) },
+                        showCaptureLog = features.showCaptureLog,
+                        onOpenLog = { nav.navigate(Routes.SETTINGS_LOG) }
                     ) }
                 }
             }
@@ -698,7 +783,6 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                         onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
                         onOpenFeatures = { nav.navigate(Routes.SETTINGS_FEATURES) },
                         onOpenBackup = { nav.navigate(Routes.SETTINGS_BACKUP) },
-                        onOpenLog = { nav.navigate(Routes.SETTINGS_LOG) },
                         onOpenPrivacy = { nav.navigate(Routes.SETTINGS_PRIVACY) },
                         onOpenNotifications = { nav.navigate(Routes.SETTINGS_NOTIFICATIONS) },
                         onOpenIntro = { nav.navigate(Routes.LEARNING) },
@@ -785,7 +869,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
             composable(Routes.SETTINGS_BANKS) {
                 SettingsBanksScreen(
                     banksVm,
-                    collectsNotifications = features.collectsNotifications,
+                    features = features,
                     onBack = { nav.popBackStack() },
                     onAdd = { nav.navigate(Routes.BANKS_ADD) },
                     onOpenNew = { nav.navigate(Routes.NEW_BANKS) },
@@ -802,7 +886,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                     onEdit = { nav.navigate(Routes.bankEdit(it.key)) },
                     // B-37: on top of the bank card, so «Назад» comes back to it.
                     onOpenCapital = { nav.navigate(Routes.capital(it)) },
-                    onOpenCashback = { nav.navigate(Routes.CASHBACK_BASE) }
+                    onOpenCashback = { nav.navigate(Routes.CASHBACK_BASE) },
+                    onOpenSubscriptions = { nav.navigate(Routes.CASHBACK_BASE + "?section=1") }
                 )
             }
             composable(Routes.SETTINGS_NOTIFICATIONS) {
@@ -841,22 +926,15 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
             composable(Routes.LEARNING) {
                 LearningScreen(
                     features, toursDone,
-                    onOpen = { nav.navigate(Routes.tour(it)) },
-                    onOpenIntro = { nav.navigate(Routes.INTRO) },
+                    onOpen = { pendingTour = it },
                     onBack = { nav.popBackStack() }
                 )
             }
-            composable(Routes.TOUR) { entry ->
-                val section = TourSection.fromKey(entry.arguments?.getString("section")) ?: TourSection.GENERAL
-                TourScreen(section, features, onDone = {
-                    tourScope.launch { container.settings.markTourDone(section.key) }
-                    nav.popBackStack()
-                })
-            }
-            composable(Routes.INTRO) {
-                IntroSlides(onDone = { nav.popBackStack() }, doneLabel = "Понятно")
-            }
             composable(Routes.SETTINGS_LOG) {
+                // Accounts switched off while the log was open: it closes (U-51).
+                LaunchedEffect(features.showCaptureLog) {
+                    if (!features.showCaptureLog) nav.popBackStack()
+                }
                 LogScreen(logVm, onBack = { nav.popBackStack() })
             }
             composable(Routes.SETTINGS_PRIVACY) {
@@ -864,10 +942,25 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
                 SettingsPrivacyScreen(settingsVm, Biometrics.available(context), onBack = { nav.popBackStack() })
             }
         }
+        // The tour's examples over the screen it plays on (B-56); the bottom bar stays the real one.
+        tour?.let { TourSandboxLayer(it, padding) }
+        }
         }
     }
     }
     }
+    }
+    tour?.let { session ->
+        val context = LocalContext.current
+        TourCoach(
+            session,
+            // A closed tour counts as taken (F-30).
+            onFinished = {
+                tourScope.launch { container.settings.markTourDone(session.section.key) }
+                tour = null
+            },
+            onAllowAccess = { Perms.openNotificationAccessSettings(context) }
+        )
     }
     if (addingDeposit) {
         AddSheet(
@@ -897,6 +990,32 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, shared: 
 }
 
 /**
+ * The tab a tour plays on: its route pattern, the route to open it with, and the
+ * section the tab must stand on ([capitalPart] of «Капитал», [paymentsSection] of «Платежи»; null — any).
+ */
+private class TourScreen(
+    val pattern: String,
+    val route: String,
+    val capitalPart: CapitalPart? = null,
+    val paymentsSection: Int? = null
+) {
+    fun matches(entry: NavBackStackEntry): Boolean =
+        entry.destination.route == pattern &&
+            (capitalPart == null || entry.arguments?.getString("section") == capitalPart.key) &&
+            (paymentsSection == null || (entry.arguments?.getInt("section") ?: 0) == paymentsSection)
+}
+
+private fun tourScreenOf(section: TourSection, features: Features): TourScreen = when (section) {
+    TourSection.GENERAL -> startRouteOf(features).let { route -> TourScreen(topDests.first { it.route == route }.pattern, route) }
+    TourSection.ACCOUNTS -> TourScreen(Routes.CAPITAL, Routes.capital(CapitalPart.ACCOUNTS), capitalPart = CapitalPart.ACCOUNTS)
+    TourSection.DEPOSITS -> TourScreen(Routes.CAPITAL, Routes.capital(CapitalPart.DEPOSITS), capitalPart = CapitalPart.DEPOSITS)
+    TourSection.CURRENCY -> TourScreen(Routes.CAPITAL, Routes.capital(CapitalPart.CURRENCY), capitalPart = CapitalPart.CURRENCY)
+    TourSection.CASH -> TourScreen(Routes.CAPITAL, Routes.capital(CapitalPart.CASH), capitalPart = CapitalPart.CASH)
+    TourSection.CASHBACK -> TourScreen(Routes.CASHBACK, Routes.CASHBACK_BASE, paymentsSection = 0)
+    TourSection.SUBSCRIPTIONS -> TourScreen(Routes.CASHBACK, Routes.CASHBACK_BASE + "?section=1", paymentsSection = 1)
+}
+
+/**
  * After saving a deposit: back to the deposits section of Capital. When the
  * flow started on the overview (empty state), Capital isn't on the stack —
  * open it on the deposits section instead.
@@ -912,7 +1031,7 @@ private fun backToDeposits(nav: NavHostController) {
 
 /** Floating, rounded bottom bar in the Слиток style with a brass active pill. */
 @Composable
-private fun SlitokBottomBar(tabs: List<TopDest>, current: NavDestination?, onSelect: (TopDest) -> Unit) {
+private fun SlitokBottomBar(tabs: List<TopDest>, current: NavDestination?, tourTargets: TourTargets?, onSelect: (TopDest) -> Unit) {
     val shape = RoundedCornerShape(26.dp)
     Box(
         Modifier
@@ -928,6 +1047,11 @@ private fun SlitokBottomBar(tabs: List<TopDest>, current: NavDestination?, onSel
                 .clip(shape)
                 .background(Brush.verticalGradient(listOf(Slitok.PanelTop, Slitok.PanelBottom)))
                 .border(1.dp, Slitok.Line, shape)
+                // B-48: the bar is the real one; a tour lights it where it stands.
+                .onGloballyPositioned { c ->
+                    tourTargets?.bounds?.set(TourTarget.BOTTOM_BAR, c.boundsInRoot())
+                    tourTargets?.radius?.set(TourTarget.BOTTOM_BAR, 26.dp)
+                }
                 .padding(8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically

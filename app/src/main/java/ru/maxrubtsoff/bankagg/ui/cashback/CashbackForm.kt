@@ -91,10 +91,11 @@ fun CashbackLineRow(
     percentState: PercentState = PercentState.Normal,
     note: String? = null,
     percentFocus: FocusRequester? = null,
-    onPercentDone: () -> Unit = {}
+    onPercentDone: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     Row(
-        Modifier
+        modifier
             .keepVisibleWhenFocused()
             .fillMaxWidth()
             .heightIn(min = 60.dp)
@@ -110,7 +111,8 @@ fun CashbackLineRow(
             CategoryIcon(iconKey, size = 36.dp)
             androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    categoryName.ifBlank { "Выберите категорию" },
+                    // B-54: wrap only between words (a hyphen is a break point too), never inside one.
+                    categoryName.ifBlank { "Выберите категорию" }.breakAfterHyphens(),
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (categoryName.isBlank()) Slitok.Muted else Slitok.Fg,
                     // Long names ("Связь, интернет и ТВ") wrap instead of losing their end (B-15).
@@ -132,6 +134,9 @@ fun CashbackLineRow(
         }
     }
 }
+
+/** A zero-width space after each hyphen: "Онлайн-покупки" may wrap at the hyphen, not between letters. */
+private fun String.breakAfterHyphens(): String = replace("-", "-​")
 
 /** Compact "NN %" box; the number and its sign stay together. */
 @Composable

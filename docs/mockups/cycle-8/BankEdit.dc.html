@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Свой банк</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+.pic{background: radial-gradient(circle at 35% 30%, #F5E9C8, #C9A25A 60%, #6E5323);}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="top">
+    <button class="ib fg" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button>
+    <h1 class="sm">Банк</h1>
+  </div>
+  <div class="body" style="padding-top: 4px; gap: 16px;">
+    <div class="panel" style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+      <div class="row" style="gap: 14px; align-items: center;">
+        <span class="bk pic" style="width: 64px; height: 64px;"></span>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;"><label class="flabel" for="bn">Название</label><div class="field"><input id="bn" value="Совкомбанк"></div></div>
+      </div>
+      <div class="tabs"><span>Буквы</span><span class="on">Картинка</span></div>
+      <button class="panel select" style="min-height: 56px; box-shadow: none;"><span style="width: 36px; height: 36px; border-radius: 12px; background: var(--btint); color: var(--brass2); display: grid; place-items: center; flex: none;"><svg class="ico" viewBox="0 0 24 24" style="width: 20px; height: 20px;"><path d="M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9h.01"></path></svg></span><span class="t-body" style="flex: 1;">Другая картинка</span></button>
+    </div>
+  </div>
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 24px;">
+    <button class="btn brass full">Сохранить</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -37,7 +37,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
+import androidx.compose.foundation.shape.CircleShape
+import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.BrandDecor
+import ru.maxrubtsoff.bankagg.ui.common.BrandAvatar
+import ru.maxrubtsoff.bankagg.ui.common.BrandDecorEditor
+import ru.maxrubtsoff.bankagg.ui.common.rememberBrandDecorState
+import ru.maxrubtsoff.bankagg.ui.common.squircle
+import ru.maxrubtsoff.bankagg.ui.common.FingerPointer
+import ru.maxrubtsoff.bankagg.ui.common.ScanReveal
+import ru.maxrubtsoff.bankagg.ui.common.ScanningThumb
+import ru.maxrubtsoff.bankagg.ui.common.ShotHeader
+import ru.maxrubtsoff.bankagg.ui.common.cascade
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +74,8 @@ import ru.maxrubtsoff.bankagg.ui.common.GhostButton
 import ru.maxrubtsoff.bankagg.ui.common.ListRow
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.Motion
+import ru.maxrubtsoff.bankagg.ui.common.errorShake
+import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import ru.maxrubtsoff.bankagg.ui.common.MoreAction
 import ru.maxrubtsoff.bankagg.ui.common.MoreMenu
 import ru.maxrubtsoff.bankagg.ui.common.Panel
@@ -63,8 +84,14 @@ import ru.maxrubtsoff.bankagg.ui.common.SelectRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
 import ru.maxrubtsoff.bankagg.ui.common.SlitokField
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSwitch
+import ru.maxrubtsoff.bankagg.ui.common.SheetIconTile
+import ru.maxrubtsoff.bankagg.ui.common.SheetList
+import ru.maxrubtsoff.bankagg.ui.common.SheetRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
+import ru.maxrubtsoff.bankagg.ui.common.BankStack
 import ru.maxrubtsoff.bankagg.ui.common.StatTile
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.ui.common.ChipButton
 import ru.maxrubtsoff.bankagg.ui.common.StatusLine
 import ru.maxrubtsoff.bankagg.ui.common.SwitchRow
 import ru.maxrubtsoff.bankagg.ui.common.TagTone
@@ -126,8 +153,26 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                         MotionTrack(name, ms, moved)
                     }
                     GhostButton("Запустить", onClick = { moved = !moved })
+                    // The «no» shake: one implementation for every refusal, still with animations off.
+                    val shake = rememberErrorShake()
+                    val scope = rememberCoroutineScope()
+                    Box(Modifier.errorShake(shake)) {
+                        PlateButton(onClick = { scope.launch { shake.play() } }, modifier = Modifier.fillMaxWidth()) { Text("Ошибка: встряхнуть") }
+                    }
                 }
             }
+
+            Caption("Оформление и аватар бренда")
+            BrandDemo()
+
+            Caption("Распознавание (скан)")
+            ScanDemo()
+
+            Caption("Шапка скрина")
+            ShotHeaderDemo()
+
+            Caption("Обучение")
+            TourDemo()
 
             Caption("Кнопки")
             BrassButton(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Сохранить") }
@@ -200,6 +245,36 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                 StatTile("К выдаче", Modifier.weight(1f)) { MoneyText("1,33 млн", style = Amounts.Large) }
                 StatTile("Доход за срок", Modifier.weight(1f)) { MoneyText("+229 600", style = Amounts.Large, color = Slitok.Mint) }
             }
+            // U-59: tiles of the Settings — the whole tile opens something; «Банки» holds a small stack and a count.
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatTile("Что храним", Modifier.weight(1f), onClick = {}) {
+                    Text("4 из 6", style = MaterialTheme.typography.titleLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                StatTile("Банки", Modifier.weight(1f), onClick = {}) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BankStack(listOf(BankBrand.SBER, BankBrand.TBANK, BankBrand.ALFA), max = 2, size = 28.dp, overlap = 8.dp)
+                        Text("3", style = MaterialTheme.typography.titleLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+
+            Caption("Список в шторке")
+            Panel(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SheetList {
+                        SheetRow("Сегодня, 19:04", subtitle = "четверг", onClick = {})
+                        SheetRow("Вчера, 21:42", subtitle = "среда", trailing = { SlitokTag("вручную", TagTone.Brass) }, onClick = {})
+                        SheetRow("20 октября, 08:15", subtitle = "вторник", selected = true, onClick = {})
+                    }
+                    SheetList {
+                        SheetRow("Из файла…", leading = { SheetIconTile(Icons.Filled.Edit) }, arrow = true, onClick = {})
+                    }
+                }
+            }
+
+            Caption("Строка действий раздела")
+            SectionActions(summary = "7 вкладов", controls = { ChipButton("по закрытию") {} }, onAdd = {}, addDescription = "Добавить вклад")
+            SectionActions(summary = "6 банков · 23 категории", lead = { ChipButton("Октябрь") {} }, onAdd = {}, addDescription = "Добавить кэшбэк")
 
             Caption("Пустое состояние")
             EmptyState("Пока нет вкладов", art = { CapitalPartArt(CapitalPart.DEPOSITS, Modifier.size(84.dp, 64.dp)) }) {
@@ -209,6 +284,89 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                 }
             }
             Caption("")
+        }
+    }
+}
+
+/** F-33: the avatar of a bank and of a subscription, and the editor of a look. */
+@Composable
+private fun BrandDemo() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            BrandAvatar(BrandDecor.defaultFor("Совкомбанк"), CircleShape, 48.dp)
+            BrandAvatar(BrandDecor.defaultFor("Яндекс Плюс"), squircle(48.dp), 48.dp, overlay = BankBrand.TBANK)
+            BrandAvatar(BrandDecor.defaultFor("Netflix"), squircle(36.dp), 36.dp)
+        }
+        val state = rememberBrandDecorState("Яндекс Плюс", BrandDecor.defaultFor("Яндекс Плюс"))
+        BrandDecorEditor(state, squircle(64.dp))
+    }
+}
+
+/** F-34: the scan line over a screenshot, then the fields rising one after another. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ScanDemo() {
+    var status by remember { mutableStateOf(ShotStatus.PROCESSING) }
+    Panel(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            ScanningThumb(status, Modifier.size(width = 130.dp, height = 220.dp), foundText = "Нашли банк и 3 категории") {
+                Column(Modifier.fillMaxSize().background(Slitok.Inset).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Ozon Банк", style = MaterialTheme.typography.labelMedium, color = Slitok.Fg)
+                    listOf("Искусство · 25%", "Отели · 5%", "Рестораны · 5%").forEach {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+            ScanReveal(status, skeletonHeight = 96.dp) { play ->
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Искусство" to "25%", "Отели" to "5%", "Рестораны" to "5%").forEachIndexed { i, (name, percent) ->
+                        ValueChip(name, percent, Modifier.cascade(i, play))
+                    }
+                }
+            }
+            GhostButton(
+                if (status == ShotStatus.PROCESSING) "Показать результат" else "Ещё раз",
+                onClick = { status = if (status == ShotStatus.PROCESSING) ShotStatus.RECOGNIZED else ShotStatus.PROCESSING }
+            )
+        }
+    }
+}
+
+/** U-53: the head over a recognised screenshot, through its states; a tap on «Дальше» moves to the next one. */
+@Composable
+private fun ShotHeaderDemo() {
+    var step by remember { mutableIntStateOf(0) }
+    val states = listOf(ShotStatus.PROCESSING, ShotStatus.NEEDS_INPUT, ShotStatus.RECOGNIZED, ShotStatus.FAILED)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ShotHeader("", states[step], hint = if (states[step] == ShotStatus.NEEDS_INPUT) "Не прочиталось: дата закрытия" else null)
+        GhostButton("Дальше", onClick = { step = (step + 1) % states.size })
+    }
+}
+
+/** F-32: the finger of a tour moves to a button and presses it. */
+@Composable
+private fun TourDemo() {
+    var step by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    Panel(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            BoxWithConstraints(Modifier.fillMaxWidth().height(96.dp)) {
+                val w = with(density) { maxWidth.toPx() }
+                val h = with(density) { 96.dp.toPx() }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TileButton(Icons.Filled.AddPhotoAlternate, "Со скринов", Modifier.weight(1f)) {}
+                    TileButton(Icons.Filled.Edit, "Вручную", Modifier.weight(1f)) {}
+                }
+                FingerPointer(
+                    target = when (step) {
+                        0 -> null
+                        1 -> Offset(w * 0.25f, h * 0.5f)
+                        else -> Offset(w * 0.75f, h * 0.5f)
+                    },
+                    pressed = step == 2
+                )
+            }
+            GhostButton(if (step == 2) "Ещё раз" else "Дальше", onClick = { step = (step + 1) % 3 })
         }
     }
 }

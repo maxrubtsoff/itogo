@@ -19,11 +19,17 @@ class NewBankActionReceiver : BroadcastReceiver() {
         val done = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                val c = container.bankCandidates.current().firstOrNull { it.packageName == pkg } ?: return@launch
-                when (intent.action) {
-                    YES -> c.guessKey?.let { container.newBankAnswers.link(c, BankBrand.fromKey(it)) }
-                    NEW -> container.newBankAnswers.addNew(c)
-                    IGNORE -> container.newBankAnswers.ignore(c)
+                // «Не банк» is remembered by package: the waiting candidate may
+                // already be gone, and the answer must not be lost (B-57).
+                if (intent.action == IGNORE) {
+                    container.newBankAnswers.ignore(pkg)
+                } else {
+                    val c = container.bankCandidates.current().firstOrNull { it.packageName == pkg }
+                        ?: return@launch
+                    when (intent.action) {
+                        YES -> c.guessKey?.let { container.newBankAnswers.link(c, BankBrand.fromKey(it)) }
+                        NEW -> container.newBankAnswers.addNew(c)
+                    }
                 }
                 container.notifier.cancelNewBank(pkg)
             } finally {

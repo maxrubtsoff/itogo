@@ -53,6 +53,8 @@ class AppNotifier(context: Context) {
             .setContentTitle(r.title)
             .setContentText(r.text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(r.text))
+            // A subscription's own icon is the big one (F-33).
+            .apply { r.decor?.let { setLargeIcon(DecorBitmap.of(it)) } }
             .setContentIntent(openApp(open, r.id.hashCode()))
             .setAutoCancel(true)
             .private(channel, when (r.kind) {
@@ -124,6 +126,9 @@ class AppNotifier(context: Context) {
         const val OPEN_CASHBACK = "cashback"
         const val OPEN_NEW_BANKS = "new_banks"
         const val OPEN_SUBSCRIPTIONS = "subscriptions"
+
+        /** «Что храним» — where a widget of a switched-off section leads (U-52). */
+        const val OPEN_FEATURES = "features"
         private const val CH_DEPOSITS = "deposits"
         private const val CH_CASHBACK = "cashback"
         private const val CH_BANKS = "banks"

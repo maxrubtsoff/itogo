@@ -228,11 +228,14 @@ private fun Modifier.dashedCircle(): Modifier = this.drawWithCache {
     onDrawBehind { drawCircle(Slitok.Faint, radius = size.minDimension / 2 - stroke.width, style = stroke) }
 }
 
-/** A caption over one figure, on its own panel (U-40/A8). */
+/** A caption over one figure, on its own panel (U-40/A8). With [onClick] the whole tile opens something (U-59). */
 @Composable
-fun StatTile(label: String, modifier: Modifier = Modifier, value: @Composable () -> Unit) {
+fun StatTile(label: String, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, value: @Composable () -> Unit) {
     Panel(modifier) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Text(label, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             value()
         }

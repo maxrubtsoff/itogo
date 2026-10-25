@@ -49,9 +49,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.BankHolding
 import ru.maxrubtsoff.bankagg.domain.model.BankSummary
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
-import ru.maxrubtsoff.bankagg.domain.model.Feature
 import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
@@ -76,7 +76,8 @@ fun BankCardScreen(
     onBack: () -> Unit,
     onEdit: (BankBrand) -> Unit,
     onOpenCapital: (CapitalPart) -> Unit,
-    onOpenCashback: () -> Unit
+    onOpenCashback: () -> Unit,
+    onOpenSubscriptions: () -> Unit
 ) {
     val mine by vm.mine.collectAsStateWithLifecycle()
     val collected by vm.collected.collectAsStateWithLifecycle()
@@ -122,7 +123,7 @@ fun BankCardScreen(
                 }
             }
 
-            summary?.let { s -> Holdings(s, features, onOpenCapital, onOpenCashback) }
+            summary?.let { s -> Holdings(s, features, onOpenCapital, onOpenCashback, onOpenSubscriptions) }
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -132,17 +133,28 @@ fun BankCardScreen(
     }
 }
 
-/** The bank's accounts, deposits and this month's cashback; a line opens its section. */
+/** The bank's accounts, deposits, this month's cashback and subscriptions; a line opens its section. */
 @Composable
-private fun Holdings(s: BankSummary, features: Features, onOpenCapital: (CapitalPart) -> Unit, onOpenCashback: () -> Unit) {
+private fun Holdings(
+    s: BankSummary,
+    features: Features,
+    onOpenCapital: (CapitalPart) -> Unit,
+    onOpenCashback: () -> Unit,
+    onOpenSubscriptions: () -> Unit
+) {
     data class Line(val dot: Color, val label: String, val money: ru.maxrubtsoff.bankagg.domain.model.Money?, val note: String?, val open: () -> Unit)
-    val lines = buildList {
-        if (features.has(Feature.ACCOUNTS) && s.accountCount > 0)
-            add(Line(Slitok.Brass, if (s.accountCount == 1) "Счёт" else "Счета", s.accounts, null) { onOpenCapital(CapitalPart.ACCOUNTS) })
-        if (features.has(Feature.DEPOSITS) && s.depositCount > 0)
-            add(Line(Slitok.Violet, if (s.depositCount == 1) "Вклад" else "Вклады · ${s.depositCount}", s.deposits, null) { onOpenCapital(CapitalPart.DEPOSITS) })
-        if (features.has(Feature.CASHBACK) && s.cashbackCount > 0)
-            add(Line(Slitok.Mint, "Кэшбэк · " + CashbackMonth.shortLabel(CashbackMonth.currentKey()).lowercase(), null, RuPlural.categories(s.cashbackCount), onOpenCashback))
+    // What the card lists and in what order is the domain's call (U-52); here only how each line looks.
+    val lines = s.holdings(features).map { h ->
+        when (h) {
+            BankHolding.ACCOUNTS ->
+                Line(Slitok.Brass, if (s.accountCount == 1) "Счёт" else "Счета", s.accounts, null) { onOpenCapital(CapitalPart.ACCOUNTS) }
+            BankHolding.DEPOSITS ->
+                Line(Slitok.Violet, if (s.depositCount == 1) "Вклад" else "Вклады · ${s.depositCount}", s.deposits, null) { onOpenCapital(CapitalPart.DEPOSITS) }
+            BankHolding.CASHBACK ->
+                Line(Slitok.Mint, "Кэшбэк · " + CashbackMonth.shortLabel(CashbackMonth.currentKey()).lowercase(), null, RuPlural.categories(s.cashbackCount), onOpenCashback)
+            BankHolding.SUBSCRIPTIONS ->
+                Line(Slitok.Coral, if (s.subscriptionCount == 1) "Подписка" else "Подписки · ${s.subscriptionCount}", s.subscriptionsPerMonth, "/ мес", onOpenSubscriptions)
+        }
     }
     if (lines.isEmpty()) return
     Panel(Modifier.fillMaxWidth()) {

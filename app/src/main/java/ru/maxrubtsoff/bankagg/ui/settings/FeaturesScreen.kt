@@ -8,8 +8,6 @@ import ru.maxrubtsoff.bankagg.ui.overview.PaymentArt
 import ru.maxrubtsoff.bankagg.ui.overview.PaymentPartArt
 import ru.maxrubtsoff.bankagg.ui.overview.CapitalPartArt
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -56,7 +54,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.Feature
 import ru.maxrubtsoff.bankagg.domain.model.Features
+import ru.maxrubtsoff.bankagg.ui.common.errorShake
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
+import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
 /** «Что храним» in Settings (F-21): the same plates as on the first launch. */
@@ -100,13 +100,13 @@ fun FeaturesGrid(features: Features, onToggle: (Feature) -> Unit) {
 @Composable
 private fun FeatureTile(f: Feature, on: Boolean, features: Features, modifier: Modifier, onToggle: (Feature) -> Unit) {
     val shape = RoundedCornerShape(20.dp)
-    val shake = remember { Animatable(0f) }
+    val shake = rememberErrorShake()
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val border by animateColorAsState(if (on) Slitok.BrassLine else Slitok.Line, label = "border")
     Box(
         modifier
-            .graphicsLayer { translationX = shake.value }
+            .errorShake(shake)
             .pressScale()
             .clip(shape)
             .background(if (on) Brush.linearGradient(listOf(Slitok.Brass.copy(alpha = 0.14f), Slitok.PanelTop)) else Brush.linearGradient(listOf(Slitok.PanelBottom, Slitok.PanelBottom)))
@@ -114,7 +114,7 @@ private fun FeatureTile(f: Feature, on: Boolean, features: Features, modifier: M
             .clickable {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 if (features.toggle(f) == features) {
-                    scope.launch { for (x in listOf(10f, -8f, 6f, -4f, 0f)) shake.animateTo(x, tween(45)) }
+                    scope.launch { shake.play() }
                 } else onToggle(f)
             }
             .padding(14.dp)

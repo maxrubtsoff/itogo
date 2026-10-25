@@ -43,4 +43,4 @@ APK собирается в GitHub Actions при пуше в `main`
 `app/build/outputs/apk/debug/app-debug.apk`.
 
 Серверный код в `server/` — опциональный артефакт на будущее, в приложение не входит.
-Идеи и дорожная карта — в `docs/ROADMAP.md`, ТЗ текущего цикла — в `docs/TZ.md`, прошлые циклы — в `docs/archive/`.
+Идеи и дорожная карта — в `docs/ROADMAP.md`, файл текущего цикла — в `docs/cycles/cycle-N.md`, прошлые циклы — там же (`docs/cycles/`), ранние (1–7) — в `docs/archive/`.

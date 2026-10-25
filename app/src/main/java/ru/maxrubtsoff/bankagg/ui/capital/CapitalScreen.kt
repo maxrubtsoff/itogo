@@ -1,5 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.capital
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeaderGap
@@ -17,6 +19,14 @@ import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.graphics.graphicsLayer
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
+import ru.maxrubtsoff.bankagg.ui.common.ChipButton
+import ru.maxrubtsoff.bankagg.ui.common.MoreAction
+import ru.maxrubtsoff.bankagg.ui.common.MoreMenu
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.filled.Notifications
 import ru.maxrubtsoff.bankagg.ui.common.SectionPager
 import ru.maxrubtsoff.bankagg.ui.common.PagerTabs
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
@@ -94,7 +104,12 @@ fun CapitalScreen(
     onOpenPendingShots: () -> Unit,
     onOpenCurrency: (String) -> Unit,
     onOpenBanks: () -> Unit,
-    selectedPackages: Set<String> = emptySet()
+    // U-58: the «+» of the accounts goes straight to adding a bank.
+    onAddBank: () -> Unit = {},
+    selectedPackages: Set<String> = emptySet(),
+    // U-59: the capture log lives in «⋮» of the accounts (U-51: only while accounts are kept).
+    showCaptureLog: Boolean = false,
+    onOpenLog: () -> Unit = {}
 ) {
     val snapshot by vm.snapshot.collectAsStateWithLifecycle()
     val remembered by vm.lastSection.collectAsStateWithLifecycle()
@@ -128,7 +143,17 @@ fun CapitalScreen(
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            ScreenHeader("Капитал")
+            ScreenHeader("Капитал") {
+                if (showCaptureLog && parts.getOrNull(pager.currentPage) == CapitalPart.ACCOUNTS) {
+                    val context = LocalContext.current
+                    MoreMenu(
+                        listOf(
+                            MoreAction("Журнал перехвата", Icons.AutoMirrored.Filled.ListAlt) { onOpenLog() },
+                            MoreAction("Доступ к уведомлениям", Icons.Filled.Notifications) { Perms.openNotificationAccessSettings(context) }
+                        )
+                    )
+                }
+            }
             Spacer(Modifier.height(ScreenHeaderGap))
             // One kept section needs no switch: the title already names the screen (B-24).
             if (parts.size > 1) {
@@ -143,7 +168,7 @@ fun CapitalScreen(
                 // Sections swipe sideways; each keeps its own vertical scroll.
                 SectionPager(pager, Modifier.fillMaxSize()) { page ->
                     when (parts[page]) {
-                        CapitalPart.ACCOUNTS -> AccountsSection(vm, snap, onOpenBanks, selectedPackages)
+                        CapitalPart.ACCOUNTS -> AccountsSection(vm, snap, onOpenBanks, onAddBank, selectedPackages)
                         CapitalPart.DEPOSITS -> DepositsSection(depositsVm, onOpenDeposit, onOpenDepositShot, onOpenDepositBatch, onManualDeposit, onOpenPendingShots)
                         CapitalPart.CURRENCY -> CurrencySection(vm, snap, onOpenCurrency)
                         CapitalPart.CASH -> CashSection(vm, snap)
@@ -159,7 +184,7 @@ fun CapitalScreen(
 
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenBanks: () -> Unit, selectedPackages: Set<String>) {
+private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenBanks: () -> Unit, onAddBank: () -> Unit, selectedPackages: Set<String>) {
     val byBank = snap.rubAccounts.groupBy { it.brand }
         .map { (brand, list) -> brand to list }
         .sortedByDescending { (_, list) -> list.sumOf { it.balance.minor } }
@@ -167,6 +192,11 @@ private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenB
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        SectionActions(
+            summary = if (byBank.isEmpty()) "Счетов пока нет" else RuPlural.banks(byBank.size),
+            onAdd = onAddBank,
+            addDescription = "Добавить банк"
+        )
         Panel(Modifier.fillMaxWidth().sharedCard("part-${CapitalPart.ACCOUNTS.key}"), radius = 22.dp) {
             Box(Modifier.fillMaxWidth().heroGlow(Slitok.Brass)) {
                 Column(Modifier.padding(20.dp)) {
@@ -214,7 +244,7 @@ private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenB
             }
             byBank.forEachIndexed { i, (brand, list) ->
                 val allOut = list.all { it.excluded }
-                Panel(Modifier.fillMaxWidth().cascade(i, play)) {
+                Panel(Modifier.fillMaxWidth().cascade(i, play).tourTarget(TourTarget.ACCOUNT_ROW, active = i == 0, radius = 18.dp)) {
                     // Long press (U-18): leave the bank's accounts out of the capital, or bring them back.
                     LongPressMenu(items = listOf((if (allOut) "Учитывать в капитале" else "Не учитывать в капитале") to { vm.setExcluded(list.map { it.id }, !allOut) })) { onLong ->
                     val single = list.singleOrNull()
@@ -322,7 +352,11 @@ private fun CashSection(vm: CapitalViewModel, snap: CapitalSnapshot) {
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Panel(Modifier.fillMaxWidth().sharedCard("part-${CapitalPart.CASH.key}").clickable { editing = true }, radius = 22.dp) {
+        SectionActions(
+            summary = "Наличные",
+            controls = { ChipButton(if (cash == null) "Задать" else "Изменить") { editing = true } }
+        )
+        Panel(Modifier.fillMaxWidth().tourTarget(TourTarget.CASH_SUM, radius = 22.dp).sharedCard("part-${CapitalPart.CASH.key}").clickable { editing = true }, radius = 22.dp) {
             Box(Modifier.fillMaxWidth().heroGlow(Slitok.Sand)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     SectionHeroText("Наличные", (cash?.amount ?: Money.ZERO).format())
@@ -331,9 +365,6 @@ private fun CashSection(vm: CapitalViewModel, snap: CapitalSnapshot) {
                     }
                 }
             }
-        }
-        BrassButton(onClick = { editing = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(if (cash == null) "Задать сумму" else "Изменить сумму")
         }
     }
     if (editing) {

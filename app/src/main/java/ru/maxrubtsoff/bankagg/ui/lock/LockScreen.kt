@@ -3,8 +3,6 @@ package ru.maxrubtsoff.bankagg.ui.lock
 import ru.maxrubtsoff.bankagg.ui.common.DangerButton
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import ru.maxrubtsoff.bankagg.ui.common.SlitokDialog
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,7 +56,9 @@ import ru.maxrubtsoff.bankagg.domain.model.AppLock
 import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.domain.usecase.CheckPin
 import ru.maxrubtsoff.bankagg.ui.common.nbsp
+import ru.maxrubtsoff.bankagg.ui.common.errorShake
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
+import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 
@@ -170,7 +170,7 @@ private fun PinPad(
     rest: Pair<String, Long>? = null
 ) {
     var pin by remember(title) { mutableStateOf("") }
-    val shake = remember { Animatable(0f) }
+    val shake = rememberErrorShake(strong = true)
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
@@ -182,7 +182,7 @@ private fun PinPad(
             scope.launch {
                 if (!check(typed)) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    for (x in listOf(18f, -14f, 10f, -6f, 0f)) shake.animateTo(x, tween(50))
+                    shake.play()
                 }
                 pin = ""
             }
@@ -228,7 +228,7 @@ private fun PinPad(
                 Spacer(Modifier.height(8.dp))
                 Text("Следующая пауза — ${RuPlural.pause(rest.second)}".nbsp(), style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
             } else Row(
-                Modifier.graphicsLayer { translationX = shake.value },
+                Modifier.errorShake(shake),
                 horizontalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 repeat(AppLock.PIN_LENGTH) { i ->

@@ -2,6 +2,8 @@
 
 package ru.maxrubtsoff.bankagg.ui.overview
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import androidx.compose.foundation.layout.ColumnScope
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.domain.model.HideToggle
@@ -27,7 +29,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -45,7 +46,10 @@ import ru.maxrubtsoff.bankagg.ui.common.LocalAmountsHidden
 import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.grayscale
+import ru.maxrubtsoff.bankagg.ui.common.Motion
+import ru.maxrubtsoff.bankagg.ui.common.errorShake
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
+import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -144,7 +148,7 @@ fun OverviewScreen(
         ScreenHeader("Обзор") {
             val hidden = LocalAmountsHidden.current
             val hasAmounts = snapshot?.parts?.any { it.hasData } == true
-            if (HideToggle.visible(hasAmounts, hidden)) IconButton(onClick = onToggleHidden) {
+            if (HideToggle.visible(hasAmounts, hidden)) IconButton(onClick = onToggleHidden, modifier = Modifier.tourTarget(TourTarget.HIDE_EYE, radius = 24.dp)) {
                 Icon(
                     if (hidden) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                     contentDescription = if (hidden) "Показать суммы" else "Скрыть суммы",
@@ -158,8 +162,8 @@ fun OverviewScreen(
         val collecting = remember(myBanks, selectedPackages) { myBanks.filter { b -> b.packages.any { it in selectedPackages } } }
         val emptyCapital = snapshot?.parts?.none { it.hasData } == true
         // An empty card already asks for access itself.
-        if (features.collectsNotifications && banksSelected && !notifAccess && !emptyCapital) NotificationAccessBanner()
-        if (features.collectsNotifications && newBanks.isNotEmpty()) NewBanksBanner(newBanks, onOpenNewBanks)
+        if (features.showNotifAccessOnOverview && banksSelected && !notifAccess && !emptyCapital) NotificationAccessBanner()
+        if (features.showNewBanksPrompt && newBanks.isNotEmpty()) NewBanksBanner(newBanks, onOpenNewBanks)
 
         val snap = snapshot
         if (features.showCapital) when {
@@ -247,7 +251,7 @@ private fun NewBanksBanner(list: List<BankCandidate>, onOpen: () -> Unit) {
 private fun PartTile(part: CapitalPart, on: Boolean, valueMinor: Long, modifier: Modifier, onClick: (shake: () -> Unit) -> Unit) {
     val color = part.color()
     val shape = RoundedCornerShape(20.dp)
-    val shake = remember { Animatable(0f) }
+    val shake = rememberErrorShake()
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val artScale by animateFloatAsState(if (on) 1f else 0.9f, label = "art")
@@ -255,7 +259,7 @@ private fun PartTile(part: CapitalPart, on: Boolean, valueMinor: Long, modifier:
     val border by animateColorAsState(if (on) color else Slitok.Line, label = "border")
     Column(
         modifier
-            .graphicsLayer { translationX = shake.value }
+            .errorShake(shake)
             .pressScale()
             .clip(shape)
             .background(
@@ -265,9 +269,7 @@ private fun PartTile(part: CapitalPart, on: Boolean, valueMinor: Long, modifier:
             .clickable {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 onClick {
-                    scope.launch {
-                        for (x in listOf(10f, -8f, 6f, -4f, 0f)) shake.animateTo(x, tween(45))
-                    }
+                    scope.launch { shake.play() }
                 }
             }
             .padding(14.dp),
@@ -351,7 +353,7 @@ private fun CompositionBar(snap: CapitalSnapshot, modifier: Modifier = Modifier)
     val segments = snap.parts.filter { it.share > 0f }
     // The bar grows in once per launch, not on every return to the Overview (U-29).
     val grow = remember { Animatable(if (BarIntro.pending()) 0f else 1f) }
-    LaunchedEffect(Unit) { grow.animateTo(1f, tween(500)) }
+    LaunchedEffect(Unit) { grow.animateTo(1f, Motion.tween(Motion.SLOW)) }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val minShare = (12.dp / maxWidth).coerceAtLeast(CapitalBar.MIN_SHARE)
         val widths = remember(segments, minShare) { CapitalBar.widths(segments.map { it.share }, minShare) }
@@ -367,7 +369,7 @@ private fun CompositionBar(snap: CapitalSnapshot, modifier: Modifier = Modifier)
 
 /** Whether the capital bar still has to grow in during this process (U-29). */
 private object BarIntro {
-    private var played = !android.animation.ValueAnimator.areAnimatorsEnabled()
+    private var played = !Motion.enabled
     fun pending(): Boolean = (!played).also { played = true }
 }
 
@@ -451,18 +453,19 @@ private fun EmptyCapital(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (plan.lead != EmptyStart.Lead.NONE) {
             StartPlate(lead = true, art = { CapitalPartArt(CapitalPart.ACCOUNTS, Modifier.size(width = 72.dp, height = 56.dp)) }) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        when (plan.lead) {
-                            EmptyStart.Lead.WAITING -> "Ждём уведомления"
-                            EmptyStart.Lead.GRANT_ACCESS -> "Счета из уведомлений"
-                            else -> "Счета из уведомлений"
-                        },
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (collecting.isNotEmpty()) BankStack(collecting)
-                }
+                // B-54: the title takes the whole line (it wraps by words, never into a column); the banks stand under it.
+                Text(
+                    when (plan.lead) {
+                        EmptyStart.Lead.WAITING -> "Ждём уведомления"
+                        EmptyStart.Lead.GRANT_ACCESS -> "Счета из уведомлений"
+                        else -> "Счета из уведомлений"
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (collecting.isNotEmpty()) BankStack(collecting)
                 when (plan.lead) {
                     EmptyStart.Lead.WAITING ->
                         Text("Баланс появится после первой операции", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)

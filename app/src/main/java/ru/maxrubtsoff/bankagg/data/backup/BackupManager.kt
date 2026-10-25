@@ -27,6 +27,7 @@ import ru.maxrubtsoff.bankagg.data.local.FxRateEntity
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.data.local.TransactionEntity
 import ru.maxrubtsoff.bankagg.data.local.SubscriptionEntity
+import ru.maxrubtsoff.bankagg.domain.repository.CandidateRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import java.io.File
 import java.time.Instant
@@ -49,7 +50,8 @@ class BackupManager(
     private val context: Context,
     private val db: AppDatabase,
     private val settings: SettingsRepository,
-    private val banks: BankStore? = null
+    private val banks: BankStore? = null,
+    private val candidates: CandidateRepository? = null
 ) {
     private val ledger get() = db.ledgerDao()
     private val events get() = db.eventDao()
@@ -271,6 +273,10 @@ class BackupManager(
                     put("brandKey", s.brandKey ?: JSONObject.NULL); put("payee", s.payee ?: JSONObject.NULL)
                     put("remind", s.remind); put("status", s.status)
                     put("previousPriceMinor", s.previousPriceMinor ?: JSONObject.NULL); put("createdAt", s.createdAt)
+                    // v10: the subscription's own look (F-33), its picture travels like a bank's.
+                    put("colorArgb", s.colorArgb ?: JSONObject.NULL); put("letters", s.letters ?: JSONObject.NULL)
+                    put("textColorArgb", s.textColorArgb ?: JSONObject.NULL); put("logoFile", s.logoFile ?: JSONObject.NULL)
+                    LogoBackup.encode(s.logoFile)?.let { put("logoPng", it) }
                 })
             }
         })
@@ -301,6 +307,13 @@ class BackupManager(
         val pkgs = JSONArray()
         settings.currentSelectedPackages().forEach { pkgs.put(it) }
         root.put("selectedPackages", pkgs)
+
+        // v9: «Что такое Itogo» was shown — a restore must not bring the slides back (B-50).
+        root.put("introShown", settings.introShown())
+        // v9: apps answered «Не банк» — otherwise a restore asks about them again (B-57).
+        candidates?.let { c ->
+            root.put("notBanks", JSONArray().apply { c.ignored().forEach { put(it) } })
+        }
 
         // Cashback — manually entered and not reconstructable from notifications,
         // so it must live in the backup.
@@ -423,7 +436,11 @@ class BackupManager(
         val capitalParts: Set<CapitalPart>?,
         val rates: List<FxRateEntity>,
         val banks: List<BankBrand>? = null,
-        val logos: Map<String, ByteArray> = emptyMap()
+        val logos: Map<String, ByteArray> = emptyMap(),
+        /** Subscription pictures by subscription id (F-33). */
+        val subscriptionLogos: Map<String, ByteArray> = emptyMap(),
+        val notBanks: Set<String>? = null,
+        val introShown: Boolean = false
     )
 
     /**
@@ -440,6 +457,11 @@ class BackupManager(
         } catch (e: Exception) {
             throw RestoreError.Corrupt()
         }
+        val logoDir = File(context.filesDir, "bank-logos")
+        // A path from the file itself is never trusted (B-30), and a missing file means letters, not a broken picture.
+        val restoredSubscriptions = snapshot.subscriptions.map { s ->
+            s.copy(logoFile = s.logoFile?.takeIf { path -> SafeFiles.inside(logoDir, path)?.isFile == true })
+        }
         db.withTransaction {
             ledger.clearTransactions()
             ledger.clearAccounts()
@@ -452,7 +474,7 @@ class BackupManager(
             fx.clear()
             fx.clearCash()
             subscriptions.clear()
-            snapshot.subscriptions.forEach { subscriptions.upsert(it) }
+            restoredSubscriptions.forEach { subscriptions.upsert(it) }
             snapshot.accounts.forEach { ledger.upsertAccount(it) }
             snapshot.transactions.forEach { ledger.insertTransaction(it) }
             snapshot.events.forEach { events.insert(it) }
@@ -465,11 +487,24 @@ class BackupManager(
             snapshot.cash?.let { fx.setCash(it) }
             if (snapshot.rates.isNotEmpty()) fx.upsertRates(snapshot.rates)
         }
+        // Subscription pictures go back into the app's files only after the data is in: a rolled-back restore erases nothing.
+        restoredSubscriptions.forEach { s ->
+            snapshot.subscriptionLogos[s.id]?.let { bytes ->
+                runCatching { LogoBackup.write(logoDir, s.id, bytes) }.getOrNull()?.let { subscriptions.upsert(s.copy(logoFile = it)) }
+            }
+        }
         snapshot.selectedPackages?.let { settings.setSelectedPackages(it) }
+        if (snapshot.introShown) settings.markIntroShown()
+        // «Не банк» survives a restore: what was answered stays answered (B-57).
+        candidates?.let { store ->
+            snapshot.notBanks?.let { saved ->
+                (store.ignored() - saved).forEach { store.unignore(it) }
+                saved.forEach { store.ignore(it) }
+            }
+        }
         snapshot.capitalParts?.let { settings.setCapitalParts(it) }
         snapshot.banks?.let { list ->
             // Pictures from the copy are written back into the app's files (F-25).
-            val logoDir = File(context.filesDir, "bank-logos")
             val restored = list.map { b ->
                 snapshot.logos[b.key]?.let { bytes ->
                     runCatching { LogoBackup.write(logoDir, b.key, bytes) }.getOrNull()?.let { b.copy(logoFile = it) }
@@ -497,7 +532,12 @@ class BackupManager(
                     payee = o.optStringOrNull("payee"), remind = o.optBoolean("remind", false),
                     status = o.optString("status", "ACTIVE"),
                     previousPriceMinor = if (o.isNull("previousPriceMinor") || !o.has("previousPriceMinor")) null else o.getLong("previousPriceMinor"),
-                    createdAt = o.optLong("createdAt", 0L)
+                    createdAt = o.optLong("createdAt", 0L),
+                    // Copies before v10 have no look: the title gives the default.
+                    colorArgb = if (o.isNull("colorArgb") || !o.has("colorArgb")) null else o.getLong("colorArgb"),
+                    letters = o.optStringOrNull("letters"),
+                    textColorArgb = if (o.isNull("textColorArgb") || !o.has("textColorArgb")) null else o.getLong("textColorArgb"),
+                    logoFile = o.optStringOrNull("logoFile")
                 )
             },
             accounts = root.objects("accounts").map { o ->
@@ -535,6 +575,10 @@ class BackupManager(
             selectedPackages = root.optJSONArray("selectedPackages")?.let { arr ->
                 (0 until arr.length()).map { arr.getString(it) }.toSet()
             },
+            notBanks = root.optJSONArray("notBanks")?.let { arr ->
+                (0 until arr.length()).map { arr.getString(it) }.toSet()
+            },
+            introShown = root.optBoolean("introShown", false),
             // "favoriteGroups" from older copies is ignored: the home card picks itself.
             cashback = root.objects("cashback").map { o ->
                 CashbackEntity(
@@ -595,13 +639,16 @@ class BackupManager(
             },
             logos = root.objects("banks").mapNotNull { o ->
                 LogoBackup.decode(o.optString("logoPng"))?.let { o.getString("key") to it }
+            }.toMap(),
+            subscriptionLogos = root.objects("subscriptions").mapNotNull { o ->
+                LogoBackup.decode(o.optString("logoPng"))?.let { o.getString("id") to it }
             }.toMap()
         )
     }
 
     private companion object {
-        // v7: own bank pictures; v6: banks; v5: cash currency, cash, capital parts, rates (v4: deposits; v3: cashback groupKey).
-        const val FORMAT_VERSION = 8
+        // v10: subscription look and pictures (F-33); v7: own bank pictures; v6: banks; v5: cash currency, cash, capital parts, rates (v4: deposits; v3: cashback groupKey).
+        const val FORMAT_VERSION = 10
         const val FOLDER = "BankAggregator"
     }
 }

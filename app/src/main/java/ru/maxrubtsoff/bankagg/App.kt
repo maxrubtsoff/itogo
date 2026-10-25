@@ -35,6 +35,8 @@ class App : Application(), ImageLoaderFactory {
         MainScope().launch(kotlinx.coroutines.Dispatchers.IO) {
             ShotImageFiles.sealExisting(listOf(java.io.File(filesDir, "cashback_shots"), java.io.File(filesDir, "deposit_shots")))
         }
+        // Operations the old parser read wrong are re-read from the log, once (B-45, B-46).
+        MainScope().launch { container.repairJournal() }
         // Old journal texts go once a day; on start too, the worker may not have run for a while (U-33).
         MainScope().launch { container.trimJournal() }
         // A new month changes the widget's rows: redraw it when the month flips.

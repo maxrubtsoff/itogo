@@ -9,6 +9,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
 import ru.maxrubtsoff.bankagg.domain.repository.DepositRepository
 import ru.maxrubtsoff.bankagg.domain.repository.CashbackRepository
+import ru.maxrubtsoff.bankagg.domain.repository.SubscriptionRepository
 import ru.maxrubtsoff.bankagg.domain.repository.Today
 import ru.maxrubtsoff.bankagg.ui.common.UndoCenter
 import ru.maxrubtsoff.bankagg.domain.model.BankCandidate
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.data.icons.LogoMaker
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.BrandDecor
 import ru.maxrubtsoff.bankagg.domain.model.CbrBanks
 import ru.maxrubtsoff.bankagg.domain.repository.BankRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
@@ -35,13 +37,14 @@ import java.util.UUID
 class BanksViewModel(
     private val banks: BankRepository,
     private val settings: SettingsRepository,
-    installedIcons: StateFlow<Map<BankBrand, Bitmap>>,
+    installedIcons: StateFlow<Map<String, Bitmap>>,
     private val logos: LogoMaker,
-    candidateRepo: CandidateRepository,
+    private val candidateRepo: CandidateRepository,
     private val answers: NewBankAnswers,
     private val ledger: LedgerRepository,
     private val deposits: DepositRepository,
     private val cashback: CashbackRepository,
+    private val subscriptions: SubscriptionRepository,
     private val today: Today,
     private val undo: UndoCenter
 ) : ViewModel() {
@@ -53,6 +56,12 @@ class BanksViewModel(
     fun addNew(c: BankCandidate) = viewModelScope.launch { answers.addNew(c) }
     fun ignore(c: BankCandidate) = viewModelScope.launch { answers.ignore(c) }
 
+    /** Apps answered «Не банк» — shown at the bottom of «Банки» to change one's mind (B-57). */
+    val notBanks: StateFlow<Set<String>> =
+        candidateRepo.ignoredApps.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    fun unignore(pkg: String) = viewModelScope.launch { answers.unignore(pkg) }
+
 
     val mine: StateFlow<List<BankBrand>> = banks.myBanks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -61,7 +70,7 @@ class BanksViewModel(
 
     /** Known banks with an app on this phone that aren't added yet. */
     val onPhone: StateFlow<List<BankBrand>> = combine(installedIcons, banks.myBanks) { icons, my ->
-        BankBrand.known.filter { it in icons.keys && it !in my }
+        BankBrand.known.filter { it.key in icons.keys && it !in my }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** The largest banks not added yet (business apps aren't "popular"). */
@@ -100,8 +109,8 @@ class BanksViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun summary(bankKey: String): Flow<BankSummary> {
         val month = today.date.flatMapLatest { cashback.observeMonth(CashbackMonth.keyOf(it)) }
-        return combine(ledger.observeAccounts(), deposits.observeAll(), month, today.date) { a, d, c, day ->
-            BankSummary.of(bankKey, a, d, c, day)
+        return combine(ledger.observeAccounts(), deposits.observeAll(), month, subscriptions.observeAll(), today.date) { a, d, c, s, day ->
+            BankSummary.of(bankKey, a, d, c, s, day)
         }
     }
 
@@ -112,7 +121,7 @@ class BanksViewModel(
     }
 
     /** A new own bank or changes to one; [picture] — a gallery image to cut into the logo. */
-    fun saveOwn(existing: BankBrand?, title: String, letters: String, color: Long, textColor: Long, picture: Uri?, usePicture: Boolean, onDone: (BankBrand) -> Unit) =
+    fun saveOwn(existing: BankBrand?, title: String, look: BrandDecor, picture: Uri?, usePicture: Boolean, onDone: (BankBrand) -> Unit) =
         viewModelScope.launch {
             val key = existing?.key ?: (BankBrand.USER_PREFIX + UUID.randomUUID())
             val logo = when {
@@ -120,13 +129,8 @@ class BanksViewModel(
                 picture != null -> logos.make(picture, key)
                 else -> existing?.logoFile
             }
-            val bank = (existing ?: BankBrand(key, title.trim(), color)).copy(
-                title = title.trim(),
-                primaryColor = color,
-                letters = letters.trim().uppercase().take(3).ifEmpty { BankBrand.lettersOf(title) },
-                textColor = textColor,
-                logoFile = logo
-            )
+            val base = existing ?: BankBrand(key, title.trim(), look.colorArgb)
+            val bank = base.withDecor(title.trim(), look.copy(logoFile = logo))
             if (existing == null) banks.add(bank) else banks.update(bank)
             onDone(bank)
         }

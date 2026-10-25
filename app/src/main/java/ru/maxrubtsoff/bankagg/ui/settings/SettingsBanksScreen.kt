@@ -49,14 +49,18 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
-import ru.maxrubtsoff.bankagg.ui.common.AddButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.domain.model.Features
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
 import ru.maxrubtsoff.bankagg.ui.common.ChipButton
+import ru.maxrubtsoff.bankagg.ui.common.ListRow
 import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import ru.maxrubtsoff.bankagg.ui.common.NotificationAccessBanner
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.rememberNotificationAccess
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
+import ru.maxrubtsoff.bankagg.util.InstalledApps
 import ru.maxrubtsoff.bankagg.util.Perms
 
 /**
@@ -65,30 +69,41 @@ import ru.maxrubtsoff.bankagg.util.Perms
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsBanksScreen(vm: BanksViewModel, collectsNotifications: Boolean, onBack: () -> Unit, onAdd: () -> Unit, onOpenNew: () -> Unit, onEdit: (BankBrand) -> Unit, onOpen: (BankBrand) -> Unit) {
+fun SettingsBanksScreen(vm: BanksViewModel, features: Features, onBack: () -> Unit, onAdd: () -> Unit, onOpenNew: () -> Unit, onEdit: (BankBrand) -> Unit, onOpen: (BankBrand) -> Unit) {
     var removing by remember { mutableStateOf<BankBrand?>(null) }
     val candidates by vm.candidates.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val mine by vm.mine.collectAsStateWithLifecycle()
+    val notBanks by vm.notBanks.collectAsStateWithLifecycle()
     val collected by vm.collected.collectAsStateWithLifecycle()
     val notifAccess by rememberNotificationAccess()
+    val collectsNotifications = features.collectsNotifications
     val unrestricted by rememberOnResume { Perms.isBatteryUnrestricted(context) }
 
     Scaffold(
-        topBar = {
-            ScreenHeader("Банки", onBack) {
-                Box(Modifier.padding(end = 12.dp)) { AddButton("Добавить банк", onAdd) }
-            }
-        }
+        topBar = { ScreenHeader("Банки", onBack) }
     ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (collectsNotifications && !notifAccess) NotificationAccessBanner()
+            SectionActions(
+                summary = if (mine.isEmpty()) "Банков пока нет" else RuPlural.banks(mine.size),
+                onAdd = onAdd,
+                addDescription = "Добавить банк"
+            )
+            // The words follow what the notifications feed: balances with accounts, else subscriptions (U-52).
+            if (collectsNotifications && !notifAccess) {
+                if (features.showNotifAccessOnOverview) NotificationAccessBanner()
+                else NotificationAccessBanner(text = "Подписки не находятся — нет доступа к уведомлениям")
+            }
             if (collectsNotifications && !unrestricted) BatteryBanner { Perms.openBatterySettings(context) }
             if (collectsNotifications && candidates.isNotEmpty()) {
                 PlateButton(onClick = onOpenNew, modifier = Modifier.fillMaxWidth()) { Text("Новые банки · ${candidates.size}") }
+            }
+
+            if (collectsNotifications && notBanks.isNotEmpty()) {
+                NotBanksPanel(notBanks, onReturn = vm::unignore)
             }
 
             if (mine.isNotEmpty()) Panel(Modifier.fillMaxWidth()) {
@@ -154,6 +169,34 @@ private fun BankRow(bank: BankBrand, collecting: Boolean, showBell: Boolean, onB
                         tint = if (collecting) Slitok.Mint else Slitok.Faint
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Apps the user answered «Не банк» about (B-57): folded away at the bottom,
+ * one tap returns an app to the questions.
+ */
+@Composable
+private fun NotBanksPanel(packages: Set<String>, onReturn: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    Panel(Modifier.fillMaxWidth()) {
+        ListRow(
+            title = "Не банки · ${packages.size}",
+            onClick = { open = !open },
+            trailing = {
+                Text(if (open) "скрыть" else "показать", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
+            }
+        )
+        if (open) {
+            packages.sorted().forEach { pkg ->
+                HorizontalDivider(Modifier.padding(start = 16.dp), color = Slitok.Line)
+                ListRow(
+                    title = InstalledApps.labelOf(context, pkg) ?: pkg,
+                    trailing = { ChipButton("Вернуть", onClick = { onReturn(pkg) }) }
+                )
             }
         }
     }

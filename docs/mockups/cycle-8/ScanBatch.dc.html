@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Пакет скринов</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="top">
+    <button class="ib fg" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button>
+    <h1 class="sm">Кэшбэк · 2 из 4</h1>
+  </div>
+  <div class="body" style="padding-top: 4px; gap: 12px;">
+    <div class="queue" style="padding: 0 4px;">
+      <span class="q"><span class="ok"><svg class="ico" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke-width: 3;"><path d="M5 12l5 5 9-10"></path></svg></span></span>
+      <span class="q now" style="overflow: hidden;"><span class="scanline" style="top: 6px; height: 30px;"></span></span>
+      <span class="q next"></span>
+      <span class="q next"></span>
+    </div>
+
+    <div class="panel shot">
+      <button class="sthumb" aria-label="Открыть скрин"><i style="width: 70%"></i><i></i><i style="width: 55%"></i><i></i><i style="width: 80%"></i><span class="scanline" style="top: 20px; height: 34px;"></span></button>
+      <div class="info">
+        <span class="status brass">Читаем скрин</span>
+        <span class="t-sm">Т-Банк</span>
+      </div>
+    </div>
+
+    <button class="panel select land"><span class="bk s36 b-t">Т</span><span class="t-body" style="flex: 1;">Т-Банк</span><svg class="ico" viewBox="0 0 24 24" style="color: var(--faint); width: 18px; height: 18px;"><path d="M9 6l6 6-6 6"></path></svg></button>
+
+    <div class="panel list">
+      <div class="lrow" style="gap: 12px;"><span class="catic"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M4 7h16l-2 10H6z"></path></svg></span><span class="grow t-body">Супермаркеты</span><span class="pct land"><input value="5" aria-label="Процент"><span>%</span></span></div>
+      <div class="lrow faded" style="gap: 12px;"><span class="catic"></span><span class="grow"><span style="display: block; width: 45%; height: 8px; border-radius: 4px; background: rgba(238,243,240,.14);"></span></span><span class="pct"></span></div>
+      <div class="lrow faded" style="gap: 12px;"><span class="catic"></span><span class="grow"><span style="display: block; width: 60%; height: 8px; border-radius: 4px; background: rgba(238,243,240,.14);"></span></span><span class="pct"></span></div>
+    </div>
+  </div>
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 24px;">
+    <div class="brow"><button class="btn plate">Пропустить</button><button class="btn brass">Дальше</button></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

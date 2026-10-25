@@ -1,5 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.capital
 
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
+import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
 import ru.maxrubtsoff.bankagg.ui.common.sharedCard
 import ru.maxrubtsoff.bankagg.ui.common.cascade
@@ -8,6 +10,8 @@ import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import androidx.compose.foundation.combinedClickable
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
+import ru.maxrubtsoff.bankagg.ui.common.SectionActions
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -71,12 +75,19 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
     // A long press on a currency (U-18) opens the sheet with that currency chosen.
     var sheetCurrency by rememberSaveable { mutableStateOf<String?>(null) }
     val cur = snap.currency
-    val cashPositions = cur.positions.filter { it.qtyMinor != 0L || it.realizedMinor != 0L }
+    val cashPositions = cur.shownPositions
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        SectionActions(
+            summary = if (cur.isEmpty) "Валюты пока нет"
+                else RuPlural.currencies(cur.currencyCount),
+            // «+» is a purchase; a sale is the quiet plate under the list.
+            onAdd = { sheetKind = FxKind.BUY.name },
+            addDescription = "Купил валюту"
+        )
         CurrencyHero(snap, refreshing, onRefresh = vm::refreshRatesNow)
 
         if (cur.isEmpty) {
@@ -100,15 +111,13 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
                     cashPositions.forEachIndexed { i, p ->
                         if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = Slitok.Line)
                         // U-45: «Купил / Продал» live on the currency's screen.
-                        Box(Modifier.cascade(i, play)) { PositionRow(p) { onOpenCurrency(p.currency) } }
+                        Box(Modifier.cascade(i, play).tourTarget(TourTarget.CURRENCY_ROW, active = i == 0, radius = 16.dp)) { PositionRow(p) { onOpenCurrency(p.currency) } }
                     }
                 }
             }
-            BuySellButtons(
-                canSell = cashPositions.any { it.qtyMinor > 0 },
-                onBuy = { sheetKind = FxKind.BUY.name },
-                onSell = { sheetKind = FxKind.SELL.name }
-            )
+            if (cashPositions.any { it.qtyMinor > 0 }) {
+                PlateButton(onClick = { sheetKind = FxKind.SELL.name }, modifier = Modifier.fillMaxWidth()) { Text("− Продал") }
+            }
             if (cur.holdings.isNotEmpty()) {
                 GroupTitle("На счетах")
                 Panel(Modifier.fillMaxWidth()) {
@@ -142,7 +151,7 @@ private fun GroupTitle(text: String) {
 @Composable
 fun BuySellButtons(canSell: Boolean, onBuy: () -> Unit, onSell: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        BrassButton(onClick = onBuy, modifier = Modifier.weight(1f)) { Text("+ Купил") }
+        BrassButton(onClick = onBuy, modifier = Modifier.weight(1f).tourTarget(TourTarget.ADD_BUTTON, radius = 16.dp)) { Text("+ Купил") }
         PlateButton(onClick = onSell, enabled = canSell, modifier = Modifier.weight(1f)) { Text("− Продал") }
     }
 }

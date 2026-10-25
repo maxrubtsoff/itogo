@@ -73,6 +73,10 @@ object RuDays {
         "января", "февраля", "марта", "апреля", "мая", "июня",
         "июля", "августа", "сентября", "октября", "ноября", "декабря"
     )
+    private val WEEKDAYS = listOf("понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье")
+
+    /** "понедельник" … "воскресенье": the day of the week, lower case. */
+    fun weekday(day: LocalDate): String = WEEKDAYS[day.dayOfWeek.value - 1]
 
     fun relative(day: LocalDate, today: LocalDate): String = when (day) {
         today -> "сегодня"

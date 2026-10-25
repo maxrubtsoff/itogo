@@ -43,7 +43,8 @@ enum class SubscriptionStatus { ACTIVE, ARCHIVED, IGNORED }
 /**
  * A subscription (F-27): found in the bank pushes or added by hand. [payee] —
  * the counterparty as the bank writes it, to tie new payments to it; null for
- * one added by hand without a match. [previousPriceMinor] — the price before
+ * one added by hand without a match. [brand] — the bank it is charged from, a
+ * second note next to its own look ([decor], F-33). [previousPriceMinor] — the price before
  * the last change, for «подорожала на …». An [SubscriptionStatus.IGNORED] row
  * only remembers «Не подписка» for its payee.
  */
@@ -58,8 +59,13 @@ data class Subscription(
     val remind: Boolean = false,
     val status: SubscriptionStatus = SubscriptionStatus.ACTIVE,
     val previousPriceMinor: Long? = null,
-    val createdAt: Long = 0L
+    val createdAt: Long = 0L,
+    /** The user's own look (F-33); null — never touched, [look] gives the default. */
+    val decor: BrandDecor? = null
 ) {
+    /** What to draw: the user's look, or the one the name gives (always valid). */
+    val look: BrandDecor get() = decor ?: BrandDecor.defaultFor(title)
+
     /** Up by how much since the last change, or null. */
     val raisedBy: Long? get() = previousPriceMinor?.let { priceMinor - it }?.takeIf { it > 0 }
 }
@@ -162,7 +168,8 @@ object Subscriptions {
 
     /** A new subscription from a finding, the fields filled in. */
     fun fromFinding(f: Finding, id: String, now: Long): Subscription =
-        Subscription(id, f.title, f.priceMinor, f.period, f.nextDate, brand = f.payments.last().brand, payee = f.payee, createdAt = now)
+        Subscription(id, f.title, f.priceMinor, f.period, f.nextDate, brand = f.payments.last().brand, payee = f.payee, createdAt = now,
+            decor = BrandDecor.defaultFor(f.title))
 
     /** The next payment day not before [today] (a missed push doesn't leave a date in the past). */
     fun upcoming(s: Subscription, today: LocalDate): LocalDate {

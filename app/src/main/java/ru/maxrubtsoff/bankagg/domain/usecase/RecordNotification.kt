@@ -41,7 +41,7 @@ class RecordNotification(
         val brand = BankBrand.fromPackage(packageName)
         val op = NotificationParser.parse(title, normalized, brand.defaultCurrency)
         val content = contentHash(packageName, normalized, op)
-        val hash = sha256("$content|$postedAt")
+        val hash = eventHash(content, postedAt)
 
         tx.run {
             // Banks re-post the same push (updates, group re-sorts): the same text,
@@ -99,7 +99,17 @@ class RecordNotification(
 
         /** Identity of a push without its time: package, text, amount and balance. */
         fun contentHash(packageName: String, normalizedText: String, op: ParsedOp?): String =
-            sha256("$packageName|$normalizedText|${op?.amount?.minor ?: ""}|${op?.balance?.minor ?: ""}")
+            contentHash(packageName, normalizedText, op?.amount?.minor, op?.balance?.minor)
+
+        fun contentHash(
+            packageName: String,
+            normalizedText: String,
+            amountMinor: Long?,
+            balanceMinor: Long?
+        ): String = sha256("$packageName|$normalizedText|${amountMinor ?: ""}|${balanceMinor ?: ""}")
+
+        /** Identity of this very push: its content and the time it arrived. Also the operation's id. */
+        fun eventHash(contentHash: String, postedAt: Long): String = sha256("$contentHash|$postedAt")
 
         private fun sha256(s: String): String =
             MessageDigest.getInstance("SHA-256").digest(s.toByteArray())

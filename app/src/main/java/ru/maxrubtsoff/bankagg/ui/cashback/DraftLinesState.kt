@@ -8,9 +8,9 @@ import androidx.compose.runtime.toMutableStateList
 
 /** Saves editor rows across process death and configuration changes. */
 private val DraftLinesSaver = listSaver<SnapshotStateList<CashbackViewModel.DraftLine>, String>(
-    save = { list -> list.flatMap { listOf(it.text, it.groupKey, it.percentText, it.sourceText) } },
+    save = { list -> list.flatMap { listOf(it.text, it.groupKey, it.percentText, it.sourceText, it.id) } },
     restore = { flat ->
-        flat.chunked(4).map { CashbackViewModel.DraftLine(it[0], it[1], it[2], it[3]) }.toMutableStateList()
+        flat.chunked(5).filter { it.size == 5 }.map { CashbackViewModel.DraftLine(it[0], it[1], it[2], it[3], it[4]) }.toMutableStateList()
     }
 )
 

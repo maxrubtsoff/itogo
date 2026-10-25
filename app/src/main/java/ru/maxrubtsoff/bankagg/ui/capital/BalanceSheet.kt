@@ -56,7 +56,7 @@ fun BalanceSheet(account: Account, since: suspend () -> Pair<Long, Long>?, onSav
     LaunchedEffect(account.id) { if (account.estimated) breakdown = since() }
     val input = parseAmountMinor(text.text)
 
-    SlitokSheet(onDismiss) {
+    SlitokSheet(onDismiss, imeField = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             BankIcon(account.brand, size = 44.dp)
             Spacer(Modifier.width(14.dp))

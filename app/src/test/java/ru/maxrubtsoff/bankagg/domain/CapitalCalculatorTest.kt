@@ -97,6 +97,22 @@ class CapitalCalculatorTest {
         assertEquals(80_000L, snap.part(CapitalPart.CURRENCY).valueMinor)
     }
 
+    @Test fun currencyCount_counts_each_currency_once_across_cash_and_accounts() {
+        val byn = FxRate("BYN", today, 27_737_500)
+        val snap = CapitalCalculator.compute(
+            listOf(account(BankBrand.SBER, "USD", 100), account(BankBrand.TBANK, "USD", 50), account(BankBrand.BSB, "BYN", 100)),
+            emptyList(), listOf(buyUsd(10, 800)), listOf(usdRate(80), byn), null, all, today
+        )
+        assertEquals(2, snap.currency.currencyCount)   // USD (наличные + 2 счёта) и BYN
+        assertEquals(listOf("USD"), snap.currency.shownPositions.map { it.currency })
+    }
+
+    @Test fun currencyCount_is_zero_when_nothing_is_held() {
+        val snap = CapitalCalculator.compute(emptyList(), emptyList(), emptyList(), emptyList(), null, all, today)
+        assertEquals(0, snap.currency.currencyCount)
+        assertTrue(snap.currency.isEmpty)
+    }
+
     @Test fun empty_parts_have_no_data() {
         val snap = CapitalCalculator.compute(emptyList(), emptyList(), emptyList(), emptyList(), null, all, today)
         assertTrue(snap.parts.none { it.hasData })

@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.ui.subscriptions
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import ru.maxrubtsoff.bankagg.data.icons.LogoMaker
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.Finding
 import ru.maxrubtsoff.bankagg.domain.model.Payment
@@ -35,7 +37,9 @@ class SubscriptionsViewModel(
     private val repo: SubscriptionRepository,
     ledger: LedgerRepository,
     banks: BankRepository,
-    private val today: Today
+    private val today: Today,
+    /** Makes the picture of a subscription's look; null where nothing is saved (the tours' sandbox). */
+    private val logos: LogoMaker? = null
 ) : ViewModel() {
 
     private val payments = ledger.observeTransactions(PAYMENT_WINDOW).map { list ->
@@ -88,6 +92,21 @@ class SubscriptionsViewModel(
 
     fun save(s: Subscription, onDone: () -> Unit) = viewModelScope.launch {
         repo.save(s)
+        onDone()
+    }
+
+    /**
+     * Saves [s] with its look (F-33): [picked] is a gallery image to cut into the
+     * subscription's picture; without [usePicture] the picture goes, letters stay.
+     */
+    fun saveWithPicture(s: Subscription, picked: Uri?, usePicture: Boolean, onDone: () -> Unit) = viewModelScope.launch {
+        val look = s.look
+        val logo = when {
+            !usePicture -> null
+            picked != null -> logos?.make(picked, s.id)
+            else -> look.logoFile
+        }
+        repo.save(s.copy(decor = look.copy(logoFile = logo)))
         onDone()
     }
 

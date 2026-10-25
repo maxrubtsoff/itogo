@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.withContext
 import ru.maxrubtsoff.bankagg.domain.model.AppLock
 import ru.maxrubtsoff.bankagg.domain.model.Feature
 import ru.maxrubtsoff.bankagg.domain.model.Features
+import ru.maxrubtsoff.bankagg.domain.model.IntroSlidesRule
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 
 class SettingsViewModel(
@@ -41,6 +43,12 @@ class SettingsViewModel(
     fun toggleFeature(f: Feature) = viewModelScope.launch { settings.setFeatures(settings.currentFeatures().toggle(f)) }
 
     fun finishOnboarding() = viewModelScope.launch { settings.setOnboarded(true) }
+
+    /** «Что такое Itogo» is shown once, at the very first launch (B-50). */
+    suspend fun showIntroSlides(): Boolean =
+        IntroSlidesRule.show(onboarded = settings.onboarded.first(), shown = settings.introShown())
+
+    fun markIntroShown() = viewModelScope.launch { settings.markIntroShown() }
 
     // ---- privacy ----
 

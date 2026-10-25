@@ -28,6 +28,8 @@ class RecordNotificationTest {
             stored.any { it.contentHash == contentHash && it.postedAt in from..to }
         override fun observeRecent(limit: Int): Flow<List<CapturedEvent>> = emptyFlow()
         override suspend fun trim(parsedBefore: Long, unparsedBefore: Long) = 0
+        override suspend fun all(): List<CapturedEvent> = stored.toList()
+        override suspend fun updateParse(id: Long, parsed: Boolean, dedupHash: String, contentHash: String) = Unit
     }
 
     private class FakeLedger : LedgerRepository {
@@ -43,6 +45,12 @@ class RecordNotificationTest {
         override suspend fun setExcluded(accountId: String, excluded: Boolean) = Unit
         override fun observeTransactions(limit: Int): Flow<List<Transaction>> = emptyFlow()
         override suspend fun clear() {}
+        override suspend fun account(accountId: String): Account? = null
+        override suspend fun transaction(id: String): Transaction? = txs.firstOrNull { it.id == id }
+        override suspend fun deleteTransaction(id: String) { txs.removeAll { it.id == id } }
+        override suspend fun setCountedBalance(accountId: String, balanceMinor: Long, estimated: Boolean) {
+            balances[accountId] = balanceMinor
+        }
     }
 
     private val direct = object : TransactionRunner {

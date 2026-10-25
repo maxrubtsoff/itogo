@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Капитал · валюта</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+.cur{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(108,196,232,.14);color:#6CC4E8;font:700 14px/1 "Golos Text",system-ui,sans-serif;flex:none}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="hdr"><h1>Капитал</h1></div>
+  <div class="body" style="padding-top: 0; gap: 12px;">
+    <div class="tabs"><span>Счета</span><span>Вклады</span><span class="on">Валюта</span><span>Наличные</span></div>
+    <div class="actrow">
+      <span class="what">3 валюты</span>
+      <button class="add" aria-label="Добавить валюту"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button>
+    </div>
+
+    <div class="panel glow" style="--gc: rgba(108,196,232,.2); padding: 20px; display: flex; flex-direction: column; gap: 6px;">
+      <div class="amt hero">1 087 450 ₽</div>
+      <div class="t-sm">по курсу ЦБ на сегодня</div>
+    </div>
+
+    <div class="panel list">
+      <div class="lrow"><span class="cur">$</span><span class="grow" style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span class="t-body">Доллар</span><span class="t-sm">8 410 $</span></span><span class="amt rowa">812 406 ₽</span></div>
+      <div class="lrow"><span class="cur">€</span><span class="grow" style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span class="t-body">Евро</span><span class="t-sm">2 100 €</span></span><span class="amt rowa">218 330<span class="k">,40 ₽</span></span></div>
+      <div class="lrow"><span class="cur">¥</span><span class="grow" style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span class="t-body">Юань</span><span class="t-sm">4 200 ¥</span></span><span class="amt rowa">56 713<span class="k">,60 ₽</span></span></div>
+    </div>
+  </div>
+  <div class="bottombar">
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z"></path></svg>Обзор</span>
+    <span class="on"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16v13H4zM16 12h4"></path></svg>Капитал</span>
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M19 5 5 19M7 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path></svg>Платежи</span>
+    <span><svg class="ico" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-2-4-2 1-2-2V4h-4v2l-2 2-2-1-2 4 2 1v0l-2 1 2 4 2-1 2 2v2h4v-2l2-2 2 1 2-4z"></path></svg>Настройки</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

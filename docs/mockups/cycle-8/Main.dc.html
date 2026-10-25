@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Восстановить</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="slitok.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..700&amp;family=Unbounded:wght@400..700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0F0E}
+a{color:#F0C878}a:hover{color:#D7A74A}
+</style>
+</helmet>
+<div class="scr" style="height: 844px;">
+  <div class="top">
+    <button class="ib fg" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></button>
+    <h1 class="sm">Резервная копия</h1>
+  </div>
+  <div class="body" style="padding-top: 4px;">
+    <div class="panel" style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+      <div class="row" style="gap: 14px;">
+        <span style="width: 40px; height: 40px; border-radius: 12px; background: rgba(89,226,166,.12); color: var(--mint); display: grid; place-items: center; flex: none;"><svg class="ico" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18zM9 13l2 2 4-4"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span class="t-title">Копия сохраняется сама</span><span class="t-sm">Последняя — сегодня в 23:31</span></span>
+      </div>
+      <div class="brow"><button class="btn brass">Сохранить</button><button class="btn plate">Восстановить</button></div>
+    </div>
+  </div>
+  <div class="veil"></div>
+  <div class="sheet" style="gap: 16px; padding-bottom: 28px;">
+    <div class="handle"></div>
+    <h2>Восстановить</h2>
+    <p class="sub">Копии за 7 дней</p>
+    <div class="sgroup">
+      <button class="srow"><span class="st"><b>Сегодня, 23:31</b><small>четверг</small></span></button>
+      <button class="srow"><span class="st"><b>Сегодня, 14:02</b><small>четверг</small></span><span class="tag n">вручную</span></button>
+      <button class="srow"><span class="st"><b>Вчера, 23:30</b><small>среда</small></span></button>
+      <button class="srow"><span class="st"><b>21 октября, 19:12</b><small>вторник</small></span><span class="tag n">до восстановления</span></button>
+      <button class="srow"><span class="st"><b>20 октября, 23:30</b><small>понедельник</small></span></button>
+    </div>
+    <div class="sgroup">
+      <button class="srow"><span class="lead"><svg class="ico" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><path d="M3 7h6l2 2h10v10H3zM3 7V5h6"></path></svg></span><span class="st"><b>Из файла…</b></span><svg class="ico" viewBox="0 0 24 24" style="color: var(--faint); width: 18px; height: 18px;"><path d="M9 6l6 6-6 6"></path></svg></button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

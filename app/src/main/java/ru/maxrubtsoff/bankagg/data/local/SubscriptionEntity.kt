@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.BrandDecor
 import ru.maxrubtsoff.bankagg.domain.model.Period
 import ru.maxrubtsoff.bankagg.domain.model.PeriodUnit
 import ru.maxrubtsoff.bankagg.domain.model.Subscription
@@ -28,7 +29,12 @@ data class SubscriptionEntity(
     val remind: Boolean,
     val status: String,
     val previousPriceMinor: Long?,
-    val createdAt: Long
+    val createdAt: Long,
+    // F-33: the subscription's own look; all null — the one its title gives.
+    val colorArgb: Long? = null,
+    val letters: String? = null,
+    val textColorArgb: Long? = null,
+    val logoFile: String? = null
 )
 
 @Dao
@@ -60,11 +66,16 @@ fun SubscriptionEntity.toDomain(): Subscription = Subscription(
     remind = remind,
     status = runCatching { SubscriptionStatus.valueOf(status) }.getOrDefault(SubscriptionStatus.ACTIVE),
     previousPriceMinor = previousPriceMinor,
-    createdAt = createdAt
+    createdAt = createdAt,
+    decor = if (colorArgb == null && letters == null && textColorArgb == null && logoFile == null) null else {
+        val byTitle = BrandDecor.defaultFor(title)
+        BrandDecor(colorArgb ?: byTitle.colorArgb, letters ?: byTitle.letters, textColorArgb, logoFile)
+    }
 )
 
 fun Subscription.toEntity(): SubscriptionEntity = SubscriptionEntity(
     id = id, title = title, priceMinor = priceMinor, periodUnit = period.unit.name, periodDays = period.days,
     nextEpochDay = nextDate.toEpochDay(), brandKey = brand?.key, payee = payee, remind = remind,
-    status = status.name, previousPriceMinor = previousPriceMinor, createdAt = createdAt
+    status = status.name, previousPriceMinor = previousPriceMinor, createdAt = createdAt,
+    colorArgb = decor?.colorArgb, letters = decor?.letters, textColorArgb = decor?.textColorArgb, logoFile = decor?.logoFile
 )

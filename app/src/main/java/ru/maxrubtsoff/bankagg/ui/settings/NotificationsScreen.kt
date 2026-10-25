@@ -67,6 +67,9 @@ import ru.maxrubtsoff.bankagg.domain.model.ReminderSettings
 import ru.maxrubtsoff.bankagg.domain.repository.ReminderRepository
 import ru.maxrubtsoff.bankagg.ui.common.ChipButton
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.domain.model.ReminderKind
+import ru.maxrubtsoff.bankagg.domain.model.ReminderKinds
+import androidx.compose.material.icons.filled.Autorenew
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
 /**
@@ -119,9 +122,17 @@ fun NotificationsScreen(reminders: ReminderRepository, notifier: AppNotifier, fe
             }
             Panel(Modifier.fillMaxWidth()) {
                 val rows = buildList {
-                    if (features.collectsNotifications) add(Triple("Новый банк", Icons.Filled.AccountBalance, Slitok.Brass2))
-                    if (features.has(Feature.DEPOSITS)) add(Triple("Вклад заканчивается", Icons.Filled.EventAvailable, Slitok.Violet))
-                    if (features.showCashback) add(Triple("Новый месяц кэшбэка", Icons.Filled.Percent, Slitok.Mint))
+                    // The kinds of the kept sections, decided in the domain (U-52).
+                    ReminderKinds.of(features).forEach { kind ->
+                        add(
+                            when (kind) {
+                                ReminderKind.NEW_BANK -> Triple(kind.label, Icons.Filled.AccountBalance, Slitok.Brass2)
+                                ReminderKind.DEPOSIT_ENDING -> Triple(kind.label, Icons.Filled.EventAvailable, Slitok.Violet)
+                                ReminderKind.CASHBACK_MONTH -> Triple(kind.label, Icons.Filled.Percent, Slitok.Mint)
+                                ReminderKind.SUBSCRIPTION -> Triple(kind.label, Icons.Filled.Autorenew, Slitok.Sky)
+                            }
+                        )
+                    }
                 }
                 rows.forEachIndexed { i, (name, icon, color) ->
                     if (i > 0) HorizontalDivider(Modifier.padding(start = 68.dp), color = Slitok.Line)

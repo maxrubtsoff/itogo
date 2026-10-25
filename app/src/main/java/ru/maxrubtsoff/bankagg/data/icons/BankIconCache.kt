@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -33,9 +34,36 @@ class BankIconCache(context: Context) {
     /** The launch check and the first resume's check would otherwise race on the files. */
     private val busy = Mutex()
 
-    private val _icons = MutableStateFlow<Map<BankBrand, Bitmap>>(emptyMap())
-    /** Installed banks' icons; a bank without an entry has no app on the phone. */
-    val icons: StateFlow<Map<BankBrand, Bitmap>> = _icons.asStateFlow()
+    // Kept by bank key, not by the whole bank: a bank the user renamed or gave a
+    // picture to is a different object and used to lose its icon (B-49).
+    private val _icons = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
+    /** Installed banks' icons by bank key; no entry — no app on the phone. */
+    val icons: StateFlow<Map<String, Bitmap>> = _icons.asStateFlow()
+
+    // The user's own pictures (banks, subscriptions) by file path, decoded in the
+    // background and shrunk to icon size (U-55/P2): a screen only reads what is ready.
+    // A key with no picture means the file couldn't be read.
+    private val _pictures = MutableStateFlow<Map<String, Bitmap?>>(emptyMap())
+    val pictures: StateFlow<Map<String, Bitmap?>> = _pictures.asStateFlow()
+    private val asked = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** Starts decoding the picture at [path] unless it already is (or was). */
+    fun loadPicture(path: String) {
+        if (!asked.add(path)) return
+        scope.launch {
+            val bitmap = runCatching { decodeScaled(path) }.getOrNull()
+            _pictures.update { it + (path to bitmap) }
+        }
+    }
+
+    private fun decodeScaled(path: String): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= ICON_PX) sample *= 2
+        return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+    }
 
     /** Reads the saved icons (a few small files), then refreshes them in the background if they're old. */
     fun start() {
@@ -48,10 +76,10 @@ class BankIconCache(context: Context) {
         scope.launch { busy.withLock { refreshIfStale() } }
     }
 
-    private fun readSaved(): Map<BankBrand, Bitmap> =
+    private fun readSaved(): Map<String, Bitmap> =
         BankBrand.all.mapNotNull { b ->
             val f = File(dir, "${b.key}.png")
-            if (!f.exists()) null else BitmapFactory.decodeFile(f.absolutePath)?.let { b to it }
+            if (!f.exists()) null else BitmapFactory.decodeFile(f.absolutePath)?.let { b.key to it }
         }.toMap()
 
     private fun refreshIfStale() {
@@ -66,10 +94,10 @@ class BankIconCache(context: Context) {
         val fresh = installed.mapNotNull { b ->
             InstalledApps.iconFor(appContext, b, ICON_PX)?.let { bmp ->
                 runCatching { File(dir, "${b.key}.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) } }
-                b to bmp
+                b.key to bmp
             }
         }.toMap()
-        BankBrand.all.filter { it !in fresh }.forEach { File(dir, "${it.key}.png").delete() }
+        BankBrand.all.filterNot { it.key in fresh }.forEach { File(dir, "${it.key}.png").delete() }
         meta.writeText((listOf(now.toString()) + installed.map { it.key }).joinToString("\n"))
         _icons.value = fresh
     }

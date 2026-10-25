@@ -44,6 +44,15 @@ interface LedgerDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransaction(tx: TransactionEntity): Long
 
+    @Query("SELECT * FROM transactions WHERE id = :id")
+    suspend fun transaction(id: String): TransactionEntity?
+
+    @Query("DELETE FROM transactions WHERE id = :id")
+    suspend fun deleteTransaction(id: String)
+
+    @Query("UPDATE accounts SET balanceMinor = :balanceMinor, estimated = :estimated WHERE id = :id")
+    suspend fun setCountedBalance(id: String, balanceMinor: Long, estimated: Boolean)
+
     @Query("SELECT * FROM accounts ORDER BY brandKey, title")
     fun observeAccounts(): Flow<List<AccountEntity>>
 

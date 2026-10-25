@@ -23,6 +23,9 @@ class CandidateStore(context: Context) : CandidateRepository {
     private val _list = MutableStateFlow(read())
     override val candidates: Flow<List<BankCandidate>> = _list.asStateFlow()
 
+    private val _ignored = MutableStateFlow(ignoredNow())
+    override val ignoredApps: Flow<Set<String>> = _ignored.asStateFlow()
+
     override suspend fun current(): List<BankCandidate> = _list.value
 
     override suspend fun put(candidate: BankCandidate) = lock.withLock {
@@ -34,8 +37,17 @@ class CandidateStore(context: Context) : CandidateRepository {
     }
 
     override suspend fun ignore(packageName: String) = lock.withLock {
-        prefs.edit().putStringSet(KEY_IGNORED, ignoredNow() + packageName).apply()
+        setIgnored(ignoredNow() + packageName)
         write(_list.value.filterNot { it.packageName == packageName })
+    }
+
+    override suspend fun unignore(packageName: String) = lock.withLock {
+        setIgnored(ignoredNow() - packageName)
+    }
+
+    private fun setIgnored(packages: Set<String>) {
+        prefs.edit().putStringSet(KEY_IGNORED, packages).apply()
+        _ignored.value = packages
     }
 
     override suspend fun ignored(): Set<String> = ignoredNow()

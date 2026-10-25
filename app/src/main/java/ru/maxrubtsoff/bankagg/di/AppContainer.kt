@@ -56,11 +56,14 @@ import ru.maxrubtsoff.bankagg.domain.repository.OcrEngine
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import ru.maxrubtsoff.bankagg.domain.repository.TextEmbedder
 import ru.maxrubtsoff.bankagg.domain.model.CategoryResolver
+import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.domain.model.JournalRetention
 import ru.maxrubtsoff.bankagg.domain.usecase.ClassifyScreenshot
 import ru.maxrubtsoff.bankagg.domain.usecase.RecognizeCashbackShot
 import ru.maxrubtsoff.bankagg.domain.usecase.RecognizeDepositShot
+import ru.maxrubtsoff.bankagg.domain.parser.NotificationParser
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordNotification
+import ru.maxrubtsoff.bankagg.domain.usecase.RepairFromJournal
 
 /** Manual DI container. Data stays local; the only network call is CBR rates ([CbrRatesSource]). */
 class AppContainer(context: Context) {
@@ -119,12 +122,23 @@ class AppContainer(context: Context) {
     val textEmbedder: TextEmbedder by lazy { OnnxTextEmbedder(appContext) }
     val categoryResolver by lazy { CategoryResolver(textEmbedder) }
 
-    val backupManager by lazy { BackupManager(appContext, db, settings, banks) }
+    val backupManager by lazy { BackupManager(appContext, db, settings, banks, bankCandidates) }
     val autoBackup by lazy { AutoBackup(db, backupManager, settings) }
     val backupPassword by lazy { BackupPassword(appContext) }
     val subscriptionRepository: SubscriptionRepository by lazy { SubscriptionRepositoryImpl(db.subscriptionDao()) }
 
     /** Keeps the notification journal from growing forever (U-33). */
+    /**
+     * The better parser goes over the log once and fixes what the old one got
+     * wrong — wrong signs on transfers and advertisements taken for operations
+     * (B-45, B-46).
+     */
+    suspend fun repairJournal() {
+        if (settings.repairedParserVersion() >= NotificationParser.VERSION) return
+        runCatching { repairFromJournal() }
+            .onSuccess { settings.setRepairedParserVersion(NotificationParser.VERSION) }
+    }
+
     suspend fun trimJournal() {
         val (parsed, unparsed) = JournalRetention.cutoffs(System.currentTimeMillis())
         runCatching { eventRepository.trim(parsed, unparsed) }
@@ -136,6 +150,7 @@ class AppContainer(context: Context) {
     // Use cases
     val transactionRunner by lazy { RoomTransactionRunner(db) }
     val recordNotification by lazy { RecordNotification(eventRepository, ledgerRepository, transactionRunner) }
+    val repairFromJournal by lazy { RepairFromJournal(eventRepository, ledgerRepository, transactionRunner) }
 
     /** The app's own notifications and their switches (F-24). */
     val reminders: ReminderStore by lazy { ReminderStore(appContext) }
@@ -151,6 +166,12 @@ class AppContainer(context: Context) {
     val getCapital by lazy {
         GetCapital(ledgerRepository, depositRepository, fxRepository, ratesRepository, cashRepository, settings, today)
     }
+
+    /**
+     * A fresh sandbox for a tour (U-54): the use-cases over example data in
+     * memory, nothing written anywhere. Built per tour, so a repeat starts clean.
+     */
+    fun sandbox(features: Features = Features.ALL): SandboxContainer = SandboxContainer(appContext, today, features)
 
     /** This process's lock session: unlocked yet, and when the app last went to the background. */
     val lockSession = LockSession()

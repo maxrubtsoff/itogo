@@ -99,4 +99,15 @@ class CashbackSummaryTest {
         assertEquals(SortOrder(CashbackSummary.Order.ALPHABET), CashbackSummary.Order.decode("abc"))
         assertEquals(SortOrder(CashbackSummary.Order.PERCENT), CashbackSummary.Order.decode(null))
     }
+
+    @Test fun caption_countsBanksAndCategories() {
+        val items = listOf(
+            item(BankBrand.SBER, "groceries", "Супермаркеты", 10.0),
+            item(BankBrand.ALFA, "groceries", "Продукты", 5.0),
+            item(BankBrand.ALFA, "pharmacy", "Аптеки", 7.0)
+        )
+        // Two banks; «Супермаркеты» and «Продукты» are one catalogue group.
+        assertEquals("2 банка · 2 категории", CashbackSummary.caption(items))
+        assertEquals("Кэшбэка пока нет", CashbackSummary.caption(emptyList()))
+    }
 }

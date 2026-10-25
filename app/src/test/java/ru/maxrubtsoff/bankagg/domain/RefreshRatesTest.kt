@@ -17,6 +17,8 @@ import java.time.LocalDate
 class RefreshRatesTest {
 
     private class FakeSettings : SettingsRepository {
+        override suspend fun repairedParserVersion() = 0
+        override suspend fun setRepairedParserVersion(version: Int) = Unit
         var attempt = 0L
         var success: Long? = null
         override val selectedPackages: Flow<Set<String>> = emptyFlow()

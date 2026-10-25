@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import ru.maxrubtsoff.bankagg.ui.common.cascade
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -164,26 +165,32 @@ fun rememberDepositFormState(
 // ---- the fields ----
 
 @Composable
-fun DepositFormFields(state: DepositFormState) {
+fun DepositFormFields(state: DepositFormState, reveal: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        FieldLabel("Банк")
-        BankPickerRow(selected = state.brand, onSelect = { state.brand = it })
+        Column(Modifier.cascade(0, reveal), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            FieldLabel("Банк")
+            BankPickerRow(selected = state.brand, onSelect = { state.brand = it })
+        }
 
-        TextInput(
-            label = "Название (необязательно)",
-            value = state.title,
-            onChange = { state.title = it },
-            placeholder = "напр. «Надёжный»"
-        )
+        Box(Modifier.cascade(1, reveal)) {
+            TextInput(
+                label = "Название (необязательно)",
+                value = state.title,
+                onChange = { state.title = it },
+                placeholder = "напр. «Надёжный»"
+            )
+        }
 
-        AmountField(
-            label = "Сумма на входе",
-            value = state.principal,
-            onChange = { state.principal = it },
-            placeholder = "0 ₽"
-        )
+        Box(Modifier.cascade(2, reveal)) {
+            AmountField(
+                label = "Сумма на входе",
+                value = state.principal,
+                onChange = { state.principal = it },
+                placeholder = "0 ₽"
+            )
+        }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.cascade(3, reveal), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.weight(1f)) {
                 AmountField(
                     label = "Ставка, % годовых",
@@ -198,12 +205,12 @@ fun DepositFormFields(state: DepositFormState) {
             }
         }
 
-        DateField("Дата окончания", state.end) { state.end = it }
+        Box(Modifier.cascade(4, reveal)) { DateField("Дата окончания", state.end) { state.end = it } }
 
-        MethodPicker(state.method) { state.method = it }
+        Box(Modifier.cascade(5, reveal)) { MethodPicker(state.method) { state.method = it } }
 
         // Auto-compute vs explicit exit amount.
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.cascade(6, reveal), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Считать доход по ставке", style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg)
                 Text(
@@ -215,16 +222,18 @@ fun DepositFormFields(state: DepositFormState) {
             SlitokSwitch(checked = state.autoExit, onChange = { state.autoExit = it })
         }
 
-        if (state.autoExit) {
-            // While typing it rides on top of the keyboard instead (KeyboardExitSum).
-            if (!keyboardOpen()) ComputedExitRow(state.payoutPreview())
-        } else {
-            AmountField(
-                label = "Сумма на выходе",
-                value = state.exit,
-                onChange = { state.exit = it },
-                placeholder = "0 ₽"
-            )
+        Box(Modifier.cascade(7, reveal)) {
+            if (state.autoExit) {
+                // While typing it rides on top of the keyboard instead (KeyboardExitSum).
+                if (!keyboardOpen()) ComputedExitRow(state.payoutPreview())
+            } else {
+                AmountField(
+                    label = "Сумма на выходе",
+                    value = state.exit,
+                    onChange = { state.exit = it },
+                    placeholder = "0 ₽"
+                )
+            }
         }
     }
 }
