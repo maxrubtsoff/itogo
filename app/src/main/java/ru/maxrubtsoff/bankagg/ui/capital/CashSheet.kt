@@ -69,7 +69,7 @@ fun CashSheet(currentMinor: Long, onSave: (Long) -> Unit, onDismiss: () -> Unit)
     val input = parseAmountMinor(text.text)
     val result = input?.let { CashEdit.result(currentMinor, mode, it) }
 
-    SlitokSheet(onDismiss) {
+    SlitokSheet(onDismiss, imeField = true) {
         Text("Наличные", style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(CashEdit.Mode.SET to "Задать", CashEdit.Mode.ADD to "+ Добавить", CashEdit.Mode.TAKE to "− Взять")
