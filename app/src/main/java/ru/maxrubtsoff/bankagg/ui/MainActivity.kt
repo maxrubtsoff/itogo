@@ -65,6 +65,8 @@ import ru.maxrubtsoff.bankagg.data.security.PhoneKeys
 import ru.maxrubtsoff.bankagg.ui.common.twoFingerSwipeDown
 import ru.maxrubtsoff.bankagg.ui.common.LocalRevealAmounts
 import ru.maxrubtsoff.bankagg.ui.common.LocalAmountsHidden
+import ru.maxrubtsoff.bankagg.ui.history.CapitalHistoryScreen
+import ru.maxrubtsoff.bankagg.ui.history.CapitalHistoryViewModel
 import ru.maxrubtsoff.bankagg.domain.model.FlipDetector
 import ru.maxrubtsoff.bankagg.domain.model.AppLock
 import kotlinx.coroutines.withContext
@@ -210,6 +212,9 @@ private object Routes {
     const val CAPITAL = "capital?section={section}"
     const val CAPITAL_BASE = "capital"
     fun capital(part: CapitalPart) = "capital?section=${part.key}"
+    /** F-36: the capital's history; [part] null — the total. */
+    const val CAPITAL_HISTORY = "history/capital?part={part}"
+    fun capitalHistory(part: CapitalPart?) = "history/capital?part=${part?.key ?: "total"}"
     const val CURRENCY = "currency/{code}"
     fun currency(code: String) = "currency/$code"
     const val SETTINGS_BANKS = "settings/banks"
@@ -327,7 +332,12 @@ class MainActivity : FragmentActivity() {
                             { openRoute.value = null }
                         ) { shared.value = emptyList() }
                     }
-                    if (isLocked) LockGate(container)
+                    // U-61: the lock dissolves instead of vanishing; it appears at once (the app must not show first).
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isLocked,
+                        enter = androidx.compose.animation.EnterTransition.None,
+                        exit = androidx.compose.animation.fadeOut(Motion.tween(Motion.NORMAL))
+                    ) { LockGate(container) }
                 }
             }
         }
@@ -607,12 +617,20 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     // It is the same screen only with the same section: «Капитал» on another part would end up
     // under the fade-out in the wrong place. The jump to the right section is tried once.
     var tourJumped by remember { mutableStateOf(false) }
+    // B-66: the tour began from «Обучение» (the close goes back there) and the examples that
+    // are already up while the app travels to the screen, so the person's own data never flashes.
+    var tourFromLearning by remember { mutableStateOf(false) }
+    var stagedTour by remember { mutableStateOf<TourSession?>(null) }
     LaunchedEffect(pendingTour, backStack) {
         val section = pendingTour ?: return@LaunchedEffect
         if (tour != null) { pendingTour = null; return@LaunchedEffect }
         val screen = tourScreenOf(section, features)
         val entry = backStack ?: return@LaunchedEffect
         if (entry.destination.route != screen.pattern) {
+            if (stagedTour?.section != section) {
+                tourFromLearning = entry.destination.route == Routes.LEARNING
+                stagedTour = TourSession(section, features, notifAccess, container.sandbox(features)).also { it.sandboxAlpha.snapTo(1f) }
+            }
             if (section == TourSection.GENERAL) openTab(screen.route) else nav.navigate(screen.route)
             return@LaunchedEffect
         }
@@ -624,7 +642,9 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
         entry.lifecycle.currentStateFlow.first { it == Lifecycle.State.RESUMED }
         pendingTour = null
         tourJumped = false
-        tour = TourSession(section, features, notifAccess, container.sandbox(features))
+        if (stagedTour == null) tourFromLearning = false
+        tour = stagedTour?.takeIf { it.section == section } ?: TourSession(section, features, notifAccess, container.sandbox(features))
+        stagedTour = null
     }
 
     val myBanks by container.banks.myBanks.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -690,6 +710,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         vm = capitalVm,
                         cashbackVm = cashbackVm,
                         onOpenCapital = { openPart(it) },
+                        onOpenHistory = { nav.navigate(Routes.capitalHistory(null)) },
                         onOpenCashback = { openTab(Routes.CASHBACK_BASE) },
                         onOpenCashbackNext = { jumpTo("cashback?offset=1") },
                         onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
@@ -766,8 +787,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         onOpenDepositShot = { id -> nav.navigate(Routes.depositShot(id)) },
                         onOpenDepositBatch = { ids -> nav.navigate(Routes.depositBatch(ids)) },
                         onManualDeposit = { nav.navigate(Routes.DEPOSITS_MANUAL) },
-                        onOpenPendingShots = { nav.navigate(Routes.DEPOSITS_ADD) },
                         onOpenCurrency = { code -> nav.navigate(Routes.currency(code)) },
+                        onOpenHistory = { nav.navigate(Routes.capitalHistory(it)) },
                         selectedPackages = selectedPackages,
                         onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
                         onAddBank = { nav.navigate(Routes.BANKS_ADD) },
@@ -775,6 +796,13 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         onOpenLog = { nav.navigate(Routes.SETTINGS_LOG) }
                     ) }
                 }
+            }
+            composable(
+                Routes.CAPITAL_HISTORY,
+                arguments = listOf(navArgument("part") { type = NavType.StringType; nullable = true; defaultValue = null })
+            ) { entry ->
+                val historyVm: CapitalHistoryViewModel = viewModel(entry, factory = factory)
+                CapitalHistoryScreen(historyVm, entry.arguments?.getString("part"), onBack = { nav.popBackStack() })
             }
             composable(Routes.SETTINGS) {
                 TopLevel(padding) {
@@ -943,7 +971,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             }
         }
         // The tour's examples over the screen it plays on (B-56); the bottom bar stays the real one.
-        tour?.let { TourSandboxLayer(it, padding) }
+        (tour ?: stagedTour)?.let { TourSandboxLayer(it, padding) }
         }
         }
     }
@@ -957,7 +985,11 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             // A closed tour counts as taken (F-30).
             onFinished = {
                 tourScope.launch { container.settings.markTourDone(session.section.key) }
+                // B-65: nothing of the tour is left to catch touches; B-66: back to «Обучение» if it began there.
                 tour = null
+                pendingTour = null
+                stagedTour = null
+                if (tourFromLearning) { tourFromLearning = false; nav.popBackStack(Routes.LEARNING, false) }
             },
             onAllowAccess = { Perms.openNotificationAccessSettings(context) }
         )

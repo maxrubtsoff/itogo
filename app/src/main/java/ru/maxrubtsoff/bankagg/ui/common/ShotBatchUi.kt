@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -30,6 +32,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -64,9 +70,14 @@ fun BatchProgress(done: Int, total: Int) {
     }
 }
 
-/** A group's screenshots as small thumbnails; tapping one opens [onOpen]. */
+/** A group's screenshots as small thumbnails; tapping one opens [onOpen], a long press carries it when [drag] is given (U-65). */
 @Composable
-fun ShotThumbs(paths: List<Pair<String, String>>, onOpen: (String) -> Unit) {
+fun ShotThumbs(
+    paths: List<Pair<String, String>>,
+    onOpen: (String) -> Unit,
+    drag: ShotDragState? = null,
+    trailing: (@Composable () -> Unit)? = null
+) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         paths.forEach { (id, path) ->
             val shape = RoundedCornerShape(8.dp)
@@ -77,6 +88,7 @@ fun ShotThumbs(paths: List<Pair<String, String>>, onOpen: (String) -> Unit) {
                     .background(Slitok.Inset)
                     .border(1.dp, Slitok.Line, shape)
                     .clickable { onOpen(id) }
+                    .let { if (drag != null) it.shotDragSource(drag, id, path) else it }
             ) {
                 if (path.isNotBlank() && File(path).exists()) {
                     Image(
@@ -87,6 +99,71 @@ fun ShotThumbs(paths: List<Pair<String, String>>, onOpen: (String) -> Unit) {
                     )
                 }
             }
+        }
+        trailing?.invoke()
+    }
+}
+
+/** The dashed «+» that ends a deposit's row of screenshots (F-38): adds one more. */
+@Composable
+fun AddShotTile(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Box(
+        Modifier
+            .size(width = 40.dp, height = 64.dp)
+            .clip(shape)
+            .background(Slitok.Inset)
+            .drawBehind {
+                drawRoundRect(
+                    Slitok.BrassLine,
+                    cornerRadius = CornerRadius(8.dp.toPx()),
+                    style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())))
+                )
+            }
+            .clickable(onClickLabel = "Добавить скрин", onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(Icons.Filled.Add, contentDescription = "Добавить скрин", tint = Slitok.Brass2)
+    }
+}
+
+/** A screenshot that waits for review, as a row of [AddShotSheet]. */
+data class PendingShotRow(val id: String, val path: String, val title: String, val subtitle: String?)
+
+/** «Добавить скрин»: the shots waiting for review come first, «Из галереи» is the quiet row after them. */
+@Composable
+fun AddShotSheet(pending: List<PendingShotRow>, onPick: (String) -> Unit, onGallery: () -> Unit, onDismiss: () -> Unit) {
+    SlitokSheet(onDismiss) {
+        Text("Добавить скрин", style = MaterialTheme.typography.titleMedium)
+        if (pending.isNotEmpty()) {
+            SheetList {
+                pending.forEach { row ->
+                    SheetRow(
+                        row.title,
+                        subtitle = row.subtitle,
+                        leading = { SheetThumb(row.path) },
+                        onClick = { onPick(row.id) }
+                    )
+                }
+            }
+        }
+        SheetList {
+            SheetRow("Из галереи", leading = { SheetIconTile(Icons.Filled.AddPhotoAlternate) }, arrow = true, onClick = onGallery)
+        }
+    }
+}
+
+@Composable
+private fun SheetThumb(path: String) {
+    val shape = RoundedCornerShape(6.dp)
+    Box(Modifier.size(width = 32.dp, height = 52.dp).clip(shape).background(Slitok.Inset).border(1.dp, Slitok.Line, shape)) {
+        if (path.isNotBlank() && File(path).exists()) {
+            Image(
+                rememberAsyncImagePainter(ShotImage(path)),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

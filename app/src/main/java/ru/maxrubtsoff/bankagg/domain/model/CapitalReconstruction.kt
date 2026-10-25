@@ -1,0 +1,95 @@
+package ru.maxrubtsoff.bankagg.domain.model
+
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+
+/**
+ * The past of the capital, rebuilt once from what the phone already knows (F-36):
+ * accounts from today's balance minus the operations after a day, deposits by
+ * [DepositMath] from the opening day, cash currency from its deals at the CBR rate
+ * of the day, cash as it is now (it was never kept before). Approximate where the
+ * sources are — a balance the bank told or the user set is not an operation — and
+ * exact from the day the daily points start.
+ */
+object CapitalReconstruction {
+
+    /** The deepest the rebuilt past goes. */
+    const val MAX_DAYS = 1100
+
+    /** The first day there is anything to rebuild from; null — nothing at all. */
+    fun firstDay(
+        transactions: List<Transaction>, deposits: List<Deposit>, fxOps: List<FxOperation>,
+        cash: CashBalance?, today: LocalDate, zone: ZoneId = ZoneId.systemDefault()
+    ): LocalDate? {
+        val days = transactions.map { dayOf(it.postedAt, zone) } +
+            deposits.map { it.startDate } + fxOps.map { it.date } +
+            listOfNotNull(cash?.takeIf { it.updatedAt > 0L }?.let { dayOf(it.updatedAt, zone) })
+        val first = days.minOrNull() ?: return null
+        val floor = today.minusDays(MAX_DAYS.toLong())
+        return if (first.isBefore(floor)) floor else first
+    }
+
+    /** Days of weekly rate samples to ask the CBR for: from the first fx deal or foreign account day to [today]. */
+    fun rateDays(from: LocalDate, today: LocalDate, stepDays: Long = 7): List<LocalDate> {
+        val out = ArrayList<LocalDate>()
+        var d = from
+        while (d.isBefore(today)) { out += d; d = d.plusDays(stepDays) }
+        return out
+    }
+
+    fun build(
+        accounts: List<Account>,
+        transactions: List<Transaction>,
+        deposits: List<Deposit>,
+        fxOps: List<FxOperation>,
+        rates: List<FxRate>,
+        cash: CashBalance?,
+        included: Set<CapitalPart>,
+        today: LocalDate,
+        zone: ZoneId = ZoneId.systemDefault()
+    ): List<CapitalPoint> {
+        val hasAnything = accounts.isNotEmpty() || deposits.isNotEmpty() || fxOps.isNotEmpty() || cash != null
+        if (!hasAnything) return emptyList()
+        // One day before the first event: the line starts from what there was before it.
+        val start = firstDay(transactions, deposits, fxOps, cash, today, zone)?.minusDays(1) ?: today
+        val kept = accounts.filterNot { it.excluded }
+        val byAccount = transactions.groupBy { it.accountId }
+        val cashMinor = cash?.amount?.minor ?: 0L
+        val out = ArrayList<CapitalPoint>()
+        var day = start
+        while (!day.isAfter(today)) {
+            val after = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            var accountsMinor = 0L
+            var currencyMinor = 0L
+            kept.forEach { a ->
+                val later = byAccount[a.id].orEmpty().filter { it.postedAt >= after }.sumOf { it.amount.minor }
+                val then = a.balance.minor - later
+                if (a.currency == Currencies.RUB) accountsMinor += then
+                else rateAt(rates, a.currency, day)?.let { currencyMinor += FxMath.rubOf(then, it) }
+            }
+            fxOps.map { it.currency }.distinct().forEach { code ->
+                val qty = fxOps.filter { it.currency == code && !it.date.isAfter(day) }
+                    .sumOf { if (it.kind == FxKind.BUY) it.amountMinor else -it.amountMinor }
+                if (qty != 0L) rateAt(rates, code, day)?.let { currencyMinor += FxMath.rubOf(qty, it) }
+            }
+            val depositsMinor = deposits
+                .filter { !day.isBefore(it.startDate) && DepositMath.isActive(it, day) }
+                .sumOf { DepositMath.project(it, day, seriesPoints = 2).currentValue.minor }
+            val parts = mapOf(
+                CapitalPart.ACCOUNTS to accountsMinor, CapitalPart.DEPOSITS to depositsMinor,
+                CapitalPart.CURRENCY to currencyMinor, CapitalPart.CASH to cashMinor
+            )
+            out += CapitalPoint(day, parts.filterKeys { it in included }.values.sum(), parts)
+            day = day.plusDays(1)
+        }
+        return out
+    }
+
+    /** The rate of the day, or the nearest known one (offline the current rate stands for the whole past). */
+    private fun rateAt(rates: List<FxRate>, code: String, day: LocalDate): Long? =
+        FxRates.latestOnOrBefore(rates, code, day)?.rubPerUnitMicro
+            ?: rates.filter { it.currency == code }.minByOrNull { it.date }?.rubPerUnitMicro
+
+    private fun dayOf(epochMs: Long, zone: ZoneId): LocalDate = Instant.ofEpochMilli(epochMs).atZone(zone).toLocalDate()
+}

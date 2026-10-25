@@ -21,7 +21,9 @@ import ru.maxrubtsoff.bankagg.domain.model.FxOperation
 import ru.maxrubtsoff.bankagg.domain.model.FxPortfolio
 import ru.maxrubtsoff.bankagg.domain.model.FxRate
 import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.domain.repository.CapitalHistoryRepository
 import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
+import ru.maxrubtsoff.bankagg.domain.model.CapitalPoint
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
@@ -43,7 +45,8 @@ class CapitalViewModel(
     private val refreshRates: RefreshRates,
     private val today: Today,
     private val undo: UndoCenter,
-    private val ledger: LedgerRepository
+    private val ledger: LedgerRepository,
+    history: CapitalHistoryRepository
 ) : ViewModel() {
 
     /** Leaves accounts out of the capital or brings them back (U-18). */
@@ -67,6 +70,10 @@ class CapitalViewModel(
     /** Live capital; null until the first emission. */
     val snapshot: StateFlow<CapitalSnapshot?> =
         getCapital().stateIn<CapitalSnapshot?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The capital's daily points: the lines under the sums read the month from them (F-36). */
+    val days: StateFlow<List<CapitalPoint>> =
+        history.observeDays().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val operations: StateFlow<List<FxOperation>> =
         fx.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

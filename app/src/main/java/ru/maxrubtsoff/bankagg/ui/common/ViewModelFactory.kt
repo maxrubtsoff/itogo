@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import ru.maxrubtsoff.bankagg.di.AppContainer
 import ru.maxrubtsoff.bankagg.di.SandboxContainer
 import ru.maxrubtsoff.bankagg.ui.capital.CapitalViewModel
+import ru.maxrubtsoff.bankagg.ui.history.CapitalHistoryViewModel
 import ru.maxrubtsoff.bankagg.ui.cashback.CashbackViewModel
 import ru.maxrubtsoff.bankagg.ui.subscriptions.SubscriptionsViewModel
 import ru.maxrubtsoff.bankagg.ui.deposits.DepositsViewModel
@@ -29,7 +30,13 @@ class ViewModelFactory(
                 container.refreshRates,
                 container.today,
                 container.undo,
-                container.ledgerRepository
+                container.ledgerRepository,
+                container.capitalHistory
+            ) as T
+        modelClass.isAssignableFrom(CapitalHistoryViewModel::class.java) ->
+            CapitalHistoryViewModel(
+                container.capitalHistory, container.ledgerRepository, container.fxRepository,
+                container.depositRepository, container.cashRepository, container.settings, container.today
             ) as T
         modelClass.isAssignableFrom(LogViewModel::class.java) ->
             LogViewModel(container.eventRepository) as T
@@ -87,7 +94,8 @@ class SandboxViewModelFactory(
                 container.refreshRates,
                 container.today,
                 container.undo,
-                container.ledgerRepository
+                container.ledgerRepository,
+                container.capitalHistory
             ) as T
         modelClass.isAssignableFrom(CashbackViewModel::class.java) ->
             CashbackViewModel(
@@ -101,7 +109,7 @@ class SandboxViewModelFactory(
                 container.settings
             ) as T
         modelClass.isAssignableFrom(SubscriptionsViewModel::class.java) ->
-            SubscriptionsViewModel(container.subscriptionRepository, container.ledgerRepository, container.banks, container.today) as T
+            SubscriptionsViewModel(container.subscriptionRepository, container.ledgerRepository, container.banks, container.today, null) as T
         modelClass.isAssignableFrom(DepositsViewModel::class.java) ->
             DepositsViewModel(
                 container.depositRepository,

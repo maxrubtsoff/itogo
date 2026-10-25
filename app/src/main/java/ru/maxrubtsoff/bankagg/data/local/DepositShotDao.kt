@@ -24,6 +24,9 @@ interface DepositShotDao {
     @Query("UPDATE deposit_shots SET status = :status WHERE id = :id")
     suspend fun setStatus(id: String, status: String)
 
+    @Query("UPDATE deposit_shots SET depositId = :depositId WHERE id IN (:ids)")
+    suspend fun setDepositId(ids: List<String>, depositId: String?)
+
     @Query("DELETE FROM deposit_shots WHERE id = :id")
     suspend fun deleteById(id: String)
 

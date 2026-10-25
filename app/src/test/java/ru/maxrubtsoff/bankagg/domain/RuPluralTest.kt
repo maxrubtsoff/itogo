@@ -20,5 +20,10 @@ class RuPluralTest {
         assertEquals("1 валюта", RuPlural.currencies(1))
         assertEquals("3 валюты", RuPlural.currencies(3))
         assertEquals("11 валют", RuPlural.currencies(11))
+        assertEquals("1 скрин ждёт проверки", RuPlural.pendingShots(1))
+        assertEquals("3 скрина ждут проверки", RuPlural.pendingShots(3))
+        assertEquals("11 скринов ждут проверки", RuPlural.pendingShots(11))
+        assertEquals("1 готов", RuPlural.readyShots(1))
+        assertEquals("2 не прочитаны", RuPlural.unreadShots(2))
     }
 }

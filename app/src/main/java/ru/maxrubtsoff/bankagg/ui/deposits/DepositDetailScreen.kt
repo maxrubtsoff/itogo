@@ -61,7 +61,16 @@ import ru.maxrubtsoff.bankagg.ui.common.AmountText
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
 import ru.maxrubtsoff.bankagg.ui.common.RuText
 import ru.maxrubtsoff.bankagg.ui.common.nbsp
+import ru.maxrubtsoff.bankagg.domain.model.DepositShot
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.ui.common.AddShotSheet
+import ru.maxrubtsoff.bankagg.ui.common.AddShotTile
+import ru.maxrubtsoff.bankagg.ui.common.PendingShotRow
+import ru.maxrubtsoff.bankagg.ui.common.ShotThumbs
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
@@ -80,8 +89,15 @@ fun DepositDetailScreen(
     val item by remember(depositId) { vm.observeItem(depositId) }
         .collectAsStateWithLifecycle(initialValue = null)
     val today by vm.todayDate.collectAsStateWithLifecycle()
+    val depositShots by remember(depositId) { vm.observeDepositShots(depositId) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
     val d = item?.deposit
     var toppingUp by remember { mutableStateOf(openTopUp) }
+    var addingShot by remember { mutableStateOf(false) }
+    val pending by vm.shots.collectAsStateWithLifecycle()
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        if (uri != null) vm.addShotTo(depositId, uri)
+    }
 
     Scaffold(
         topBar = {
@@ -133,6 +149,8 @@ fun DepositDetailScreen(
         ) {
             Spacer(Modifier.height(4.dp))
             Hero(d, proj, today)
+            // B-64: all the screens the deposit was made from, not only the first.
+            if (depositShots.isNotEmpty() || pending.isNotEmpty()) DepositShotsBlock(depositShots, onAdd = { addingShot = true })
             Tiles(proj)
             MonthsCard(d, today)
             FactsCard(d)
@@ -140,8 +158,35 @@ fun DepositDetailScreen(
             Spacer(Modifier.height(16.dp))
         }
     }
+    if (addingShot) {
+        // Shots that wait for review come first; «Из галереи» is the quiet row after them.
+        val rows = pending.sortedBy { it.createdAt }.map { s ->
+            PendingShotRow(
+                s.id, s.imagePath,
+                s.brand?.title ?: "Скрин не прочитался",
+                s.draft.endDate?.let { "срок до ${formatDate(it)}" }
+            )
+        }
+        AddShotSheet(
+            pending = rows,
+            onPick = { vm.attachShots(listOf(it), depositId); addingShot = false },
+            onGallery = { addingShot = false; gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            onDismiss = { addingShot = false }
+        )
+    }
     if (toppingUp && d != null) {
         TopUpSheet(d, today, onSave = { minor, date -> vm.addTopUp(d.id, minor, date); toppingUp = false }, onDismiss = { toppingUp = false })
+    }
+}
+
+/** The screenshots this deposit was read from. */
+@Composable
+private fun DepositShotsBlock(shots: List<DepositShot>, onAdd: () -> Unit) {
+    Panel(modifier = Modifier.fillMaxWidth(), radius = 20.dp) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(if (shots.isEmpty()) "Скрины" else "Скрины · ${shots.size}", style = MaterialTheme.typography.titleMedium)
+            ShotThumbs(shots.map { it.id to it.imagePath }, onOpen = {}, trailing = { AddShotTile(onAdd) })
+        }
     }
 }
 

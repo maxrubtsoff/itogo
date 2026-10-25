@@ -14,9 +14,9 @@ import androidx.room.RoomDatabase
         CashbackEntity::class, CashbackShotEntity::class,
         DepositEntity::class, DepositShotEntity::class,
         FxOperationEntity::class, FxRateEntity::class, CashEntity::class, SubscriptionEntity::class,
-        DepositTopUpEntity::class
+        DepositTopUpEntity::class, CapitalSnapshotEntity::class
     ],
-    version = 14,
+    version = 16,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun depositShotDao(): DepositShotDao
     abstract fun fxDao(): FxDao
     abstract fun depositTopUpDao(): DepositTopUpDao
+    abstract fun capitalSnapshotDao(): CapitalSnapshotDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
@@ -41,6 +42,28 @@ abstract class AppDatabase : RoomDatabase() {
         // destructive fallback rather than migrated. From v10 on, real data lives
         // here, so each new version comes with a migration that keeps it.
         // v11: an account can be left out of the capital (U-18).
+        /**
+         * F-36: the capital's daily points. The table starts empty; the past is
+         * rebuilt once in the background ([ru.maxrubtsoff.bankagg.domain.usecase.BuildCapitalHistory]),
+         * as it needs the CBR rates, which a migration must not wait for.
+         */
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `capital_days` (`date` INTEGER NOT NULL, `totalMinor` INTEGER NOT NULL, " +
+                        "`accountsMinor` INTEGER NOT NULL, `depositsMinor` INTEGER NOT NULL, `fxMinor` INTEGER NOT NULL, " +
+                        "`cashMinor` INTEGER NOT NULL, PRIMARY KEY(`date`))"
+                )
+            }
+        }
+
+        /** B-64: a saved deposit keeps all its screenshots — one nullable column. */
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `deposit_shots` ADD COLUMN `depositId` TEXT")
+            }
+        }
+
         /** F-33: a subscription's own look — four nullable columns, nothing is lost. */
         private val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -100,7 +123,7 @@ abstract class AppDatabase : RoomDatabase() {
                         .apply { passphrase?.let { openHelperFactory(SupportOpenHelperFactory(it)) } }
                         // Data is rebuilt from notifications and protected by backup,
                         // so a schema bump rebuilds rather than crashing on update.
-                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                         .fallbackToDestructiveMigration()
                         .build()
                         .also { instance = it }

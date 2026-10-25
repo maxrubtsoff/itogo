@@ -17,7 +17,9 @@ data class DepositShot(
     val status: ShotStatus = ShotStatus.PROCESSING,
     val createdAt: Long = 0,
     val fileName: String? = null,
-    val draft: DepositDraft = DepositDraft()
+    val draft: DepositDraft = DepositDraft(),
+    /** The deposit this shot was saved into (B-64); null while it still waits for review. */
+    val depositId: String? = null
 )
 
 /** Fields the app worked out or took from an uncaptioned number, so the user should glance at them. */

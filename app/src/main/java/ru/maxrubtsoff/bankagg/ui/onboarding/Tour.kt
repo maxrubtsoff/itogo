@@ -7,6 +7,7 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateValueAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -217,7 +218,7 @@ private fun SectionScreen(session: TourSession, factory: SandboxViewModelFactory
                     sectionArg = stage.part?.key,
                     parts = CapitalPart.entries.filter { it in session.features.capitalParts },
                     onOpenDeposit = {}, onOpenDepositShot = {}, onOpenDepositBatch = {}, onManualDeposit = {},
-                    onOpenPendingShots = {}, onOpenCurrency = {}, onOpenBanks = {}
+                    onOpenCurrency = {}, onOpenBanks = {}
                 )
             }
             is Stage.Payments -> {
@@ -310,9 +311,13 @@ fun TourCoach(session: TourSession, onFinished: () -> Unit, onAllowAccess: () ->
         val window: Rect? = target?.let {
             if (framed) TourFrame.framed(it, pad, safe) else TourFrame.dimmed(it, screen, reach = with(density) { 40.dp.toPx() })
         }
-        var last by remember { mutableStateOf(Rect.Zero) }
+        // B-67: the first light appears in place (fades in), it doesn't fly in from the corner.
+        var last by remember { mutableStateOf<Rect?>(null) }
         SideEffect { if (window != null) last = window }
-        val shown by animateValueAsState(window ?: last, Rect.VectorConverter, Motion.tween(Motion.NORMAL, Motion.Standard), label = "tourWindow")
+        val shown by animateValueAsState(
+            window ?: last ?: Rect.Zero, Rect.VectorConverter,
+            if (last == null) snap() else Motion.tween(Motion.NORMAL, Motion.Standard), label = "tourWindow"
+        )
         val shownAlpha by animateFloatAsState(if (window != null) 1f else 0f, Motion.tween(Motion.FAST), label = "tourWindowAlpha")
         val radius = TourFrame.radius(targetRadius, if (framed) pad else 0f, shown)
 

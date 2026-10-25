@@ -68,7 +68,7 @@ import java.time.LocalDate
 data class FxSheetRequest(val kind: FxKind, val currency: String?, val editId: String? = null)
 
 @Composable
-fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency: (String) -> Unit) {
+fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency: (String) -> Unit, onOpenHistory: (CapitalPart?) -> Unit = {}) {
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val lastCurrency by vm.lastCurrency.collectAsStateWithLifecycle()
     var sheetKind by rememberSaveable { mutableStateOf<String?>(null) }
@@ -88,7 +88,7 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
             onAdd = { sheetKind = FxKind.BUY.name },
             addDescription = "Купил валюту"
         )
-        CurrencyHero(snap, refreshing, onRefresh = vm::refreshRatesNow)
+        CurrencyHero(snap, refreshing, onRefresh = vm::refreshRatesNow) { HeroDelta(vm, snap.today, CapitalPart.CURRENCY, onOpenHistory) }
 
         if (cur.isEmpty) {
             Panel(Modifier.fillMaxWidth()) {
@@ -157,12 +157,13 @@ fun BuySellButtons(canSell: Boolean, onBuy: () -> Unit, onSell: () -> Unit) {
 }
 
 @Composable
-private fun CurrencyHero(snap: CapitalSnapshot, refreshing: Boolean, onRefresh: () -> Unit) {
+private fun CurrencyHero(snap: CapitalSnapshot, refreshing: Boolean, onRefresh: () -> Unit, delta: @Composable () -> Unit) {
     val cur = snap.currency
     Panel(Modifier.fillMaxWidth().sharedCard("part-${CapitalPart.CURRENCY.key}"), radius = 22.dp) {
         Box(Modifier.fillMaxWidth().heroGlow(Slitok.Sky)) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 SectionHeroText("Валюта в рублях", Money.ofMinor(snap.part(CapitalPart.CURRENCY).valueMinor).format())
+                delta()
                 if (cur.costMinor > 0L) {
                     AmountText(
                         "наличные: ${signedRub(cur.unrealizedMinor)}" +

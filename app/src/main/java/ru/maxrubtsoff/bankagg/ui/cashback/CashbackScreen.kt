@@ -28,6 +28,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.mutableIntStateOf
 import ru.maxrubtsoff.bankagg.ui.common.PagerTabs
@@ -125,6 +127,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CategoryGroups
 import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.ui.common.CategoryIcon
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import java.io.File
 
@@ -178,9 +181,15 @@ fun CashbackScreen(
             onAdd = { adding = true },
             addDescription = "Добавить кэшбэк"
         )
-        if (isCurrentMonth && hintNextMonth) {
+        // U-62: the hint fades and folds away instead of vanishing; the label is kept for the exit.
+        val hintLabel = remember(currentKey) { CashbackMonth.shortLabel(CashbackMonth.nextKey(currentKey)) }
+        AnimatedVisibility(
+            visible = isCurrentMonth && hintNextMonth,
+            enter = fadeIn(Motion.tween(Motion.NORMAL)) + expandVertically(Motion.tween(Motion.NORMAL, Motion.Standard)),
+            exit = fadeOut(Motion.tween(Motion.FAST)) + shrinkVertically(Motion.tween(Motion.FAST, Motion.Standard))
+        ) {
             NextMonthHint(
-                nextLabel = CashbackMonth.shortLabel(CashbackMonth.nextKey(currentKey)),
+                nextLabel = hintLabel,
                 onClick = { onMonthOffset(monthOffset + 1) }
             )
         }
@@ -204,8 +213,7 @@ fun CashbackScreen(
                 items = month.items,
                 byCategory = byCategory,
                 onEditBank = { brand -> onEditBank(monthKey, brand) },
-                onOpenShot = onOpenShot,
-                onDeleteShot = { vm.deleteShot(it.id) }
+                onOpenBatch = onOpenBatch
             )
         }
     }
@@ -447,8 +455,7 @@ private fun MonthPage(
     items: List<CashbackItem>?,
     byCategory: Boolean,
     onEditBank: (BankBrand) -> Unit,
-    onOpenShot: (String) -> Unit,
-    onDeleteShot: (CashbackShot) -> Unit
+    onOpenBatch: (List<String>) -> Unit
 ) {
     val shots by remember(monthKey) { vm.shots(monthKey) }
         .collectAsStateWithLifecycle(initialValue = emptyList())
@@ -459,6 +466,17 @@ private fun MonthPage(
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // F-38: screens waiting for review sit on top, one plate, opening the batch screen.
+        if (shots.isNotEmpty()) {
+            PendingShotsPlate(
+                shots = shots.size,
+                thumbs = shots.map { it.imagePath },
+                ready = shots.count { it.status == ShotStatus.RECOGNIZED },
+                check = shots.count { it.status == ShotStatus.NEEDS_INPUT },
+                unread = shots.count { it.status == ShotStatus.FAILED },
+                onOpen = { onOpenBatch(shots.map { it.id }) }
+            )
+        }
         if (items == null) {
             // Not loaded yet: nothing to show, nothing to offer.
         } else if (byBrand.isEmpty()) {
@@ -480,132 +498,9 @@ private fun MonthPage(
             }
         }
 
-        // ----- shots: added through "+", listed here once there are any -----
-        if (shots.isNotEmpty()) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                "Скрины кэшбэка",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f)
-            )
-            if (shots.isNotEmpty()) {
-                Text(
-                    shotsSummary(shots),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Slitok.Muted
-                )
-            }
-        }
-        ShotRail(shots = shots, onOpenShot = onOpenShot, onDeleteShot = onDeleteShot)
-        }
         Spacer(Modifier.height(8.dp))
     }
 }
-
-private fun shotsSummary(shots: List<CashbackShot>): String {
-    val needs = shots.count { it.status == ShotStatus.NEEDS_INPUT || it.status == ShotStatus.FAILED }
-    return if (needs > 0) "${shots.size} · ${ru.maxrubtsoff.bankagg.domain.model.RuPlural.needsCheck(needs)}" else "${shots.size}"
-}
-
-@Composable
-private fun ShotRail(
-    shots: List<CashbackShot>,
-    onOpenShot: (String) -> Unit,
-    onDeleteShot: (CashbackShot) -> Unit
-) {
-    Row(
-
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        shots.forEach { shot ->
-            ShotCard(shot, onClick = { onOpenShot(shot.id) }, onDelete = { onDeleteShot(shot) })
-        }
-    }
-}
-
-
-/** A shot card: the user's photo (muted so small thumbnails don't shimmer) + status. */
-@Composable
-private fun ShotCard(shot: CashbackShot, onClick: () -> Unit, onDelete: () -> Unit) {
-    val shape = RoundedCornerShape(16.dp)
-    Box(
-        Modifier
-            .width(132.dp)
-            .height(150.dp)
-            .clip(shape)
-            .border(1.dp, Slitok.Line, shape)
-            .background(Slitok.Inset)
-            .clickable(onClick = onClick)
-    ) {
-        val exists = remember(shot.imagePath) { shot.imagePath.isNotBlank() && File(shot.imagePath).exists() }
-        if (exists) {
-            Image(
-                painter = rememberAsyncImagePainter(ShotImage(shot.imagePath)),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.TopCenter,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(2.dp)          // muted so text on the screenshot doesn't shimmer
-            )
-        }
-        // Darkening veil + bottom fade so the status/caption stay readable.
-        Box(Modifier.fillMaxSize().background(Slitok.ScrimLight))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(72.dp)
-                .align(Alignment.BottomCenter)
-                .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color.Transparent, Slitok.ScrimDeep)
-                    )
-                )
-        )
-
-        StatusPill(shot.status, Modifier.align(Alignment.TopStart).padding(8.dp))
-
-        if (shot.status != ShotStatus.PROCESSING) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Slitok.Scrim)
-                    .clickable(onClick = onDelete),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Filled.Close, contentDescription = "Удалить скрин", tint = Slitok.Fg,
-                    modifier = Modifier.size(14.dp))
-            }
-        }
-
-        Column(Modifier.align(Alignment.BottomStart).padding(10.dp)) {
-            Text(
-                shot.brand?.title ?: "Банк не распознан",
-                style = MaterialTheme.typography.labelMedium,
-                color = Slitok.Fg,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatusPill(status: ShotStatus, modifier: Modifier = Modifier) {
-    // U-40/A7: one status tag for screenshots; «не распознано» is grey, not red (B-35).
-    val (label, tone) = when (status) {
-        ShotStatus.RECOGNIZED -> "Готово" to TagTone.Mint
-        ShotStatus.NEEDS_INPUT -> "Проверьте" to TagTone.Brass
-        ShotStatus.FAILED -> "Не распознано" to TagTone.Neutral
-        ShotStatus.PROCESSING -> "Обработка…" to TagTone.Neutral
-    }
-    SlitokTag(label, tone, modifier)
-}
-
 
 /**
  * A bank's cashback for the month (U-47): its logo and name, the pencil (the

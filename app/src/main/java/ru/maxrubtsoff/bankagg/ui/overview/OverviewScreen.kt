@@ -106,6 +106,8 @@ import ru.maxrubtsoff.bankagg.ui.capital.signedRub
 import ru.maxrubtsoff.bankagg.ui.cashback.CashbackCard
 import ru.maxrubtsoff.bankagg.ui.cashback.CashbackViewModel
 import ru.maxrubtsoff.bankagg.ui.common.AmountText
+import ru.maxrubtsoff.bankagg.ui.common.DeltaLine
+import ru.maxrubtsoff.bankagg.domain.model.CapitalHistory
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.sharedCard
 import ru.maxrubtsoff.bankagg.ui.common.RuText
@@ -125,6 +127,7 @@ fun OverviewScreen(
     vm: CapitalViewModel,
     cashbackVm: CashbackViewModel,
     onOpenCapital: (CapitalPart) -> Unit,
+    onOpenHistory: () -> Unit = {},
     onOpenCashback: () -> Unit,
     onOpenCashbackNext: () -> Unit,
     onOpenBanks: () -> Unit,
@@ -138,6 +141,8 @@ fun OverviewScreen(
     onToggleHidden: () -> Unit = {}
 ) {
     val snapshot by vm.snapshot.collectAsStateWithLifecycle()
+    val days by vm.days.collectAsStateWithLifecycle()
+    val glance = remember(days, snapshot?.today) { snapshot?.let { CapitalHistory.glance(days, it.today) } }
     val notifAccess by rememberNotificationAccess()
     var tuning by rememberSaveable { mutableStateOf(false) }
 
@@ -183,6 +188,8 @@ fun OverviewScreen(
                 snap,
                 onTune = { tuning = true },
                 onOpenPart = onOpenCapital,
+                glance = glance,
+                onOpenHistory = onOpenHistory,
                 onToggleIncluded = { part -> vm.setPartIncluded(part.part, !part.included) },
                 onToggleHidden = onToggleHidden
             )
@@ -298,6 +305,8 @@ private fun CapitalHero(
     snap: CapitalSnapshot,
     onTune: () -> Unit,
     onOpenPart: (CapitalPart) -> Unit,
+    glance: CapitalHistory.Glance?,
+    onOpenHistory: () -> Unit = {},
     onToggleIncluded: (CapitalSnapshot.Part) -> Unit,
     onToggleHidden: () -> Unit
 ) {
@@ -331,7 +340,11 @@ private fun CapitalHero(
                         )
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                // F-36: the month's change under the sum; a tap opens the history.
+                glance?.let {
+                    DeltaLine(Money.ofMinor(it.change.deltaMinor), "за месяц", it.spark, Modifier.padding(end = 12.dp), onClick = onOpenHistory)
+                }
+                Spacer(Modifier.height(if (glance == null) 14.dp else 6.dp))
                 CompositionBar(snap, Modifier.padding(end = 12.dp))
                 Spacer(Modifier.height(6.dp))
                 shown.forEachIndexed { i, part ->

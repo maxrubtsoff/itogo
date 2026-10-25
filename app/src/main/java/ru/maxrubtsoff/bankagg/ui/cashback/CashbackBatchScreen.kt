@@ -58,7 +58,12 @@ import ru.maxrubtsoff.bankagg.ui.common.BatchProgress
 import ru.maxrubtsoff.bankagg.ui.common.MoveShotSheet
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.RuText
+import ru.maxrubtsoff.bankagg.ui.common.ShotDragLayer
+import ru.maxrubtsoff.bankagg.ui.common.ShotDragState
+import ru.maxrubtsoff.bankagg.ui.common.ShotDropZone
 import ru.maxrubtsoff.bankagg.ui.common.ShotThumbs
+import ru.maxrubtsoff.bankagg.ui.common.rememberShotDragState
+import ru.maxrubtsoff.bankagg.ui.common.shotDropTarget
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
 /**
@@ -98,6 +103,25 @@ fun CashbackBatchScreen(
     val groups = layout.map { g -> CashbackBatch.merge(g.mapNotNull(byId::get).map(::itemOf)) }
     val ready = groups.filter { it.brand != null && it.savableLines.isNotEmpty() }
 
+    // U-65: a thumbnail carried onto a bank's card goes there — the same move as «Перенести в…».
+    val drag = rememberShotDragState { id, target ->
+        val from = layout.indexOfFirst { id in it }
+        val to = target?.let { key -> layout.indexOfFirst { it.first() == key } }
+        val nothing = from < 0 || (target != null && (to == null || to < 0 || to == from)) || (target == null && layout[from].size == 1)
+        if (!nothing) {
+            val before = layoutText
+            val oldBrand = byId[id]?.brand
+            layoutText = BatchLayout.encode(BatchLayout.move(layout, id, to))
+            // Joining a bank's card means it is that bank.
+            val joined = to?.let { groups[it].brand }
+            if (joined != null) vm.setShotsBrand(listOf(id), joined)
+            vm.offerUndo("Скрин перенесён") {
+                layoutText = before
+                if (joined != null) vm.restoreShotBrand(id, oldBrand)
+            }
+        }
+    }
+
     var moving by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     var ask by remember { mutableStateOf<Pair<CashbackBatch.Group, Int>?>(null) }
@@ -123,8 +147,9 @@ fun CashbackBatchScreen(
             ScreenHeader("Проверьте кэшбэк", onBack)
         }
     ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Spacer(Modifier.height(4.dp))
@@ -139,16 +164,18 @@ fun CashbackBatchScreen(
                         color = Slitok.Muted
                     )
                     groups.forEachIndexed { i, g ->
-                        Box(Modifier.cascade(i, sawReading)) {
+                        Box(Modifier.cascade(i, sawReading).shotDropTarget(drag, g.ids.first())) {
                             BankGroupCard(
                                 group = g,
                                 shots = g.ids.mapNotNull(byId::get),
                                 onPickBank = { vm.setShotsBrand(g.ids, it) },
                                 onOpenShot = { moving = it },
-                                onFix = { vm.collapseGroup(g) { id -> onOpenShot(id) } }
+                                onFix = { vm.collapseGroup(g) { id -> onOpenShot(id) } },
+                                drag = drag
                             )
                         }
                     }
+                    ShotDropZone(drag, "Отдельный банк")
                     BrassButton(
                         onClick = { saving = true; saveFrom(ready) },
                         enabled = ready.isNotEmpty() && !saving,
@@ -157,6 +184,8 @@ fun CashbackBatchScreen(
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+        ShotDragLayer(drag)
         }
     }
 
@@ -215,7 +244,8 @@ private fun BankGroupCard(
     shots: List<CashbackShot>,
     onPickBank: (BankBrand) -> Unit,
     onOpenShot: (String) -> Unit,
-    onFix: () -> Unit
+    onFix: () -> Unit,
+    drag: ShotDragState
 ) {
     Panel(Modifier.fillMaxWidth(), radius = 18.dp) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -259,7 +289,7 @@ private fun BankGroupCard(
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot)
+            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag)
             PlateButton(onClick = onFix, modifier = Modifier.fillMaxWidth()) { Text("Исправить") }
         }
     }

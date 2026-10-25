@@ -17,7 +17,8 @@ fun DepositShotEntity.toDomain(): DepositShot = DepositShot(
     status = runCatching { ShotStatus.valueOf(status) }.getOrDefault(ShotStatus.NEEDS_INPUT),
     createdAt = createdAt,
     fileName = fileName,
-    draft = draftFromJson(draftJson)
+    draft = draftFromJson(draftJson),
+    depositId = depositId
 )
 
 fun DepositShot.toEntity(): DepositShotEntity = DepositShotEntity(
@@ -27,7 +28,8 @@ fun DepositShot.toEntity(): DepositShotEntity = DepositShotEntity(
     status = status.name,
     createdAt = createdAt,
     fileName = fileName,
-    draftJson = draftToJson(draft)
+    draftJson = draftToJson(draft),
+    depositId = depositId
 )
 
 /** Draft fields as a flat JSON object; missing values are JSON null. */

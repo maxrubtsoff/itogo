@@ -11,9 +11,11 @@ data class ReminderSettings(
     val depositEnding: Boolean = true,
     /** Days before a deposit closes: 1, 3 or 7. */
     val daysBefore: Int = 3,
-    val cashbackMonth: Boolean = true
+    val cashbackMonth: Boolean = true,
+    /** The day before a subscription payment (B-61): its own switch, apart from the cashback month. */
+    val subscriptions: Boolean = true
 ) {
-    val any: Boolean get() = newBank || depositEnding || cashbackMonth
+    val any: Boolean get() = newBank || depositEnding || cashbackMonth || subscriptions
 
     companion object {
         val DAY_CHOICES = listOf(1, 3, 7)
@@ -87,7 +89,7 @@ object Reminders {
         val out = mutableListOf<Reminder>()
         val kinds = ReminderKinds.of(features)
         // F-27: the day before a payment, for subscriptions with the switch on.
-        if (ReminderKind.SUBSCRIPTION in kinds) subscriptions
+        if (settings.subscriptions && ReminderKind.SUBSCRIPTION in kinds) subscriptions
             .filter { it.remind && it.status == SubscriptionStatus.ACTIVE }.forEach { s ->
             val date = Subscriptions.upcoming(s, today)
             if (ChronoUnit.DAYS.between(today, date) != 1L) return@forEach

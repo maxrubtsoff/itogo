@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.data.backup
 
+import ru.maxrubtsoff.bankagg.data.local.CapitalSnapshotEntity
 import ru.maxrubtsoff.bankagg.data.local.DepositTopUpEntity
 import ru.maxrubtsoff.bankagg.data.settings.BankStore
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
@@ -61,6 +62,7 @@ class BackupManager(
     private val depositShots get() = db.depositShotDao()
     private val fx get() = db.fxDao()
     private val topUps get() = db.depositTopUpDao()
+    private val capitalDays get() = db.capitalSnapshotDao()
     private val subscriptions get() = db.subscriptionDao()
 
     /**
@@ -359,6 +361,16 @@ class BackupManager(
             }
         })
 
+        // v7: the capital's daily points (F-36).
+        root.put("capitalDays", JSONArray().apply {
+            capitalDays.all().forEach { c ->
+                put(JSONObject().apply {
+                    put("date", c.date); put("totalMinor", c.totalMinor); put("accountsMinor", c.accountsMinor)
+                    put("depositsMinor", c.depositsMinor); put("fxMinor", c.fxMinor); put("cashMinor", c.cashMinor)
+                })
+            }
+        })
+
         // Deposit shot metadata (the images themselves stay on the device).
         val depShotJson = JSONArray()
         for (s in depositShots.all()) {
@@ -366,6 +378,7 @@ class BackupManager(
                 put("id", s.id); put("imagePath", s.imagePath); put("brandKey", s.brandKey)
                 put("status", s.status); put("createdAt", s.createdAt)
                 put("fileName", s.fileName ?: JSONObject.NULL); put("draftJson", s.draftJson)
+                put("depositId", s.depositId ?: JSONObject.NULL)
             })
         }
         root.put("depositShots", depShotJson)
@@ -430,6 +443,7 @@ class BackupManager(
         val shots: List<CashbackShotEntity>,
         val deposits: List<DepositEntity>,
         val depositTopUps: List<DepositTopUpEntity> = emptyList(),
+        val capitalDays: List<CapitalSnapshotEntity> = emptyList(),
         val depositShots: List<DepositShotEntity>,
         val fxOperations: List<FxOperationEntity>,
         val cash: CashEntity?,
@@ -470,6 +484,7 @@ class BackupManager(
             shots.clear()
             deposits.clear()
             topUps.clear()
+            capitalDays.clear()
             depositShots.clear()
             fx.clear()
             fx.clearCash()
@@ -482,6 +497,7 @@ class BackupManager(
             snapshot.shots.forEach { shots.upsert(it) }
             snapshot.deposits.forEach { deposits.upsert(it) }
             snapshot.depositTopUps.forEach { topUps.upsert(it) }
+            capitalDays.upsertAll(snapshot.capitalDays)
             snapshot.depositShots.forEach { depositShots.upsert(it) }
             snapshot.fxOperations.forEach { fx.upsert(it) }
             snapshot.cash?.let { fx.setCash(it) }
@@ -599,6 +615,12 @@ class BackupManager(
             depositTopUps = root.objects("depositTopUps").map { o ->
                 DepositTopUpEntity(o.getString("id"), o.getString("depositId"), o.getLong("epochDay"), o.getLong("amountMinor"))
             },
+            capitalDays = root.objects("capitalDays").map { o ->
+                CapitalSnapshotEntity(
+                    o.getLong("date"), o.getLong("totalMinor"), o.getLong("accountsMinor"),
+                    o.getLong("depositsMinor"), o.getLong("fxMinor"), o.getLong("cashMinor")
+                )
+            },
             deposits = root.objects("deposits").map { o ->
                 DepositEntity(
                     id = o.getString("id"), brandKey = o.getString("brandKey"),
@@ -614,7 +636,7 @@ class BackupManager(
                     id = o.getString("id"), imagePath = SafeFiles.rebase(depositShotsDir, o.getString("imagePath")),
                     brandKey = o.getString("brandKey"), status = o.getString("status"),
                     createdAt = o.getLong("createdAt"), fileName = o.optStringOrNull("fileName"),
-                    draftJson = o.optString("draftJson", "{}")
+                    draftJson = o.optString("draftJson", "{}"), depositId = o.optStringOrNull("depositId")
                 )
             },
             // v5: cash currency, cash rubles, capital parts, rates. Older copies have none.

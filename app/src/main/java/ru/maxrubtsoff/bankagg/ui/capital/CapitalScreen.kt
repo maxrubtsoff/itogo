@@ -74,6 +74,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.Account
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
+import ru.maxrubtsoff.bankagg.domain.model.RuDays
 import ru.maxrubtsoff.bankagg.domain.model.CapitalSnapshot
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.ui.common.AmountText
@@ -101,8 +102,9 @@ fun CapitalScreen(
     onOpenDepositShot: (String) -> Unit,
     onOpenDepositBatch: (List<String>) -> Unit,
     onManualDeposit: () -> Unit,
-    onOpenPendingShots: () -> Unit,
     onOpenCurrency: (String) -> Unit,
+    // F-36: the line under a hero sum opens the history of that part.
+    onOpenHistory: (CapitalPart?) -> Unit = {},
     onOpenBanks: () -> Unit,
     // U-58: the «+» of the accounts goes straight to adding a bank.
     onAddBank: () -> Unit = {},
@@ -155,6 +157,15 @@ fun CapitalScreen(
                 }
             }
             Spacer(Modifier.height(ScreenHeaderGap))
+            // F-37: when the capital last changed by an event (not by the daily interest).
+            snapshot?.lastChangedAt?.let {
+                Text(
+                    RuDays.updated(it, snapshot?.today ?: java.time.LocalDate.now()),
+                    style = MaterialTheme.typography.bodySmall, color = Slitok.Muted,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
             // One kept section needs no switch: the title already names the screen (B-24).
             if (parts.size > 1) {
                 PagerTabs(parts.map { it.label }, pager) { scope.launch { pager.animateScrollToPage(it) } }
@@ -168,10 +179,11 @@ fun CapitalScreen(
                 // Sections swipe sideways; each keeps its own vertical scroll.
                 SectionPager(pager, Modifier.fillMaxSize()) { page ->
                     when (parts[page]) {
-                        CapitalPart.ACCOUNTS -> AccountsSection(vm, snap, onOpenBanks, onAddBank, selectedPackages)
-                        CapitalPart.DEPOSITS -> DepositsSection(depositsVm, onOpenDeposit, onOpenDepositShot, onOpenDepositBatch, onManualDeposit, onOpenPendingShots)
-                        CapitalPart.CURRENCY -> CurrencySection(vm, snap, onOpenCurrency)
-                        CapitalPart.CASH -> CashSection(vm, snap)
+                        CapitalPart.ACCOUNTS -> AccountsSection(vm, snap, onOpenBanks, onAddBank, selectedPackages, onOpenHistory)
+                        CapitalPart.DEPOSITS -> DepositsSection(depositsVm, onOpenDeposit, onOpenDepositShot, onOpenDepositBatch, onManualDeposit,
+                            heroExtra = { HeroDelta(vm, snap.today, CapitalPart.DEPOSITS, onOpenHistory) })
+                        CapitalPart.CURRENCY -> CurrencySection(vm, snap, onOpenCurrency, onOpenHistory)
+                        CapitalPart.CASH -> CashSection(vm, snap, onOpenHistory)
                     }
                 }
             }
@@ -184,7 +196,10 @@ fun CapitalScreen(
 
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenBanks: () -> Unit, onAddBank: () -> Unit, selectedPackages: Set<String>) {
+private fun AccountsSection(
+    vm: CapitalViewModel, snap: CapitalSnapshot, onOpenBanks: () -> Unit, onAddBank: () -> Unit,
+    selectedPackages: Set<String>, onOpenHistory: (CapitalPart?) -> Unit
+) {
     val byBank = snap.rubAccounts.groupBy { it.brand }
         .map { (brand, list) -> brand to list }
         .sortedByDescending { (_, list) -> list.sumOf { it.balance.minor } }
@@ -201,6 +216,7 @@ private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenB
             Box(Modifier.fillMaxWidth().heroGlow(Slitok.Brass)) {
                 Column(Modifier.padding(20.dp)) {
                     SectionHeroText("На счетах", Money.ofMinor(snap.part(CapitalPart.ACCOUNTS).valueMinor).format())
+                    HeroDelta(vm, snap.today, CapitalPart.ACCOUNTS, onOpenHistory)
                 }
             }
         }
@@ -345,7 +361,7 @@ private fun BalanceAsk(onClick: () -> Unit) {
 // ---- Наличные ----
 
 @Composable
-private fun CashSection(vm: CapitalViewModel, snap: CapitalSnapshot) {
+private fun CashSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenHistory: (CapitalPart?) -> Unit) {
     var editing by rememberSaveable { mutableStateOf(false) }
     val cash = snap.cash
     Column(
@@ -360,6 +376,7 @@ private fun CashSection(vm: CapitalViewModel, snap: CapitalSnapshot) {
             Box(Modifier.fillMaxWidth().heroGlow(Slitok.Sand)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     SectionHeroText("Наличные", (cash?.amount ?: Money.ZERO).format())
+                    HeroDelta(vm, snap.today, CapitalPart.CASH, onOpenHistory)
                     if (cash == null) {
                         Text("сумма не задана", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
                     }

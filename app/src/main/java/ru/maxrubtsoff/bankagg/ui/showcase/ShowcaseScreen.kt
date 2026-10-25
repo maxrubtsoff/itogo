@@ -79,6 +79,18 @@ import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import ru.maxrubtsoff.bankagg.ui.common.MoreAction
 import ru.maxrubtsoff.bankagg.ui.common.MoreMenu
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.ui.common.AddShotTile
+import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
+import ru.maxrubtsoff.bankagg.ui.common.DeltaLine
+import ru.maxrubtsoff.bankagg.ui.common.PeriodChips
+import ru.maxrubtsoff.bankagg.ui.common.CapitalChart
+import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
+import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.ui.common.ShotDragLayer
+import ru.maxrubtsoff.bankagg.ui.common.ShotDropZone
+import ru.maxrubtsoff.bankagg.ui.common.ShotThumbs
+import ru.maxrubtsoff.bankagg.ui.common.rememberShotDragState
+import ru.maxrubtsoff.bankagg.ui.common.shotDropTarget
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import ru.maxrubtsoff.bankagg.ui.common.SelectRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
@@ -276,6 +288,21 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             SectionActions(summary = "7 вкладов", controls = { ChipButton("по закрытию") {} }, onAdd = {}, addDescription = "Добавить вклад")
             SectionActions(summary = "6 банков · 23 категории", lead = { ChipButton("Октябрь") {} }, onAdd = {}, addDescription = "Добавить кэшбэк")
 
+            Caption("Скрины ждут проверки")
+            PendingShotsPlate(shots = 4, thumbs = listOf("", "", ""), ready = 2, check = 1, unread = 1, onOpen = {})
+
+            Caption("История капитала")
+            DeltaLine(Money.ofMinor(4_830_000), "за месяц", listOf(10L, 12, 11, 15, 14, 18, 20), onClick = {})
+            DeltaLine(Money.ofMinor(-400_000), "за неделю", null, onClick = {})
+            DeltaLine(Money.ZERO, "за месяц", null, onClick = {})
+            var period by remember { mutableStateOf(HistoryPeriod.MONTH) }
+            PeriodChips(period, onPick = { period = it })
+            CapitalChart(points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"), onScrub = {})
+
+            Caption("Перенос скрина пальцем")
+            ShotDragDemo()
+            ShotThumbs(listOf("a" to "", "b" to ""), onOpen = {}, trailing = { AddShotTile {} })
+
             Caption("Пустое состояние")
             EmptyState("Пока нет вкладов", art = { CapitalPartArt(CapitalPart.DEPOSITS, Modifier.size(84.dp, 64.dp)) }) {
                 BrassButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
@@ -285,6 +312,29 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             }
             Caption("")
         }
+    }
+}
+
+/** U-65: a thumbnail carried between two cards; the zone opens under them while it is in the air. */
+@Composable
+private fun ShotDragDemo() {
+    var inSecond by remember { mutableStateOf(false) }
+    val drag = rememberShotDragState { _, target -> inSecond = target == "b" }
+    Box(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            for (key in listOf("a", "b")) {
+                Box(Modifier.shotDropTarget(drag, key)) {
+                    Panel(Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (key == "a") "Альфа-Вклад" else "Лучший %", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                            if ((key == "b") == inSecond) ShotThumbs(listOf("demo" to ""), onOpen = {}, drag = drag)
+                        }
+                    }
+                }
+            }
+            ShotDropZone(drag, "Отдельный вклад")
+        }
+        ShotDragLayer(drag)
     }
 }
 

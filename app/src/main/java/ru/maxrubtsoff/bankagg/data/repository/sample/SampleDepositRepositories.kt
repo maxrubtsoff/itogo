@@ -56,6 +56,10 @@ class SampleDepositShotRepository : DepositShotRepository {
 
     private fun put(shot: DepositShot) = shots.update { it.filterNot { s -> s.id == shot.id } + shot }
 
+    override suspend fun setDepositId(ids: List<String>, depositId: String?) = shots.update { list ->
+        list.map { if (it.id in ids) it.copy(depositId = depositId) else it }
+    }
+
     override suspend fun setStatus(id: String, status: ShotStatus) = shots.update { list ->
         list.map { if (it.id == id) it.copy(status = status) else it }
     }

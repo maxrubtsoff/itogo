@@ -63,7 +63,12 @@ import ru.maxrubtsoff.bankagg.ui.common.BatchProgress
 import ru.maxrubtsoff.bankagg.ui.common.MoveShotSheet
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.RuText
+import ru.maxrubtsoff.bankagg.ui.common.ShotDragLayer
+import ru.maxrubtsoff.bankagg.ui.common.ShotDragState
+import ru.maxrubtsoff.bankagg.ui.common.ShotDropZone
 import ru.maxrubtsoff.bankagg.ui.common.ShotThumbs
+import ru.maxrubtsoff.bankagg.ui.common.rememberShotDragState
+import ru.maxrubtsoff.bankagg.ui.common.shotDropTarget
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import java.time.LocalDate
 
@@ -108,13 +113,26 @@ fun DepositBatchScreen(
     var saving by remember { mutableStateOf(false) }
     val ready = groups.filter { it.isSavable }
 
+    // U-65: a thumbnail carried onto a group goes there — the same move as «Перенести в…».
+    val drag = rememberShotDragState { id, target ->
+        val from = layout.indexOfFirst { id in it }
+        val to = target?.let { key -> layout.indexOfFirst { it.first() == key } }
+        val nothing = from < 0 || (target != null && (to == null || to < 0 || to == from)) || (target == null && layout[from].size == 1)
+        if (!nothing) {
+            val before = layoutText
+            layoutText = BatchLayout.encode(BatchLayout.move(layout, id, to))
+            vm.offerUndo("Скрин перенесён") { layoutText = before }
+        }
+    }
+
     Scaffold(
         topBar = {
             ScreenHeader("Проверьте вклады", onBack)
         }
     ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Spacer(Modifier.height(4.dp))
@@ -129,17 +147,19 @@ fun DepositBatchScreen(
                         color = Slitok.Muted
                     )
                     groups.forEachIndexed { i, g ->
-                        Box(Modifier.cascade(i, sawReading)) {
+                        Box(Modifier.cascade(i, sawReading).shotDropTarget(drag, g.ids.first())) {
                             GroupCard(
                                 group = g,
                                 shots = g.ids.mapNotNull(byId::get),
                                 onPickBank = { vm.setShotsBrand(g.ids, it) },
                                 onChoose = { part, value -> chosen[g.ids.first()] = chosen[g.ids.first()].orEmpty() + (part to value) },
                                 onOpenShot = { moving = it },
-                                onFill = { vm.collapseGroup(g) { id -> onOpenShot(id) } }
+                                onFill = { vm.collapseGroup(g) { id -> onOpenShot(id) } },
+                                drag = drag
                             )
                         }
                     }
+                    ShotDropZone(drag, "Отдельный вклад")
                     BrassButton(
                         onClick = { saving = true; vm.saveGroups(ready) { saving = false } },
                         enabled = ready.isNotEmpty() && !saving,
@@ -148,6 +168,8 @@ fun DepositBatchScreen(
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+        ShotDragLayer(drag)
         }
     }
 
@@ -184,7 +206,8 @@ private fun GroupCard(
     onPickBank: (BankBrand) -> Unit,
     onChoose: (DepositBatch.Part, Any) -> Unit,
     onOpenShot: (String) -> Unit,
-    onFill: () -> Unit
+    onFill: () -> Unit,
+    drag: ShotDragState
 ) {
     val d = group.draft
     Panel(Modifier.fillMaxWidth(), radius = 18.dp) {
@@ -216,7 +239,7 @@ private fun GroupCard(
 
             group.options.forEach { (part, values) -> OptionRow(part, values) { onChoose(part, it) } }
 
-            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot)
+            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag)
             if (!group.isSavable) {
                 PlateButton(onClick = onFill, modifier = Modifier.fillMaxWidth()) { Text("Дополнить") }
             }

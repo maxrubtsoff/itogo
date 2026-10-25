@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.data.ocr.ShotImageStore
@@ -97,8 +99,25 @@ class DepositsViewModel(
         )
     }
 
-    val shots: StateFlow<List<DepositShot>> =
+    private val allShots: StateFlow<List<DepositShot>> =
         shotRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Shots that wait for review: the ones already saved into a deposit are not here. */
+    val shots: StateFlow<List<DepositShot>> =
+        allShots.map { list -> list.filter { it.depositId == null } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** F-38: shots waiting for review join a saved deposit. */
+    fun attachShots(ids: List<String>, depositId: String) {
+        viewModelScope.launch { shotRepo.setDepositId(ids, depositId) }
+    }
+
+    /** F-38: a picture from the gallery goes straight to a saved deposit. */
+    fun addShotTo(depositId: String, uri: Uri) = addShot(uri) { id -> attachShots(listOf(id), depositId) }
+
+    /** The screens a saved deposit was made from (B-64). */
+    fun observeDepositShots(depositId: String): Flow<List<DepositShot>> =
+        allShots.map { list -> list.filter { it.depositId == depositId } }
 
     fun observeDeposit(id: String): Flow<Deposit?> = repo.observe(id)
 
@@ -163,6 +182,9 @@ class DepositsViewModel(
         viewModelScope.launch { ids.forEach { id -> shotRepo.get(id)?.let { shotRepo.update(it.copy(brand = brand)) } } }
     }
 
+    /** «Вернуть» for a change made on the screen itself (a shot carried to another group, U-65). */
+    fun offerUndo(message: String, restore: () -> Unit) = undo.offer(message, restore = { restore() })
+
     /** Saves every ready group as a deposit and drops its shots; then [onDone]. */
     fun saveGroups(groups: List<DepositBatch.Group>, onDone: () -> Unit) {
         viewModelScope.launch {
@@ -182,7 +204,8 @@ class DepositsViewModel(
                     createdAt = System.currentTimeMillis()
                 )
                 repo.add(deposit)
-                g.ids.forEach { shotRepo.delete(it) }
+                // B-64: every screen of the group stays with the deposit, not just the first.
+                shotRepo.setDepositId(g.ids, deposit.id)
             }
             onDone()
         }
@@ -258,7 +281,7 @@ class DepositsViewModel(
                 createdAt = createdAt
             )
             if (existingId == null) repo.add(deposit) else repo.update(deposit)
-            shotIdToDiscard?.let { shotRepo.delete(it) }
+            shotIdToDiscard?.let { shotRepo.setDepositId(listOf(it), deposit.id) }
             onDone()
         }
     }
@@ -266,11 +289,12 @@ class DepositsViewModel(
     fun delete(id: String) {
         viewModelScope.launch {
             val deposit = repo.get(id) ?: return@launch
+            val linked = shotRepo.observeAll().first().filter { it.depositId == id }.map { it.id }
             repo.delete(id)
             undo.offer("Вклад удалён", restore = {
                 repo.add(deposit)
                 deposit.topUps.forEach { repo.addTopUp(deposit.id, it) }
-            })
+            }, finish = { linked.forEach { shotRepo.delete(it) } })
         }
     }
 

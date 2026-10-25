@@ -16,6 +16,15 @@ class DepositBatchTest {
     private fun item(id: String, text: String) =
         DepositParser.parse(text.trimIndent(), today = today).let { DepositBatch.Item(id, it.brand, it.draft) }
 
+    // B-64: the merged group keeps every screen, so all of them go to the deposit.
+    @Test
+    fun `merge keeps the ids of all items`() {
+        val items = listOf(alfa1, alfa2)
+        val g = DepositBatch.merge(items)
+        assertEquals(items.size, g.ids.size)
+        assertEquals(listOf("alfa1", "alfa2"), g.ids)
+    }
+
     // The six real screenshots, two per deposit, shuffled.
     private val alfa1 = item("alfa1", """
         Альфа-Вклад Максимальный
