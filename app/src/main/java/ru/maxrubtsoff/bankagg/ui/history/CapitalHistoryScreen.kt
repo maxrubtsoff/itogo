@@ -52,6 +52,7 @@ import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRow
 import ru.maxrubtsoff.bankagg.domain.model.HistoryTarget
 import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.domain.model.MoneyCompact
 import ru.maxrubtsoff.bankagg.domain.model.RuDays
 import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.ui.capital.color
@@ -67,7 +68,6 @@ import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.PeriodChips
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
-import ru.maxrubtsoff.bankagg.ui.common.StatTile
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
 import ru.maxrubtsoff.bankagg.ui.common.spanWord
 import ru.maxrubtsoff.bankagg.ui.overview.CapitalPartArt
@@ -99,7 +99,9 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(e.title, style = MaterialTheme.typography.titleMedium, color = Slitok.Fg)
                 e.subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted) }
-                e.amountMinor?.let { MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg) }
+                e.amountMinor?.let {
+            MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg, compact = MoneyCompact.short(it, signed = true))
+        }
                 Text("Этого вклада больше нет", style = MaterialTheme.typography.bodySmall, color = Slitok.Faint)
             }
         }
@@ -174,7 +176,8 @@ private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, o
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
                         MoneyText(
                             deltaText(change), style = MaterialTheme.typography.bodyMedium,
-                            color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold
+                            color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f, fill = false), compact = deltaText(change, compact = true)
                         )
                         MoneyText("с ${RuDays.dayMonth(change.from.date, u.today)}", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 2)
                     }
@@ -187,21 +190,7 @@ private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, o
         }
     }
 
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        StatTile("Было", Modifier.weight(1f)) { Sum(change.from.minor) }
-        StatTile("Стало", Modifier.weight(1f)) { Sum(at?.minor ?: change.to.minor) }
-        StatTile("Дельта", Modifier.weight(1f)) { Sum((at?.minor ?: change.to.minor) - change.from.minor, signed = true) }
-    }
-
     Events(u, at?.date, onTap)
-}
-
-@Composable
-private fun Sum(minor: Long, signed: Boolean = false) {
-    AmountText(
-        if (signed) signedSum(minor) else Money.ofMinor(minor).format(),
-        style = Amounts.Small, color = if (signed && minor > 0L) Slitok.Mint else Slitok.Fg, minSize = 9.sp
-    )
 }
 
 @Composable
@@ -312,8 +301,8 @@ private fun axisOf(u: HistoryUi): List<String> {
 }
 
 /** "+13 622 ₽ · +0,6 %" / "−4 000 ₽ · −0,2 %" with a real minus sign. */
-internal fun deltaText(c: CapitalChange): String =
-    signedSum(c.deltaMinor) + (c.percentBp?.let { " · " + signedPercent(it) } ?: "")
+internal fun deltaText(c: CapitalChange, compact: Boolean = false): String =
+    (if (compact) MoneyCompact.short(c.deltaMinor, signed = true) else signedSum(c.deltaMinor)) + (c.percentBp?.let { " · " + signedPercent(it) } ?: "")
 
 internal fun signedSum(minor: Long): String = when {
     minor > 0L -> "+" + Money.ofMinor(minor).format()

@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.domain.model.MoneyCompact
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
 /**
@@ -51,20 +52,23 @@ fun DeltaLine(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (delta.minor == 0L) {
-            MoneyText("без изменений $period", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, modifier = Modifier.weight(1f, fill = false))
-        } else {
-            val up = delta.minor > 0L
-            MoneyText(
-                (if (up) "+" else "−") + Money.ofMinor(kotlin.math.abs(delta.minor)).format(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (up) Slitok.Mint else Slitok.Fg,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            MoneyText(period, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1)
+        // The sum and its period share the room the little line and the chevron leave; the sum goes short before it is cut (B-72).
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (delta.minor == 0L) {
+                MoneyText("без изменений $period", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+            } else {
+                val up = delta.minor > 0L
+                MoneyText(
+                    (if (up) "+" else "−") + Money.ofMinor(kotlin.math.abs(delta.minor)).format(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (up) Slitok.Mint else Slitok.Fg,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f, fill = false),
+                    compact = MoneyCompact.short(delta.minor, signed = true)
+                )
+                MoneyText(period, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1)
+            }
         }
-        Spacer(Modifier.weight(1f))
         if (spark != null && delta.minor != 0L) Sparkline(spark, color)
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "История капитала", tint = Slitok.Faint, modifier = Modifier.size(20.dp))
     }
