@@ -30,6 +30,15 @@ object CapitalHistory {
     /** Most points the chart gets; longer series are thinned (keeps first and last). */
     const val MAX_POINTS = 120
 
+    /** Pages of the history: the total (null) first, then each kept part (F-45). */
+    fun sections(kept: List<CapitalPart>): List<CapitalPart?> = listOf<CapitalPart?>(null) + kept
+
+    /** The page of [part]; a part that is not there leads to the total. */
+    fun pageOf(part: CapitalPart?, sections: List<CapitalPart?>): Int = sections.indexOf(part).coerceAtLeast(0)
+
+    /** The part a page shows; null — the total. */
+    fun partOf(page: Int, sections: List<CapitalPart?>): CapitalPart? = sections.getOrNull(page)
+
     /** The first day shown for [period]. */
     fun startOf(period: HistoryPeriod, points: List<CapitalPoint>, today: LocalDate): LocalDate? {
         val first = points.minOfOrNull { it.date } ?: return null

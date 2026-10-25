@@ -125,4 +125,30 @@ class CapitalHistoryTest {
         assertEquals(100_000L, pts[1].totalMinor)       // the day it came
         assertEquals(100_000L, pts.last().totalMinor)
     }
+
+    @Test fun sectionsStartWithTotal() {
+        val s = CapitalHistory.sections(listOf(CapitalPart.ACCOUNTS, CapitalPart.DEPOSITS))
+        assertEquals(listOf(null, CapitalPart.ACCOUNTS, CapitalPart.DEPOSITS), s)
+    }
+
+    @Test fun pageOfUnknownPartIsTotal() {
+        val s = CapitalHistory.sections(listOf(CapitalPart.ACCOUNTS))
+        assertEquals(0, CapitalHistory.pageOf(CapitalPart.CASH, s))
+    }
+
+    @Test fun pageOfKnownPart() {
+        val s = CapitalHistory.sections(listOf(CapitalPart.ACCOUNTS, CapitalPart.DEPOSITS))
+        assertEquals(2, CapitalHistory.pageOf(CapitalPart.DEPOSITS, s))
+        assertEquals(0, CapitalHistory.pageOf(null, s))
+    }
+
+    @Test fun partOfPageRoundTrip() {
+        val s = CapitalHistory.sections(listOf(CapitalPart.ACCOUNTS, CapitalPart.CASH))
+        s.forEachIndexed { i, p -> assertEquals(p, CapitalHistory.partOf(i, s)) }
+        assertNull(CapitalHistory.partOf(9, s))
+    }
+
+    @Test fun singleKeptStillHasTotalAndOne() {
+        assertEquals(2, CapitalHistory.sections(listOf(CapitalPart.CASH)).size)
+    }
 }

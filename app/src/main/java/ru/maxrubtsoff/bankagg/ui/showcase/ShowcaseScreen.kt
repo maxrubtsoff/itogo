@@ -297,6 +297,7 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             DeltaLine(Money.ZERO, "за месяц", null, onClick = {})
             var period by remember { mutableStateOf(HistoryPeriod.MONTH) }
             PeriodChips(period, onPick = { period = it })
+            PeriodChips(period, onPick = { period = it }, compact = true)
             CapitalChart(points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"), onScrub = {})
 
             Caption("Перенос скрина пальцем")

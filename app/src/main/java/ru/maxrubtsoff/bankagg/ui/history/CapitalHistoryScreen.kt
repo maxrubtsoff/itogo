@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -35,7 +39,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.CapitalChange
+import ru.maxrubtsoff.bankagg.domain.model.CapitalHistory
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
 import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
@@ -50,11 +57,11 @@ import ru.maxrubtsoff.bankagg.ui.common.CapitalChart
 import ru.maxrubtsoff.bankagg.ui.common.Dot
 import ru.maxrubtsoff.bankagg.ui.common.EmptyState
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
-import ru.maxrubtsoff.bankagg.ui.common.PagerTabsStatic
+import ru.maxrubtsoff.bankagg.ui.common.PagerTabs
+import ru.maxrubtsoff.bankagg.ui.common.SectionPager
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.PeriodChips
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
-import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
 import ru.maxrubtsoff.bankagg.ui.common.StatTile
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
@@ -103,29 +110,43 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
             if (u == null) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) { CircularProgressIndicator(color = Slitok.Brass) }
             } else {
-                HistoryContent(u, vm, onTap)
+                HistorySections(u, vm, onTap)
             }
             Spacer(Modifier.height(16.dp))
         }
     }
 }
 
+/** One row of sections, swiped sideways; the period is common to all of them (F-45, B-73). */
+@Composable
+private fun HistorySections(u: HistoryScreenUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
+    val sections = u.sections
+    // One kept section needs no switch: the total already is that section.
+    val swipes = u.kept.size > 1
+    val pager = rememberPagerState(initialPage = CapitalHistory.pageOf(u.part, sections)) { if (swipes) sections.size else 1 }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.settledPage }.drop(1).collect { vm.setPart(CapitalHistory.partOf(it, sections)) }
+    }
+    LaunchedEffect(u.part) {
+        val page = CapitalHistory.pageOf(u.part, sections)
+        if (swipes && pager.currentPage != page) pager.animateScrollToPage(page)
+    }
+    if (swipes) {
+        PagerTabs(sections.map { it?.label ?: "Всё" }, pager) { scope.launch { pager.animateScrollToPage(it) } }
+    }
+    SectionPager(pager) { page -> HistoryContent(u.pages[page], vm, onTap) }
+}
+
 @Composable
 private fun HistoryContent(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { HistoryPage(u, vm, onTap) }
+}
+
+@Composable
+private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
     var scrub by remember { mutableStateOf<Int?>(null) }
     val color = u.part?.color() ?: Slitok.Brass2
-
-    PeriodChips(u.period, onPick = { scrub = null; vm.setPeriod(it) })
-    if (u.kept.size > 1) {
-        PagerTabsStatic(listOf("Всего", "По категориям"), if (u.part == null) 0 else 1) { vm.setByParts(it == 1, u.kept) }
-        if (u.part != null) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                u.kept.forEach { p ->
-                    SlitokChip(p.label, selected = p == u.part, onClick = { vm.setPart(p) }, modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
 
     val change = u.change
     if (!u.drawable || change == null) {
@@ -156,6 +177,8 @@ private fun HistoryContent(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (Hi
                 }
                 Spacer(Modifier.height(12.dp))
                 CapitalChart(points = u.series.map { it.minor }, axis = axisOf(u), onScrub = { scrub = it }, color = color)
+                Spacer(Modifier.height(10.dp))
+                PeriodChips(u.period, onPick = { scrub = null; vm.setPeriod(it) }, compact = true)
             }
         }
     }
