@@ -39,7 +39,7 @@ class SubscriptionsViewModel(
     banks: BankRepository,
     private val today: Today,
     /** Makes the picture of a subscription's look; null where nothing is saved (the tours' sandbox). */
-    private val logos: LogoMaker? = null
+    private val logos: LogoMaker?
 ) : ViewModel() {
 
     private val payments = ledger.observeTransactions(PAYMENT_WINDOW).map { list ->
