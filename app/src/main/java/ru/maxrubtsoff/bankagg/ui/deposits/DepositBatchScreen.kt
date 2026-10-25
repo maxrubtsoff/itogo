@@ -154,6 +154,7 @@ fun DepositBatchScreen(
                                 onPickBank = { vm.setShotsBrand(g.ids, it) },
                                 onChoose = { part, value -> chosen[g.ids.first()] = chosen[g.ids.first()].orEmpty() + (part to value) },
                                 onOpenShot = { moving = it },
+                                onRemoveShot = { vm.deleteShot(it) },
                                 onFill = { vm.collapseGroup(g) { id -> onOpenShot(id) } },
                                 drag = drag
                             )
@@ -206,6 +207,7 @@ private fun GroupCard(
     onPickBank: (BankBrand) -> Unit,
     onChoose: (DepositBatch.Part, Any) -> Unit,
     onOpenShot: (String) -> Unit,
+    onRemoveShot: (String) -> Unit,
     onFill: () -> Unit,
     drag: ShotDragState
 ) {
@@ -239,7 +241,7 @@ private fun GroupCard(
 
             group.options.forEach { (part, values) -> OptionRow(part, values) { onChoose(part, it) } }
 
-            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag)
+            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag, onRemove = onRemoveShot)
             if (!group.isSavable) {
                 PlateButton(onClick = onFill, modifier = Modifier.fillMaxWidth()) { Text("Дополнить") }
             }

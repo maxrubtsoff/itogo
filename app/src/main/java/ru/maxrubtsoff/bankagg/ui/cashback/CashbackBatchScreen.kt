@@ -170,6 +170,7 @@ fun CashbackBatchScreen(
                                 shots = g.ids.mapNotNull(byId::get),
                                 onPickBank = { vm.setShotsBrand(g.ids, it) },
                                 onOpenShot = { moving = it },
+                                onRemoveShot = { vm.deleteShot(it) },
                                 onFix = { vm.collapseGroup(g) { id -> onOpenShot(id) } },
                                 drag = drag
                             )
@@ -244,6 +245,7 @@ private fun BankGroupCard(
     shots: List<CashbackShot>,
     onPickBank: (BankBrand) -> Unit,
     onOpenShot: (String) -> Unit,
+    onRemoveShot: (String) -> Unit,
     onFix: () -> Unit,
     drag: ShotDragState
 ) {
@@ -289,7 +291,7 @@ private fun BankGroupCard(
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag)
+            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag, onRemove = onRemoveShot)
             PlateButton(onClick = onFix, modifier = Modifier.fillMaxWidth()) { Text("Исправить") }
         }
     }
