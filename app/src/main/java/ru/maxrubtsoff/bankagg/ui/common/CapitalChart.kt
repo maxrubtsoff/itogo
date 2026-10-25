@@ -30,14 +30,16 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import ru.maxrubtsoff.bankagg.domain.model.ChartScale
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 
 /**
  * The line of the capital over a period (F-36): 2 dp in [color] with a soft glow
  * and a fill below, a dot on «today», the axis labels under it. A finger on it
  * (a touch or a drag) reports the index of the day under it through [onScrub]
- * and draws a mark there; letting go reports null. The Y axis starts at the
- * lowest value of the series, so a small change is still seen. The line grows
+ * and draws a mark there; letting go reports null. The Y scale is
+ * at least [minSpanFraction] of the average wide, so a wiggle of kopecks is not a
+ * cliff (F-43). The line grows
  * in on [Motion.SLOW] (at once with «Убрать анимации»). A fall is the same line
  * in the same colour — it is not an alarm.
  */
@@ -47,7 +49,8 @@ fun CapitalChart(
     axis: List<String>,
     onScrub: (Int?) -> Unit,
     modifier: Modifier = Modifier,
-    color: Color = Slitok.Brass2
+    color: Color = Slitok.Brass2,
+    minSpanFraction: Float = 0.02f
 ) {
     var scrub by remember { mutableStateOf<Int?>(null) }
     val grow = remember { Animatable(0f) }
@@ -81,10 +84,10 @@ fun CapitalChart(
             val padY = 12.dp.toPx()
             val w = size.width - padX * 2
             val h = size.height - padY * 2
-            val lo = points.min()
-            val span = (points.max() - lo).takeIf { it > 0L }
+            val (lo, hi) = ChartScale.range(points, Math.round(minSpanFraction * 10_000))
+            val span = hi - lo
             fun x(i: Int) = padX + w * i / (points.size - 1)
-            fun y(v: Long) = if (span == null) size.height / 2 else padY + h * (1f - (v - lo).toFloat() / span)
+            fun y(v: Long) = padY + h * (1f - (v - lo).toFloat() / span)
 
             val line = Path()
             points.forEachIndexed { i, v -> if (i == 0) line.moveTo(x(i), y(v)) else line.lineTo(x(i), y(v)) }
