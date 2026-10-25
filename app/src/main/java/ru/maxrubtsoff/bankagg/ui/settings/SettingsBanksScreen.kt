@@ -102,10 +102,6 @@ fun SettingsBanksScreen(vm: BanksViewModel, features: Features, onBack: () -> Un
                 PlateButton(onClick = onOpenNew, modifier = Modifier.fillMaxWidth()) { Text("Новые банки · ${candidates.size}") }
             }
 
-            if (collectsNotifications && notBanks.isNotEmpty()) {
-                NotBanksPanel(notBanks, onReturn = vm::unignore)
-            }
-
             if (mine.isNotEmpty()) Panel(Modifier.fillMaxWidth()) {
                 mine.forEachIndexed { i, b ->
                     if (i > 0) HorizontalDivider(Modifier.padding(start = 68.dp), color = Slitok.Line)
@@ -120,6 +116,10 @@ fun SettingsBanksScreen(vm: BanksViewModel, features: Features, onBack: () -> Un
                         onRemove = { removing = b }
                     )
                 }
+            }
+
+            if (collectsNotifications && notBanks.isNotEmpty()) {
+                NotBanksPanel(notBanks, onReturn = vm::unignore)
             }
         }
     }
