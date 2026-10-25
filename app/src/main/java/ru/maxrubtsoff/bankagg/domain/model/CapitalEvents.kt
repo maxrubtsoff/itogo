@@ -256,6 +256,11 @@ object CapitalEvents {
         return RevaluationReason(legs, manual)
     }
 
+    /** The day with events closest to [date]; of two equally close the earlier. Null when there are no events (F-41). */
+    fun nearestDay(events: List<HistoryEvent>, date: LocalDate): LocalDate? =
+        events.map { it.date }.distinct()
+            .minWithOrNull(compareBy<LocalDate>({ kotlin.math.abs(java.time.temporal.ChronoUnit.DAYS.between(it, date)) }, { it }))
+
     /** False when [target] is a deposit that no longer exists. */
     fun isAlive(target: HistoryTarget, deposits: List<Deposit>): Boolean =
         target !is HistoryTarget.Deposit || deposits.any { it.id == target.id }

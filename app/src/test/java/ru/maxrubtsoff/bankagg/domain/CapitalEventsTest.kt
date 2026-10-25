@@ -255,4 +255,30 @@ class CapitalEventsTest {
         val g = CapitalEvents.group(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE))).single() as HistoryRow.Group
         assertEquals("${d1.toEpochDay()}:SPEND", g.id)
     }
+
+    // ---- F-41: the day nearest to the picked one ----
+
+    private fun ev(day: LocalDate) = HistoryEvent(day, CapitalPart.ACCOUNTS, "t", null, 1L)
+
+    @Test fun nearestDayExactMatch() {
+        assertEquals(d1, CapitalEvents.nearestDay(listOf(ev(d0), ev(d1)), d1))
+    }
+
+    @Test fun nearestDayPicksClosest() {
+        assertEquals(d0, CapitalEvents.nearestDay(listOf(ev(d0.minusDays(10)), ev(d0)), today))
+    }
+
+    @Test fun nearestDayTieGoesToEarlier() {
+        val mid = today.minusDays(5)
+        assertEquals(mid.minusDays(2), CapitalEvents.nearestDay(listOf(ev(mid.plusDays(2)), ev(mid.minusDays(2))), mid))
+    }
+
+    @Test fun nearestDayEmptyIsNull() {
+        assertNull(CapitalEvents.nearestDay(emptyList(), today))
+    }
+
+    @Test fun monthKeyOfNearestDay() {
+        val day = CapitalEvents.nearestDay(listOf(ev(LocalDate.of(2026, 8, 31)), ev(LocalDate.of(2026, 7, 1))), LocalDate.of(2026, 9, 2))!!
+        assertEquals("2026-08", java.time.YearMonth.from(day).toString())
+    }
 }

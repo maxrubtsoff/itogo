@@ -300,7 +300,11 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             var period by remember { mutableStateOf(HistoryPeriod.MONTH) }
             PeriodChips(period, onPick = { period = it })
             PeriodChips(period, onPick = { period = it }, compact = true)
-            CapitalChart(points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"), onScrub = {})
+            var marked by remember { mutableStateOf<Int?>(null) }
+            CapitalChart(
+                points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"),
+                selected = marked, onScrub = { marked = it }, onRelease = {}
+            )
 
             Caption("Перенос скрина пальцем")
             ShotDragDemo()

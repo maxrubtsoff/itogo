@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package ru.maxrubtsoff.bankagg.ui.history
 
 import androidx.compose.foundation.clickable
@@ -28,7 +30,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
+import java.time.YearMonth
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
@@ -151,7 +160,11 @@ private fun HistoryContent(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (Hi
 
 @Composable
 private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
-    var scrub by remember { mutableStateOf<Int?>(null) }
+    // The picked day stays after the finger is gone; a new period starts clean (F-41).
+    var picked by rememberSaveable(u.period) { mutableStateOf<Long?>(null) }
+    var scrollTick by remember { mutableIntStateOf(0) }
+    var open by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    val requesters = remember { mutableMapOf<LocalDate, BringIntoViewRequester>() }
     val color = u.part?.color() ?: Slitok.Brass2
 
     val change = u.change
@@ -162,7 +175,19 @@ private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, o
         return
     }
 
-    val at = scrub?.let { u.series.getOrNull(it) }
+    val selected = picked?.let { d -> u.series.indexOfFirst { it.date.toEpochDay() == d }.takeIf { it >= 0 } }
+    val at = selected?.let { u.series.getOrNull(it) }
+    // Let go of the chart: the list moves to the nearest day with events (a folded month opens first).
+    LaunchedEffect(scrollTick) {
+        if (scrollTick == 0) return@LaunchedEffect
+        val day = at?.date?.let { CapitalEvents.nearestDay(u.events, it) } ?: return@LaunchedEffect
+        val month = YearMonth.from(day).toString()
+        if (u.months.isNotEmpty() && month !in open) {
+            open = open + month
+            withFrameNanos { }
+        }
+        requesters[day]?.bringIntoView()
+    }
     Panel(Modifier.fillMaxWidth(), radius = 22.dp) {
         Box(Modifier.fillMaxWidth().heroGlow(color)) {
             Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 12.dp)) {
@@ -183,35 +208,50 @@ private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, o
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                CapitalChart(points = u.series.map { it.minor }, axis = axisOf(u), onScrub = { scrub = it }, color = color)
+                CapitalChart(points = u.series.map { it.minor }, axis = axisOf(u), selected = selected,
+                    onScrub = { picked = u.series[it].date.toEpochDay() }, onRelease = { scrollTick++ }, color = color
+                )
                 Spacer(Modifier.height(10.dp))
-                PeriodChips(u.period, onPick = { scrub = null; vm.setPeriod(it) }, compact = true)
+                PeriodChips(u.period, onPick = { picked = null; vm.setPeriod(it) }, compact = true)
             }
         }
     }
 
-    Events(u, at?.date, onTap)
+    Events(u, at?.date, open, { open = it }, requesters, onReset = { picked = null }, onTap = onTap)
 }
 
 @Composable
-private fun Events(u: HistoryUi, scrubbed: LocalDate?, onTap: (HistoryEvent) -> Unit) {
+private fun Events(
+    u: HistoryUi,
+    picked: LocalDate?,
+    open: List<String>,
+    setOpen: (List<String>) -> Unit,
+    requesters: MutableMap<LocalDate, BringIntoViewRequester>,
+    onReset: () -> Unit,
+    onTap: (HistoryEvent) -> Unit
+) {
     // Folded groups of the list that are open, by id (F-39).
     var groupsOpen by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
-    val events = if (scrubbed != null) u.events.filter { it.date == scrubbed } else u.events
-    if (scrubbed != null) Caption(RuDays.dayMonth(scrubbed, u.today))
+    val events = u.events
+    if (picked != null) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Caption(RuDays.dayMonth(picked, u.today), Slitok.Brass2, Modifier.weight(1f))
+            SlitokChip("Сбросить", selected = false, onClick = onReset, compact = true)
+        }
+    }
+    fun mark(day: LocalDate) = Modifier.bringIntoViewRequester(requesters.getOrPut(day) { BringIntoViewRequester() })
     when {
         events.isEmpty() -> Text(
             "За это время капитал не менялся", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
-        scrubbed == null && u.months.isNotEmpty() -> {
-            var open by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+        u.months.isNotEmpty() -> {
             u.months.forEach { m ->
                 val key = m.month.toString()
                 val expanded = key in open
                 Panel(Modifier.fillMaxWidth()) {
                     Row(
-                        Modifier.fillMaxWidth().clickable { open = if (expanded) open - key else open + key }.padding(horizontal = 16.dp, vertical = 12.dp),
+                        Modifier.fillMaxWidth().clickable { setOpen(if (expanded) open - key else open + key) }.padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Column(Modifier.weight(1f)) {
@@ -224,7 +264,10 @@ private fun Events(u: HistoryUi, scrubbed: LocalDate?, onTap: (HistoryEvent) -> 
                     if (expanded) {
                         CapitalEvents.group(m.events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
                             HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
-                            Text(dayCaption(day, u.today), style = MaterialTheme.typography.labelMedium, color = Slitok.Muted, modifier = Modifier.padding(start = 16.dp, top = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                dayCaption(day, u.today), style = MaterialTheme.typography.labelMedium, color = if (day == picked) Slitok.Brass2 else Slitok.Muted,
+                                modifier = mark(day).padding(start = 16.dp, top = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis
+                            )
                             list.forEach { RowItem(it, groupsOpen, { id -> groupsOpen = if (id in groupsOpen) groupsOpen - id else groupsOpen + id }, onTap) }
                         }
                     }
@@ -232,7 +275,7 @@ private fun Events(u: HistoryUi, scrubbed: LocalDate?, onTap: (HistoryEvent) -> 
             }
         }
         else -> CapitalEvents.group(events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
-            Caption(dayCaption(day, u.today))
+            Caption(dayCaption(day, u.today), if (day == picked) Slitok.Brass2 else Slitok.Muted, mark(day))
             Panel(Modifier.fillMaxWidth()) {
                 list.forEachIndexed { i, r ->
                     if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
@@ -285,8 +328,8 @@ private fun EventRow(e: HistoryEvent, onTap: (HistoryEvent) -> Unit) {
 }
 
 @Composable
-private fun Caption(text: String) {
-    Text(text, style = MaterialTheme.typography.labelMedium, color = Slitok.Muted, modifier = Modifier.padding(start = 4.dp, top = 4.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+private fun Caption(text: String, color: Color = Slitok.Muted, modifier: Modifier = Modifier) {
+    Text(text, style = MaterialTheme.typography.labelMedium, color = color, modifier = modifier.padding(start = 4.dp, top = 4.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 private fun dayCaption(day: LocalDate, today: LocalDate): String =

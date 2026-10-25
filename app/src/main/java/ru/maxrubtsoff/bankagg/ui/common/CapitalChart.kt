@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -36,8 +37,9 @@ import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 /**
  * The line of the capital over a period (F-36): 2 dp in [color] with a soft glow
  * and a fill below, a dot on «today», the axis labels under it. A finger on it
- * (a touch or a drag) reports the index of the day under it through [onScrub]
- * and draws a mark there; letting go reports null. The Y scale is
+ * (a touch or a drag) reports the index of the day under it through [onScrub];
+ * letting go reports the last one through [onRelease]. The mark stays where
+ * [selected] says: the caller keeps it after the finger is gone (F-41). The Y scale is
  * at least [minSpanFraction] of the average wide, so a wiggle of kopecks is not a
  * cliff (F-43). The line grows
  * in on [Motion.SLOW] (at once with «Убрать анимации»). A fall is the same line
@@ -47,12 +49,16 @@ import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 fun CapitalChart(
     points: List<Long>,
     axis: List<String>,
-    onScrub: (Int?) -> Unit,
+    selected: Int?,
+    onScrub: (Int) -> Unit,
+    onRelease: (Int) -> Unit,
     modifier: Modifier = Modifier,
     color: Color = Slitok.Brass2,
     minSpanFraction: Float = 0.02f
 ) {
-    var scrub by remember { mutableStateOf<Int?>(null) }
+    val scrubbed by rememberUpdatedState(onScrub)
+    val released by rememberUpdatedState(onRelease)
+    var lastTouched by remember { mutableStateOf<Int?>(null) }
     val grow = remember { Animatable(0f) }
     LaunchedEffect(points) {
         grow.snapTo(0f)
@@ -60,7 +66,7 @@ fun CapitalChart(
     }
     fun indexAt(x: Float, width: Float): Int? =
         if (points.size < 2 || width <= 0f) null else Math.round((x / width).coerceIn(0f, 1f) * (points.size - 1))
-    fun set(i: Int?) { if (i != scrub) { scrub = i; onScrub(i) } }
+    fun touch(i: Int?) { if (i != null && i != lastTouched) { lastTouched = i; scrubbed(i) } }
 
     Column(modifier.fillMaxWidth()) {
         Canvas(
@@ -68,14 +74,19 @@ fun CapitalChart(
                 .fillMaxWidth()
                 .height(150.dp)
                 .pointerInput(points) {
-                    detectTapGestures(onPress = { p -> set(indexAt(p.x, size.width.toFloat())); tryAwaitRelease(); set(null) })
+                    detectTapGestures(onPress = { p ->
+                        lastTouched = null
+                        touch(indexAt(p.x, size.width.toFloat()))
+                        // A drag takes the touch over: it reports the release itself.
+                        if (tryAwaitRelease()) lastTouched?.let { released(it) }
+                    })
                 }
                 .pointerInput(points) {
                     detectHorizontalDragGestures(
-                        onDragStart = { p -> set(indexAt(p.x, size.width.toFloat())) },
-                        onDragEnd = { set(null) },
-                        onDragCancel = { set(null) },
-                        onHorizontalDrag = { change, _ -> set(indexAt(change.position.x, size.width.toFloat())) }
+                        onDragStart = { p -> touch(indexAt(p.x, size.width.toFloat())) },
+                        onDragEnd = { lastTouched?.let { released(it) } },
+                        onDragCancel = { lastTouched?.let { released(it) } },
+                        onHorizontalDrag = { change, _ -> touch(indexAt(change.position.x, size.width.toFloat())) }
                     )
                 }
         ) {
@@ -107,7 +118,7 @@ fun CapitalChart(
                 drawCircle(color.copy(alpha = 0.25f), 8.dp.toPx(), Offset(x(last), y(points[last])))
                 drawCircle(color, 4.dp.toPx(), Offset(x(last), y(points[last])))
             }
-            scrub?.let { i ->
+            selected?.let { i ->
                 val s = i.coerceIn(0, last)
                 drawLine(Slitok.Faint, Offset(x(s), 0f), Offset(x(s), size.height), strokeWidth = 1.dp.toPx())
                 drawCircle(Slitok.Bg, 6.dp.toPx(), Offset(x(s), y(points[s])))
