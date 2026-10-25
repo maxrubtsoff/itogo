@@ -45,7 +45,9 @@ data class HistoryUi(
     val change: CapitalChange?,
     val events: List<HistoryEvent>,
     /** Events by month, for a year and for everything. */
-    val months: List<MonthEvents>
+    val months: List<MonthEvents>,
+    /** Ids of the deposits that still exist, for the taps of F-44. */
+    val aliveDeposits: Set<String> = emptySet()
 ) {
     val drawable: Boolean get() = CapitalHistory.drawable(series)
 }
@@ -98,7 +100,8 @@ class CapitalHistoryViewModel(
             period = period, part = part, kept = kept, today = day,
             series = CapitalHistory.thin(full), change = CapitalHistory.change(full),
             events = shown,
-            months = if (period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL) CapitalEvents.byMonth(shown, i.days, part) else emptyList()
+            months = if (period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL) CapitalEvents.byMonth(shown, i.days, part) else emptyList(),
+            aliveDeposits = i.deps.map { it.id }.toSet()
         )
     }.stateIn<HistoryUi?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

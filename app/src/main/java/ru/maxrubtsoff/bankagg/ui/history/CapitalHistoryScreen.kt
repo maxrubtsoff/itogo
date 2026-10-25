@@ -39,6 +39,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalChange
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
 import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
+import ru.maxrubtsoff.bankagg.domain.model.HistoryTarget
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.RuDays
 import ru.maxrubtsoff.bankagg.domain.model.RuPlural
@@ -54,6 +55,7 @@ import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.PeriodChips
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
+import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
 import ru.maxrubtsoff.bankagg.ui.common.StatTile
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
 import ru.maxrubtsoff.bankagg.ui.common.spanWord
@@ -69,9 +71,28 @@ import java.time.LocalDate
  * [partArg] is the part the person came from (a section's hero), null — the total.
  */
 @Composable
-fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: () -> Unit) {
+fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: () -> Unit, onOpenTarget: (HistoryTarget) -> Unit) {
     LaunchedEffect(partArg) { vm.open(CapitalPart.fromKey(partArg)) }
     val ui by vm.state.collectAsStateWithLifecycle()
+    // A deposit that is gone has no screen: its event opens a sheet instead (F-44).
+    var gone by remember { mutableStateOf<HistoryEvent?>(null) }
+    val onTap: (HistoryEvent) -> Unit = { e ->
+        val t = e.target
+        val alive = ui?.aliveDeposits.orEmpty()
+        if (t != null) {
+            if (t is HistoryTarget.Deposit && t.id !in alive) gone = e else onOpenTarget(t)
+        }
+    }
+    gone?.let { e ->
+        SlitokSheet(onDismiss = { gone = null }) {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(e.title, style = MaterialTheme.typography.titleMedium, color = Slitok.Fg)
+                e.subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted) }
+                e.amountMinor?.let { MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg) }
+                Text("Этого вклада больше нет", style = MaterialTheme.typography.bodySmall, color = Slitok.Faint)
+            }
+        }
+    }
 
     Scaffold(topBar = { ScreenHeader("История капитала", onBack) }) { padding ->
         Column(
@@ -82,7 +103,7 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
             if (u == null) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) { CircularProgressIndicator(color = Slitok.Brass) }
             } else {
-                HistoryContent(u, vm)
+                HistoryContent(u, vm, onTap)
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -90,7 +111,7 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
 }
 
 @Composable
-private fun HistoryContent(u: HistoryUi, vm: CapitalHistoryViewModel) {
+private fun HistoryContent(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
     var scrub by remember { mutableStateOf<Int?>(null) }
     val color = u.part?.color() ?: Slitok.Brass2
 
@@ -145,7 +166,7 @@ private fun HistoryContent(u: HistoryUi, vm: CapitalHistoryViewModel) {
         StatTile("Дельта", Modifier.weight(1f)) { Sum((at?.minor ?: change.to.minor) - change.from.minor, signed = true) }
     }
 
-    Events(u, at?.date)
+    Events(u, at?.date, onTap)
 }
 
 @Composable
@@ -157,7 +178,7 @@ private fun Sum(minor: Long, signed: Boolean = false) {
 }
 
 @Composable
-private fun Events(u: HistoryUi, scrubbed: LocalDate?) {
+private fun Events(u: HistoryUi, scrubbed: LocalDate?, onTap: (HistoryEvent) -> Unit) {
     val events = if (scrubbed != null) u.events.filter { it.date == scrubbed } else u.events
     if (scrubbed != null) Caption(RuDays.dayMonth(scrubbed, u.today))
     when {
@@ -186,7 +207,7 @@ private fun Events(u: HistoryUi, scrubbed: LocalDate?) {
                         m.events.groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
                             HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
                             Text(dayCaption(day, u.today), style = MaterialTheme.typography.labelMedium, color = Slitok.Muted, modifier = Modifier.padding(start = 16.dp, top = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            list.forEach { EventRow(it) }
+                            list.forEach { EventRow(it, onTap) }
                         }
                     }
                 }
@@ -197,7 +218,7 @@ private fun Events(u: HistoryUi, scrubbed: LocalDate?) {
             Panel(Modifier.fillMaxWidth()) {
                 list.forEachIndexed { i, e ->
                     if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
-                    EventRow(e)
+                    EventRow(e, onTap)
                 }
             }
         }
@@ -205,9 +226,10 @@ private fun Events(u: HistoryUi, scrubbed: LocalDate?) {
 }
 
 @Composable
-private fun EventRow(e: HistoryEvent) {
+private fun EventRow(e: HistoryEvent, onTap: (HistoryEvent) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().then(if (e.target != null) Modifier.clickable { onTap(e) } else Modifier)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Dot(e.part.color())
@@ -216,6 +238,7 @@ private fun EventRow(e: HistoryEvent) {
             e.subtitle?.let { MoneyText(it, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = if (e.reason != null) 2 else 1) }
         }
         e.amountMinor?.let { MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg) }
+        if (e.target != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Faint, modifier = Modifier.size(20.dp))
     }
 }
 

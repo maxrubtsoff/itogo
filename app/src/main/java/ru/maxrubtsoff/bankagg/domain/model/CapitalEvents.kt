@@ -14,8 +14,21 @@ data class HistoryEvent(
     /** Signed kopecks; null when the event has no sum of its own. */
     val amountMinor: Long?,
     /** Why the currency was revalued (F-42); null for every other event. */
-    val reason: RevaluationReason? = null
+    val reason: RevaluationReason? = null,
+    val kind: HistoryKind = HistoryKind.TRANSACTION,
+    /** Where a tap leads (F-44); null — nowhere. */
+    val target: HistoryTarget? = null
 )
+
+/** What an event is, so the list can tell them apart and the screen can lead to the object. */
+enum class HistoryKind { TRANSACTION, FX_DEAL, DEPOSIT_OPEN, DEPOSIT_TOPUP, DEPOSIT_CLOSE, INTEREST, REVALUATION, CASH }
+
+/** The object an event is about (F-44). */
+sealed interface HistoryTarget {
+    data class Deposit(val id: String) : HistoryTarget
+    data class Currency(val code: String) : HistoryTarget
+    data class Section(val part: CapitalPart) : HistoryTarget
+}
 
 /** One currency's share in a revaluation: its balance and the rate on both days (F-42). */
 data class RevaluationLeg(
@@ -84,7 +97,11 @@ object CapitalEvents {
                 TransactionKind.UNKNOWN -> "Операция"
             }
             val part = if (t.currency == Currencies.RUB) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY
-            out += HistoryEvent(dayOf(t.postedAt, zone), part, title, t.counterparty ?: titleOf[t.accountId], t.amount.minor)
+            val target = if (t.currency == Currencies.RUB) HistoryTarget.Section(CapitalPart.ACCOUNTS) else HistoryTarget.Currency(t.currency)
+            out += HistoryEvent(
+                dayOf(t.postedAt, zone), part, title, t.counterparty ?: titleOf[t.accountId], t.amount.minor,
+                kind = HistoryKind.TRANSACTION, target = target
+            )
         }
         fxOps.forEach { o ->
             val sym = Currencies.symbolOf(o.currency)
@@ -94,17 +111,21 @@ object CapitalEvents {
                 o.date, CapitalPart.CURRENCY,
                 if (o.kind == FxKind.BUY) "Купили $sum $sym" else "Продали $sum $sym",
                 if (o.kind == FxKind.BUY) "за $rub" else "получили $rub",
-                null
+                null,
+                kind = HistoryKind.FX_DEAL, target = HistoryTarget.Currency(o.currency)
             )
         }
         deposits.forEach { d ->
             val name = d.title ?: d.brand.title
-            out += HistoryEvent(d.startDate, CapitalPart.DEPOSITS, "Новый вклад", name, d.principal.minor)
-            d.topUps.forEach { out += HistoryEvent(it.date, CapitalPart.DEPOSITS, "Пополнение вклада", name, it.amount.minor) }
-            if (d.endDate.isBefore(today)) out += HistoryEvent(d.endDate, CapitalPart.DEPOSITS, "Вклад закрыт", name, null)
+            val to = HistoryTarget.Deposit(d.id)
+            out += HistoryEvent(d.startDate, CapitalPart.DEPOSITS, "Новый вклад", name, d.principal.minor, kind = HistoryKind.DEPOSIT_OPEN, target = to)
+            d.topUps.forEach {
+                out += HistoryEvent(it.date, CapitalPart.DEPOSITS, "Пополнение вклада", name, it.amount.minor, kind = HistoryKind.DEPOSIT_TOPUP, target = to)
+            }
+            if (d.endDate.isBefore(today)) out += HistoryEvent(d.endDate, CapitalPart.DEPOSITS, "Вклад закрыт", name, null, kind = HistoryKind.DEPOSIT_CLOSE, target = to)
         }
         if (cash != null && cash.updatedAt > 0L) {
-            out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", null)
+            out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", null, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH))
         }
         out += moved(points, fxOps, deposits, rates)
         return out.filter { !it.date.isAfter(today) }.sortedByDescending { it.date }
@@ -122,15 +143,21 @@ object CapitalEvents {
                     d.topUps.filter { it.date == cur.date }.sumOf { it.amount.minor }
             }
             val interest = cur.valueOf(CapitalPart.DEPOSITS) - prev.valueOf(CapitalPart.DEPOSITS) - own
-            val live = deposits.count { DepositMath.isActive(it, cur.date) && !cur.date.isBefore(it.startDate) }
+            val liveDeps = deposits.filter { DepositMath.isActive(it, cur.date) && !cur.date.isBefore(it.startDate) }
+            val live = liveDeps.size
             if (interest > 0L && live > 0) {
-                out += HistoryEvent(cur.date, CapitalPart.DEPOSITS, "Проценты", RuPlural.deposits(live), interest)
+                val target = if (live == 1) HistoryTarget.Deposit(liveDeps[0].id) else HistoryTarget.Section(CapitalPart.DEPOSITS)
+                out += HistoryEvent(cur.date, CapitalPart.DEPOSITS, "Проценты", RuPlural.deposits(live), interest, kind = HistoryKind.INTEREST, target = target)
             }
             val dealt = fxOps.filter { it.date == cur.date }.sumOf { if (it.kind == FxKind.BUY) it.rubMinor else -it.rubMinor }
             val revalued = cur.valueOf(CapitalPart.CURRENCY) - prev.valueOf(CapitalPart.CURRENCY) - dealt
             if (revalued != 0L) {
                 val reason = reasonOf(prev.date, cur.date, revalued, fxOps, rates)
-                out += HistoryEvent(cur.date, CapitalPart.CURRENCY, "Переоценка валюты", RevaluationText.subtitle(reason), revalued, reason)
+                out += HistoryEvent(cur.date, CapitalPart.CURRENCY, "Переоценка валюты", RevaluationText.subtitle(reason), revalued, reason,
+                    kind = HistoryKind.REVALUATION,
+                    target = reason.legs.maxByOrNull { kotlin.math.abs(it.effectMinor) }?.let { HistoryTarget.Currency(it.currency) }
+                        ?: HistoryTarget.Section(CapitalPart.CURRENCY)
+                )
             }
         }
         return out
@@ -153,6 +180,10 @@ object CapitalEvents {
         val manual = if (kotlin.math.abs(rest) < maxOf(100L, kotlin.math.abs(revalued) / 100)) 0L else rest
         return RevaluationReason(legs, manual)
     }
+
+    /** False when [target] is a deposit that no longer exists. */
+    fun isAlive(target: HistoryTarget, deposits: List<Deposit>): Boolean =
+        target !is HistoryTarget.Deposit || deposits.any { it.id == target.id }
 
     /** Events of [period] (and of one [part], null — all), newest first. */
     fun within(events: List<HistoryEvent>, from: LocalDate?, part: CapitalPart?): List<HistoryEvent> =

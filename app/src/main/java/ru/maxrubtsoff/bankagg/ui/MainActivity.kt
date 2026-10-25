@@ -65,6 +65,7 @@ import ru.maxrubtsoff.bankagg.data.security.PhoneKeys
 import ru.maxrubtsoff.bankagg.ui.common.twoFingerSwipeDown
 import ru.maxrubtsoff.bankagg.ui.common.LocalRevealAmounts
 import ru.maxrubtsoff.bankagg.ui.common.LocalAmountsHidden
+import ru.maxrubtsoff.bankagg.domain.model.HistoryTarget
 import ru.maxrubtsoff.bankagg.ui.history.CapitalHistoryScreen
 import ru.maxrubtsoff.bankagg.ui.history.CapitalHistoryViewModel
 import ru.maxrubtsoff.bankagg.domain.model.FlipDetector
@@ -803,7 +804,18 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                 arguments = listOf(navArgument("part") { type = NavType.StringType; nullable = true; defaultValue = null })
             ) { entry ->
                 val historyVm: CapitalHistoryViewModel = viewModel(entry, factory = factory)
-                CapitalHistoryScreen(historyVm, entry.arguments?.getString("part"), onBack = { nav.popBackStack() })
+                CapitalHistoryScreen(
+                    historyVm, entry.arguments?.getString("part"), onBack = { nav.popBackStack() },
+                    onOpenTarget = { t ->
+                        nav.navigate(
+                            when (t) {
+                                is HistoryTarget.Deposit -> Routes.depositDetail(t.id)
+                                is HistoryTarget.Currency -> Routes.currency(t.code)
+                                is HistoryTarget.Section -> Routes.capital(t.part)
+                            }
+                        )
+                    }
+                )
             }
             composable(Routes.SETTINGS) {
                 TopLevel(padding) {
