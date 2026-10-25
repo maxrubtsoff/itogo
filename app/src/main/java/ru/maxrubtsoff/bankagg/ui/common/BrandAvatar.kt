@@ -133,11 +133,12 @@ fun BrandAvatar(
             else -> Coin(decor, shape, size, face)
         }
         if (overlay != null) {
-            val mark = (size.value * 0.45f).coerceAtLeast(14f).dp
+            // Smaller and pushed further into the corner, so it stays clear of two-letter faces ("ЯП").
+            val mark = (size.value * 0.4f).coerceAtLeast(14f).dp
             Box(
                 Modifier
                     .align(Alignment.BottomEnd)
-                    .offset(mark * 0.18f, mark * 0.18f)
+                    .offset(mark * 0.35f, mark * 0.35f)
                     .clip(CircleShape)
                     .background(Slitok.PanelBottom)
                     .padding(1.5.dp)
