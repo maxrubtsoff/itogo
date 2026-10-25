@@ -61,7 +61,9 @@ import ru.maxrubtsoff.bankagg.ui.common.AmountText
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
 import ru.maxrubtsoff.bankagg.ui.common.RuText
 import ru.maxrubtsoff.bankagg.ui.common.nbsp
+import ru.maxrubtsoff.bankagg.domain.model.DepositShot
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.ui.common.ShotThumbs
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
@@ -80,6 +82,8 @@ fun DepositDetailScreen(
     val item by remember(depositId) { vm.observeItem(depositId) }
         .collectAsStateWithLifecycle(initialValue = null)
     val today by vm.todayDate.collectAsStateWithLifecycle()
+    val depositShots by remember(depositId) { vm.observeDepositShots(depositId) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
     val d = item?.deposit
     var toppingUp by remember { mutableStateOf(openTopUp) }
 
@@ -133,6 +137,8 @@ fun DepositDetailScreen(
         ) {
             Spacer(Modifier.height(4.dp))
             Hero(d, proj, today)
+            // B-64: all the screens the deposit was made from, not only the first.
+            if (depositShots.isNotEmpty()) DepositShotsBlock(depositShots)
             Tiles(proj)
             MonthsCard(d, today)
             FactsCard(d)
@@ -142,6 +148,17 @@ fun DepositDetailScreen(
     }
     if (toppingUp && d != null) {
         TopUpSheet(d, today, onSave = { minor, date -> vm.addTopUp(d.id, minor, date); toppingUp = false }, onDismiss = { toppingUp = false })
+    }
+}
+
+/** The screenshots this deposit was read from. */
+@Composable
+private fun DepositShotsBlock(shots: List<DepositShot>) {
+    Panel(modifier = Modifier.fillMaxWidth(), radius = 20.dp) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Скрины · ${shots.size}", style = MaterialTheme.typography.titleMedium)
+            ShotThumbs(shots.map { it.id to it.imagePath }, onOpen = {})
+        }
     }
 }
 

@@ -28,6 +28,10 @@ class DepositShotRepositoryImpl(
 
     override suspend fun update(shot: DepositShot) = dao.upsert(shot.toEntity())
 
+    override suspend fun setDepositId(ids: List<String>, depositId: String?) {
+        if (ids.isNotEmpty()) dao.setDepositId(ids, depositId)
+    }
+
     override suspend fun setStatus(id: String, status: ShotStatus) =
         dao.setStatus(id, status.name)
 

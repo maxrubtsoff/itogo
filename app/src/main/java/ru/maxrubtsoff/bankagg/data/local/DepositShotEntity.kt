@@ -16,5 +16,6 @@ data class DepositShotEntity(
     val status: String,
     val createdAt: Long,
     val fileName: String?,
-    val draftJson: String
+    val draftJson: String,
+    val depositId: String? = null
 )

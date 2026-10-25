@@ -366,6 +366,7 @@ class BackupManager(
                 put("id", s.id); put("imagePath", s.imagePath); put("brandKey", s.brandKey)
                 put("status", s.status); put("createdAt", s.createdAt)
                 put("fileName", s.fileName ?: JSONObject.NULL); put("draftJson", s.draftJson)
+                put("depositId", s.depositId ?: JSONObject.NULL)
             })
         }
         root.put("depositShots", depShotJson)
@@ -614,7 +615,7 @@ class BackupManager(
                     id = o.getString("id"), imagePath = SafeFiles.rebase(depositShotsDir, o.getString("imagePath")),
                     brandKey = o.getString("brandKey"), status = o.getString("status"),
                     createdAt = o.getLong("createdAt"), fileName = o.optStringOrNull("fileName"),
-                    draftJson = o.optString("draftJson", "{}")
+                    draftJson = o.optString("draftJson", "{}"), depositId = o.optStringOrNull("depositId")
                 )
             },
             // v5: cash currency, cash rubles, capital parts, rates. Older copies have none.

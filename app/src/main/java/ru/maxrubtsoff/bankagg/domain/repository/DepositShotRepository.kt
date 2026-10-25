@@ -13,6 +13,8 @@ interface DepositShotRepository {
     /** Persists a new shot (image already saved to [DepositShot.imagePath]). */
     suspend fun add(shot: DepositShot)
     suspend fun update(shot: DepositShot)
+    /** Ties every shot of [ids] to [depositId] (null frees them); they stay as the deposit's screens. */
+    suspend fun setDepositId(ids: List<String>, depositId: String?)
     suspend fun setStatus(id: String, status: ShotStatus)
     /** Deletes the shot row and its image file. */
     suspend fun delete(id: String)
