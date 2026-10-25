@@ -7,6 +7,8 @@ tools: Read, Grep, Glob, Bash
 
 Ты проверяешь интерфейс Itogo на эмуляторе Android. На машине есть Android SDK и Android Studio (`adb`, `emulator`). Ты ничего не правишь в коде — гоняешь приложение и возвращаешь наблюдения.
 
+Отчёт короткий и по делу. Статичные проверки по скринам (есть ли элемент, высота, обрезка текста) можно гонять на haiku, если родитель так задал; тонкую плавность всё равно отдавай человеку.
+
 ## Что умеешь через adb
 - Поднять эмулятор: `emulator -list-avds`, затем `emulator -avd <avd>` (в фоне). Дождаться загрузки: `adb wait-for-device; adb shell getprop sys.boot_completed` (ждать `1`).
 - Собрать и поставить: debug-APK из `app/build/outputs/apk/debug/` (собери `./gradlew assembleDebug`, если его нет), `adb install -r <apk>`. Приложение ставится как `ru.maxrubtsoff.bankagg.debug`.
