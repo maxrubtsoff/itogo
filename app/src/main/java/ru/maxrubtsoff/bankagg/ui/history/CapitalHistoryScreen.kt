@@ -213,7 +213,7 @@ private fun EventRow(e: HistoryEvent) {
         Dot(e.part.color())
         Column(Modifier.weight(1f)) {
             Text(e.title, style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            e.subtitle?.let { MoneyText(it, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1) }
+            e.subtitle?.let { MoneyText(it, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = if (e.reason != null) 2 else 1) }
         }
         e.amountMinor?.let { MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg) }
     }

@@ -14,6 +14,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalPoint
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
 import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
+import ru.maxrubtsoff.bankagg.domain.model.FxRate
 import ru.maxrubtsoff.bankagg.domain.model.Transaction
 import ru.maxrubtsoff.bankagg.domain.model.CapitalEvents
 import ru.maxrubtsoff.bankagg.domain.model.CapitalHistory
@@ -27,6 +28,7 @@ import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.DepositRepository
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
+import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import ru.maxrubtsoff.bankagg.domain.repository.Today
 import java.time.LocalDate
@@ -52,6 +54,7 @@ class CapitalHistoryViewModel(
     history: CapitalHistoryRepository,
     ledger: LedgerRepository,
     fx: FxRepository,
+    rates: RatesRepository,
     deposits: DepositRepository,
     cash: CashRepository,
     settings: SettingsRepository,
@@ -82,13 +85,14 @@ class CapitalHistoryViewModel(
 
     private val inputs: Flow<Inputs> = combine(
         history.observeDays(), ledger.observeTransactions(Int.MAX_VALUE), ledger.observeAccounts(), fx.observeAll(), deposits.observeAll()
-    ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null) }
+    ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null, emptyList()) }
         .combine(cash.observe()) { i, c -> i.copy(cash = c) }
+        .combine(rates.observeAll()) { i, r -> i.copy(rates = r) }
 
     val state: StateFlow<HistoryUi?> = combine(inputs, settings.features, _period, _part, today.date) { i, features, period, part, day ->
         val kept = CapitalPart.entries.filter { it in features.capitalParts }
         val full = CapitalHistory.series(i.days, period, day, part)
-        val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day)
+        val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day, rates = i.rates)
         val shown = CapitalEvents.within(all, CapitalHistory.startOf(period, i.days, day), part)
         HistoryUi(
             period = period, part = part, kept = kept, today = day,
@@ -104,6 +108,7 @@ class CapitalHistoryViewModel(
         val accounts: List<Account>,
         val ops: List<FxOperation>,
         val deps: List<Deposit>,
-        val cash: CashBalance?
+        val cash: CashBalance?,
+        val rates: List<FxRate>
     )
 }
