@@ -107,6 +107,14 @@ class DepositsViewModel(
         allShots.map { list -> list.filter { it.depositId == null } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** F-38: shots waiting for review join a saved deposit. */
+    fun attachShots(ids: List<String>, depositId: String) {
+        viewModelScope.launch { shotRepo.setDepositId(ids, depositId) }
+    }
+
+    /** F-38: a picture from the gallery goes straight to a saved deposit. */
+    fun addShotTo(depositId: String, uri: Uri) = addShot(uri) { id -> attachShots(listOf(id), depositId) }
+
     /** The screens a saved deposit was made from (B-64). */
     fun observeDepositShots(depositId: String): Flow<List<DepositShot>> =
         allShots.map { list -> list.filter { it.depositId == depositId } }

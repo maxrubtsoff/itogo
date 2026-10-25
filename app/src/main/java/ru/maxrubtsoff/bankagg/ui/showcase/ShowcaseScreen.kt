@@ -79,6 +79,7 @@ import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import ru.maxrubtsoff.bankagg.ui.common.MoreAction
 import ru.maxrubtsoff.bankagg.ui.common.MoreMenu
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.ui.common.AddShotTile
 import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
 import ru.maxrubtsoff.bankagg.ui.common.ShotDragLayer
 import ru.maxrubtsoff.bankagg.ui.common.ShotDropZone
@@ -287,6 +288,7 @@ fun ShowcaseScreen(onBack: () -> Unit) {
 
             Caption("Перенос скрина пальцем")
             ShotDragDemo()
+            ShotThumbs(listOf("a" to "", "b" to ""), onOpen = {}, trailing = { AddShotTile {} })
 
             Caption("Пустое состояние")
             EmptyState("Пока нет вкладов", art = { CapitalPartArt(CapitalPart.DEPOSITS, Modifier.size(84.dp, 64.dp)) }) {
