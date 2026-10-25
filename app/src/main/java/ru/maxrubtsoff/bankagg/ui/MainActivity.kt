@@ -770,6 +770,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         onOpenCurrency = { code -> nav.navigate(Routes.currency(code)) },
                         selectedPackages = selectedPackages,
                         onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
+                        onAddBank = { nav.navigate(Routes.BANKS_ADD) },
                         showCaptureLog = features.showCaptureLog,
                         onOpenLog = { nav.navigate(Routes.SETTINGS_LOG) }
                     ) }

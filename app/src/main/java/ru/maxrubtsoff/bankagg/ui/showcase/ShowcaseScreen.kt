@@ -88,6 +88,7 @@ import ru.maxrubtsoff.bankagg.ui.common.SheetIconTile
 import ru.maxrubtsoff.bankagg.ui.common.SheetList
 import ru.maxrubtsoff.bankagg.ui.common.SheetRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
+import ru.maxrubtsoff.bankagg.ui.common.BankStack
 import ru.maxrubtsoff.bankagg.ui.common.StatTile
 import ru.maxrubtsoff.bankagg.ui.common.SectionActions
 import ru.maxrubtsoff.bankagg.ui.common.ChipButton
@@ -243,6 +244,18 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatTile("К выдаче", Modifier.weight(1f)) { MoneyText("1,33 млн", style = Amounts.Large) }
                 StatTile("Доход за срок", Modifier.weight(1f)) { MoneyText("+229 600", style = Amounts.Large, color = Slitok.Mint) }
+            }
+            // U-59: tiles of the Settings — the whole tile opens something; «Банки» holds a small stack and a count.
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatTile("Что храним", Modifier.weight(1f), onClick = {}) {
+                    Text("4 из 6", style = MaterialTheme.typography.titleLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                StatTile("Банки", Modifier.weight(1f), onClick = {}) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BankStack(listOf(BankBrand.SBER, BankBrand.TBANK, BankBrand.ALFA), max = 2, size = 28.dp, overlap = 8.dp)
+                        Text("3", style = MaterialTheme.typography.titleLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
             }
 
             Caption("Список в шторке")

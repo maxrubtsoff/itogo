@@ -113,6 +113,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import ru.maxrubtsoff.bankagg.ui.common.ShotImage
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
@@ -151,9 +152,11 @@ fun CashbackScreen(
 
     var adding by remember { mutableStateOf(false) }
     var pickingMonth by rememberSaveable { mutableStateOf(false) }
-    // The line under the actions: what the month in view holds.
-    val monthItems by remember(currentKey) { vm.monthItems(currentKey) }
-        .collectAsStateWithLifecycle(initialValue = emptyList())
+    // The month in view is read once: the line under the actions and the page share it.
+    // null — not loaded yet (no «Кэшбэка пока нет» flash); keyed, so a stale month never shows.
+    val loaded by remember(currentKey) { vm.monthItems(currentKey).map { currentKey to it } }
+        .collectAsStateWithLifecycle(initialValue = null)
+    val monthItems = loaded?.takeIf { it.first == currentKey }?.second
 
     // Photo picker — adds a shot to the month in view, then opens it for review.
     // One screenshot opens for review; several go to the batch check.
@@ -169,7 +172,7 @@ fun CashbackScreen(
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionActions(
-            summary = remember(monthItems) { CashbackSummary.caption(monthItems) },
+            summary = remember(monthItems) { monthItems?.let { CashbackSummary.caption(it) }.orEmpty() },
             lead = { MonthChip(CashbackMonth.shortLabel(currentKey)) { pickingMonth = true } },
             controls = { ViewToggle(byCategory, onByCategory) },
             onAdd = { adding = true },
@@ -182,19 +185,23 @@ fun CashbackScreen(
             )
         }
         // The next month slides in from the side it lies on.
+        // contentKey: only the month moves the page; new items of the same month just recompose it.
         AnimatedContent(
-            targetState = currentKey,
+            targetState = MonthData(currentKey, monthItems),
+            contentKey = { it.key },
             transitionSpec = {
-                val dir = if (targetState > initialState) 1 else -1
+                val dir = if (targetState.key > initialState.key) 1 else -1
                 (slideInHorizontally(Motion.tween(Motion.NORMAL, Motion.Standard)) { w -> dir * w / 5 } + fadeIn(Motion.tween(Motion.NORMAL))) togetherWith
                     (slideOutHorizontally(Motion.tween(Motion.FAST, Motion.Standard)) { w -> -dir * w / 8 } + fadeOut(Motion.tween(Motion.FAST)))
             },
             modifier = Modifier.fillMaxWidth().weight(1f),
             label = "month"
-        ) { monthKey ->
+        ) { month ->
+            val monthKey = month.key
             MonthPage(
                 vm = vm,
                 monthKey = monthKey,
+                items = month.items,
                 byCategory = byCategory,
                 onEditBank = { brand -> onEditBank(monthKey, brand) },
                 onOpenShot = onOpenShot,
@@ -215,6 +222,9 @@ fun CashbackScreen(
         )
     }
 }
+
+/** A month page's state: its key and the items (null until loaded). */
+private data class MonthData(val key: String, val items: List<CashbackItem>?)
 
 @Composable
 private fun NextMonthHint(nextLabel: String, onClick: () -> Unit) {
@@ -434,23 +444,24 @@ private fun PercentText(percent: Double, best: Boolean, small: Boolean = false) 
 private fun MonthPage(
     vm: CashbackViewModel,
     monthKey: String,
+    items: List<CashbackItem>?,
     byCategory: Boolean,
     onEditBank: (BankBrand) -> Unit,
     onOpenShot: (String) -> Unit,
     onDeleteShot: (CashbackShot) -> Unit
 ) {
-    val items by remember(monthKey) { vm.monthItems(monthKey) }
-        .collectAsStateWithLifecycle(initialValue = emptyList())
     val shots by remember(monthKey) { vm.shots(monthKey) }
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
-    val byBrand = items.groupBy { it.brand }.toList().sortedBy { it.first.title }
+    val byBrand = remember(items) { items.orEmpty().groupBy { it.brand }.toList().sortedBy { it.first.title } }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (byBrand.isEmpty()) {
+        if (items == null) {
+            // Not loaded yet: nothing to show, nothing to offer.
+        } else if (byBrand.isEmpty()) {
             LocalTourOffer.current(TourSection.CASHBACK, false)?.let { tour ->
                 PlateButton(onClick = tour, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Lightbulb, contentDescription = null)
@@ -459,7 +470,7 @@ private fun MonthPage(
             }
         } else if (byCategory) {
             val order by vm.categoryOrder.collectAsStateWithLifecycle()
-            CategoryPanel(items, order, vm::pickCategoryOrder, vm::flipCategoryOrder, onEditBank)
+            CategoryPanel(items.orEmpty(), order, vm::pickCategoryOrder, vm::flipCategoryOrder, onEditBank)
         } else {
             val play = rememberCascade("cashback-banks")
             byBrand.forEachIndexed { i, (brand, list) ->

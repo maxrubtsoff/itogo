@@ -46,7 +46,13 @@ data class CapitalSnapshot(
         val rateDate: LocalDate?                     // самая старая дата курса среди используемых
     ) {
         val unrealizedPct: Double? get() = if (costMinor > 0L) unrealizedMinor.toDouble() / costMinor else null
-        val isEmpty: Boolean get() = positions.none { it.qtyMinor != 0L || it.realizedMinor != 0L } && holdings.isEmpty()
+        /** Наличные позиции, что есть в списке: с остатком или с зафиксированным результатом. */
+        val shownPositions: List<FxPortfolio.Position>
+            get() = positions.filter { it.qtyMinor != 0L || it.realizedMinor != 0L }
+        /** Сколько разных валют в разделе: наличные и на счетах, каждая один раз. */
+        val currencyCount: Int
+            get() = (shownPositions.map { it.currency } + holdings.map { it.account.currency }).distinct().size
+        val isEmpty: Boolean get() = shownPositions.isEmpty() && holdings.isEmpty()
     }
 
     fun part(p: CapitalPart): Part = parts.first { it.part == p }

@@ -104,6 +104,8 @@ fun CapitalScreen(
     onOpenPendingShots: () -> Unit,
     onOpenCurrency: (String) -> Unit,
     onOpenBanks: () -> Unit,
+    // U-58: the «+» of the accounts goes straight to adding a bank.
+    onAddBank: () -> Unit = {},
     selectedPackages: Set<String> = emptySet(),
     // U-59: the capture log lives in «⋮» of the accounts (U-51: only while accounts are kept).
     showCaptureLog: Boolean = false,
@@ -166,7 +168,7 @@ fun CapitalScreen(
                 // Sections swipe sideways; each keeps its own vertical scroll.
                 SectionPager(pager, Modifier.fillMaxSize()) { page ->
                     when (parts[page]) {
-                        CapitalPart.ACCOUNTS -> AccountsSection(vm, snap, onOpenBanks, selectedPackages)
+                        CapitalPart.ACCOUNTS -> AccountsSection(vm, snap, onOpenBanks, onAddBank, selectedPackages)
                         CapitalPart.DEPOSITS -> DepositsSection(depositsVm, onOpenDeposit, onOpenDepositShot, onOpenDepositBatch, onManualDeposit, onOpenPendingShots)
                         CapitalPart.CURRENCY -> CurrencySection(vm, snap, onOpenCurrency)
                         CapitalPart.CASH -> CashSection(vm, snap)
@@ -182,7 +184,7 @@ fun CapitalScreen(
 
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenBanks: () -> Unit, selectedPackages: Set<String>) {
+private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenBanks: () -> Unit, onAddBank: () -> Unit, selectedPackages: Set<String>) {
     val byBank = snap.rubAccounts.groupBy { it.brand }
         .map { (brand, list) -> brand to list }
         .sortedByDescending { (_, list) -> list.sumOf { it.balance.minor } }
@@ -192,7 +194,7 @@ private fun AccountsSection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenB
     ) {
         SectionActions(
             summary = if (byBank.isEmpty()) "Счетов пока нет" else RuPlural.banks(byBank.size),
-            onAdd = onOpenBanks,
+            onAdd = onAddBank,
             addDescription = "Добавить банк"
         )
         Panel(Modifier.fillMaxWidth().sharedCard("part-${CapitalPart.ACCOUNTS.key}"), radius = 22.dp) {

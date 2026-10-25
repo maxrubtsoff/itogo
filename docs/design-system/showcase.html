@@ -834,7 +834,11 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
         <div class="panel" style="padding:14px"><div style="color:var(--muted);font-size:12px">Доход за срок</div><div class="amt large inc" style="margin-top:4px">+41 900 ₽</div></div>
         <div class="panel" style="padding:14px"><div style="color:var(--muted);font-size:12px">До закрытия</div><div class="amt large" style="margin-top:4px">39 дн.</div></div>
       </div></div>
-      <p class="note">Заменяет четыре своих <span class="code">Tile</span> (A8).</p>
+      <div class="stage"><div class="btnrow">
+        <div class="panel" style="padding:14px;cursor:pointer"><div style="color:var(--muted);font-size:12px">Что храним</div><div style="margin-top:4px;font:600 20px/24px var(--display);color:var(--fg)">4 из 6</div></div>
+        <div class="panel" style="padding:14px;cursor:pointer"><div style="color:var(--muted);font-size:12px">Банки</div><div class="row" style="margin-top:4px;gap:8px"><div class="stack"><span class="bk" style="background:#21A038;width:28px;height:28px;font-size:9px">С</span><span class="bk" style="background:#FFDD2D;color:#111;width:28px;height:28px;font-size:9px;margin-left:-8px">Т</span></div><span style="font:600 20px/24px var(--display);color:var(--fg)">3</span></div></div>
+      </div></div>
+      <p class="note">Заменяет четыре своих <span class="code">Tile</span> (A8). С <span class="code">onClick</span> плитка нажимается целиком — плитки Настроек (U-59): «Что храним», «Банки» со стопкой логотипов поменьше (<span class="code">BankStack(size, overlap)</span>) и числом.</p>
     </div>
     <div class="card">
       <h3>Полоса прогресса</h3>

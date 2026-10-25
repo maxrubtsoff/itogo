@@ -6,9 +6,6 @@ import ru.maxrubtsoff.bankagg.ui.common.ScreenHeaderGap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.filled.Notifications
 import ru.maxrubtsoff.bankagg.ui.common.LocalMyBanks
-import ru.maxrubtsoff.bankagg.domain.model.RuPlural
-import ru.maxrubtsoff.bankagg.domain.model.Feature
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.clickable
@@ -33,8 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.ListAlt
-import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -47,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.domain.model.ReminderKinds
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok

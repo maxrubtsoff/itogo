@@ -75,7 +75,7 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
     // A long press on a currency (U-18) opens the sheet with that currency chosen.
     var sheetCurrency by rememberSaveable { mutableStateOf<String?>(null) }
     val cur = snap.currency
-    val cashPositions = cur.positions.filter { it.qtyMinor != 0L || it.realizedMinor != 0L }
+    val cashPositions = cur.shownPositions
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
@@ -83,7 +83,7 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
     ) {
         SectionActions(
             summary = if (cur.isEmpty) "Валюты пока нет"
-                else RuPlural.currencies((cashPositions.map { it.currency } + cur.holdings.map { it.account.currency }).distinct().size),
+                else RuPlural.currencies(cur.currencyCount),
             // «+» is a purchase; a sale is the quiet plate under the list.
             onAdd = { sheetKind = FxKind.BUY.name },
             addDescription = "Купил валюту"
