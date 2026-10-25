@@ -28,6 +28,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.mutableIntStateOf
 import ru.maxrubtsoff.bankagg.ui.common.PagerTabs
@@ -178,9 +180,15 @@ fun CashbackScreen(
             onAdd = { adding = true },
             addDescription = "Добавить кэшбэк"
         )
-        if (isCurrentMonth && hintNextMonth) {
+        // U-62: the hint fades and folds away instead of vanishing; the label is kept for the exit.
+        val hintLabel = remember(currentKey) { CashbackMonth.shortLabel(CashbackMonth.nextKey(currentKey)) }
+        AnimatedVisibility(
+            visible = isCurrentMonth && hintNextMonth,
+            enter = fadeIn(Motion.tween(Motion.NORMAL)) + expandVertically(Motion.tween(Motion.NORMAL, Motion.Standard)),
+            exit = fadeOut(Motion.tween(Motion.FAST)) + shrinkVertically(Motion.tween(Motion.FAST, Motion.Standard))
+        ) {
             NextMonthHint(
-                nextLabel = CashbackMonth.shortLabel(CashbackMonth.nextKey(currentKey)),
+                nextLabel = hintLabel,
                 onClick = { onMonthOffset(monthOffset + 1) }
             )
         }
