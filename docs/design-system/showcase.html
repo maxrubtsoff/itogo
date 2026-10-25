@@ -1004,6 +1004,16 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
       </div>
       <p class="note"><span class="code">SectionActions</span>: первая строка раздела под шапкой и переключателем. Слева — что показано (или выбор: месяц кэшбэка, тогда счётчик тихой строкой ниже), справа — управление списком, «+» последним в правом углу. В шапке — только заголовок и значки.</p>
     </div>
+    <div class="card">
+      <h3>Скрины ждут проверки <span class="st new">новое</span> <span class="tag n">F-38</span></h3>
+      <div class="stage">
+        <div class="row" style="flex-wrap:nowrap;align-items:center;gap:12px;padding:14px;border-radius:18px;border:1px solid var(--brass-line);background:linear-gradient(135deg,var(--brass-tint),var(--panel-top))">
+          <div style="display:flex"><span style="width:28px;height:44px;border-radius:6px;background:var(--inset);border:1px solid var(--line)"></span><span style="width:28px;height:44px;border-radius:6px;background:var(--inset);border:1px solid var(--line);margin-left:-18px"></span><span style="width:28px;height:44px;border-radius:6px;background:var(--inset);border:1px solid var(--line);margin-left:-18px"></span></div>
+          <div style="flex:1"><div style="font:400 14px/20px var(--text)">4 скрина ждут проверки</div><div style="font:500 12px/16px var(--text)"><span style="color:var(--mint)">2 готовы</span> &nbsp; <span style="color:var(--brass2)">1 проверить</span> &nbsp; <span style="color:var(--muted)">1 не прочитан</span></div></div>
+        </div>
+      </div>
+      <p class="note"><span class="code">PendingShotsPlate</span>: под строкой действий раздела, во Вкладах и Кэшбэке одна. Касание открывает экран пакета. Статус с нулём не показывается.</p>
+    </div>
   </div>
 </section>
 
@@ -1196,6 +1206,7 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
         <tr><td>KopeckLook — копейки по ступени</td><td><span class="st chg">цикл 8</span></td><td>одно правило 70% / 55% на все размеры (U-56)</td></tr>
         <tr><td>MoneyText, AmountText — пыль на месте цифр</td><td><span class="st chg">цикл 8</span></td><td>Crossfade с пылью «символы × 0,58 em» (B-44)</td></tr>
         <tr><td>SectionActions — строка действий раздела</td><td><span class="st new">цикл 8</span></td><td>«+» и счётчик в шапке и в разных местах списка (U-58)</td></tr>
+        <tr><td>PendingShotsPlate — скрины ждут проверки</td><td><span class="st new">цикл 10</span></td><td>плашка во Вкладах и карусель внизу Кэшбэка (F-38, U-64)</td></tr>
         <tr><td>ScreenHeader — шапка экрана</td><td><span class="st new">цикл 8</span></td><td>TopAppBar ×19 и 8 своих шапок с разными отступами (U-57)</td></tr>
         <tr><td>Motion — шкала движения</td><td><span class="st new">цикл 8</span></td><td>вся шкала из Motion: длительности, кривые, тряска ошибки, «Убрать анимации» (U-55)</td></tr>
         <tr><td>ScanningThumb, ScanReveal — скан скрина и появление полей</td><td><span class="st new">цикл 9</span></td><td>вспышка «распознаётся → результат» (F-34, B-51)</td></tr>

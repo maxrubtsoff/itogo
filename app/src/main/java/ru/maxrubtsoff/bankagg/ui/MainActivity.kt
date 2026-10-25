@@ -781,7 +781,6 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         onOpenDepositShot = { id -> nav.navigate(Routes.depositShot(id)) },
                         onOpenDepositBatch = { ids -> nav.navigate(Routes.depositBatch(ids)) },
                         onManualDeposit = { nav.navigate(Routes.DEPOSITS_MANUAL) },
-                        onOpenPendingShots = { nav.navigate(Routes.DEPOSITS_ADD) },
                         onOpenCurrency = { code -> nav.navigate(Routes.currency(code)) },
                         selectedPackages = selectedPackages,
                         onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },

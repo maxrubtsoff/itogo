@@ -20,6 +20,18 @@ object RuPlural {
 
     fun screens(n: Int): String = "$n " + form(n, "скрин", "скрина", "скринов")
 
+    /** "1 скрин ждёт проверки", "3 скрина ждут проверки". */
+    fun pendingShots(n: Int): String {
+        val one = n % 10 == 1 && n % 100 != 11
+        return screens(n) + (if (one) " ждёт" else " ждут") + " проверки"
+    }
+
+    /** "1 готов", "2 готовы". */
+    fun readyShots(n: Int): String = "$n " + if (n % 10 == 1 && n % 100 != 11) "готов" else "готовы"
+
+    /** "1 не прочитан", "2 не прочитаны". */
+    fun unreadShots(n: Int): String = "$n " + if (n % 10 == 1 && n % 100 != 11) "не прочитан" else "не прочитаны"
+
     /** "1 подписка", "3 подписки", "5 подписок". */
     fun subscriptions(n: Int): String = "$n " + form(n, "подписка", "подписки", "подписок")
 

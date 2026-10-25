@@ -101,7 +101,6 @@ fun CapitalScreen(
     onOpenDepositShot: (String) -> Unit,
     onOpenDepositBatch: (List<String>) -> Unit,
     onManualDeposit: () -> Unit,
-    onOpenPendingShots: () -> Unit,
     onOpenCurrency: (String) -> Unit,
     onOpenBanks: () -> Unit,
     // U-58: the «+» of the accounts goes straight to adding a bank.
@@ -169,7 +168,7 @@ fun CapitalScreen(
                 SectionPager(pager, Modifier.fillMaxSize()) { page ->
                     when (parts[page]) {
                         CapitalPart.ACCOUNTS -> AccountsSection(vm, snap, onOpenBanks, onAddBank, selectedPackages)
-                        CapitalPart.DEPOSITS -> DepositsSection(depositsVm, onOpenDeposit, onOpenDepositShot, onOpenDepositBatch, onManualDeposit, onOpenPendingShots)
+                        CapitalPart.DEPOSITS -> DepositsSection(depositsVm, onOpenDeposit, onOpenDepositShot, onOpenDepositBatch, onManualDeposit)
                         CapitalPart.CURRENCY -> CurrencySection(vm, snap, onOpenCurrency)
                         CapitalPart.CASH -> CashSection(vm, snap)
                     }

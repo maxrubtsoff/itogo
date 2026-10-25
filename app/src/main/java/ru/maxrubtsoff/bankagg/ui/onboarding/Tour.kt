@@ -218,7 +218,7 @@ private fun SectionScreen(session: TourSession, factory: SandboxViewModelFactory
                     sectionArg = stage.part?.key,
                     parts = CapitalPart.entries.filter { it in session.features.capitalParts },
                     onOpenDeposit = {}, onOpenDepositShot = {}, onOpenDepositBatch = {}, onManualDeposit = {},
-                    onOpenPendingShots = {}, onOpenCurrency = {}, onOpenBanks = {}
+                    onOpenCurrency = {}, onOpenBanks = {}
                 )
             }
             is Stage.Payments -> {

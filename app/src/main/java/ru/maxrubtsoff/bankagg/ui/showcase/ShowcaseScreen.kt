@@ -79,6 +79,7 @@ import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import ru.maxrubtsoff.bankagg.ui.common.MoreAction
 import ru.maxrubtsoff.bankagg.ui.common.MoreMenu
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import ru.maxrubtsoff.bankagg.ui.common.SelectRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
@@ -275,6 +276,9 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             Caption("Строка действий раздела")
             SectionActions(summary = "7 вкладов", controls = { ChipButton("по закрытию") {} }, onAdd = {}, addDescription = "Добавить вклад")
             SectionActions(summary = "6 банков · 23 категории", lead = { ChipButton("Октябрь") {} }, onAdd = {}, addDescription = "Добавить кэшбэк")
+
+            Caption("Скрины ждут проверки")
+            PendingShotsPlate(shots = 4, thumbs = listOf("", "", ""), ready = 2, check = 1, unread = 1, onOpen = {})
 
             Caption("Пустое состояние")
             EmptyState("Пока нет вкладов", art = { CapitalPartArt(CapitalPart.DEPOSITS, Modifier.size(84.dp, 64.dp)) }) {

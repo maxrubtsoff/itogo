@@ -95,6 +95,8 @@ import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
 import ru.maxrubtsoff.bankagg.ui.common.AmountText
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
 import ru.maxrubtsoff.bankagg.ui.common.Panel
+import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
+import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.ui.common.RuText
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
@@ -111,8 +113,7 @@ fun DepositsSection(
     onOpenDeposit: (String) -> Unit,
     onOpenShot: (String) -> Unit,
     onOpenBatch: (List<String>) -> Unit,
-    onManual: () -> Unit,
-    onOpenPending: () -> Unit
+    onManual: () -> Unit
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val pending by vm.shots.collectAsStateWithLifecycle()
@@ -145,7 +146,16 @@ fun DepositsSection(
             onAdd = onAdd,
             addDescription = "Добавить вклад"
         )
-        if (pending.isNotEmpty()) PendingShots(pending.size, onOpenPending)
+        if (pending.isNotEmpty()) {
+            PendingShotsPlate(
+                shots = pending.size,
+                thumbs = pending.map { it.imagePath },
+                ready = pending.count { it.status == ShotStatus.RECOGNIZED },
+                check = pending.count { it.status == ShotStatus.NEEDS_INPUT },
+                unread = pending.count { it.status == ShotStatus.FAILED },
+                onOpen = { onOpenBatch(pending.map { it.id }) }
+            )
+        }
         if (state.isEmpty) {
             EmptyState(onAdd, LocalTourOffer.current(TourSection.DEPOSITS, false))
         } else {
@@ -195,25 +205,6 @@ fun DepositsSection(
             onDismiss = { sorting = false }
         )
     }
-}
-
-/** Screenshots uploaded earlier and not saved yet. */
-@Composable
-private fun PendingShots(count: Int, onOpen: () -> Unit) {
-    Panel(Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = Slitok.Brass2)
-            Spacer(Modifier.width(12.dp))
-            Text(pendingLabel(count), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = Slitok.Muted, modifier = Modifier.rotate(-90f))
-        }
-    }
-}
-
-/** "1 скрин ждёт проверки" / "3 скрина ждут проверки". */
-private fun pendingLabel(n: Int): String {
-    val one = n % 10 == 1 && n % 100 != 11
-    return RuPlural.screens(n) + (if (one) " ждёт" else " ждут") + " проверки"
 }
 
 /**
