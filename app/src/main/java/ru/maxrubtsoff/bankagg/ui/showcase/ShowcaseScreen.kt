@@ -80,6 +80,11 @@ import ru.maxrubtsoff.bankagg.ui.common.MoreAction
 import ru.maxrubtsoff.bankagg.ui.common.MoreMenu
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
+import ru.maxrubtsoff.bankagg.ui.common.ShotDragLayer
+import ru.maxrubtsoff.bankagg.ui.common.ShotDropZone
+import ru.maxrubtsoff.bankagg.ui.common.ShotThumbs
+import ru.maxrubtsoff.bankagg.ui.common.rememberShotDragState
+import ru.maxrubtsoff.bankagg.ui.common.shotDropTarget
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import ru.maxrubtsoff.bankagg.ui.common.SelectRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
@@ -280,6 +285,9 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             Caption("Скрины ждут проверки")
             PendingShotsPlate(shots = 4, thumbs = listOf("", "", ""), ready = 2, check = 1, unread = 1, onOpen = {})
 
+            Caption("Перенос скрина пальцем")
+            ShotDragDemo()
+
             Caption("Пустое состояние")
             EmptyState("Пока нет вкладов", art = { CapitalPartArt(CapitalPart.DEPOSITS, Modifier.size(84.dp, 64.dp)) }) {
                 BrassButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
@@ -289,6 +297,29 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             }
             Caption("")
         }
+    }
+}
+
+/** U-65: a thumbnail carried between two cards; the zone opens under them while it is in the air. */
+@Composable
+private fun ShotDragDemo() {
+    var inSecond by remember { mutableStateOf(false) }
+    val drag = rememberShotDragState { _, target -> inSecond = target == "b" }
+    Box(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            for (key in listOf("a", "b")) {
+                Box(Modifier.shotDropTarget(drag, key)) {
+                    Panel(Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (key == "a") "Альфа-Вклад" else "Лучший %", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                            if ((key == "b") == inSecond) ShotThumbs(listOf("demo" to ""), onOpen = {}, drag = drag)
+                        }
+                    }
+                }
+            }
+            ShotDropZone(drag, "Отдельный вклад")
+        }
+        ShotDragLayer(drag)
     }
 }
 

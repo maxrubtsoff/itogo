@@ -223,6 +223,14 @@ class CashbackViewModel(
     }
 
     /** A group to fix by hand: its rows go into the first shot, the rest are dropped; [onReady] opens it. */
+    /** «Вернуть» for a change made on the screen itself (a shot carried to another group, U-65). */
+    fun offerUndo(message: String, restore: () -> Unit) = undo.offer(message, restore = { restore() })
+
+    /** Puts a shot's bank back, or clears it (undo of a carry that named the bank). */
+    fun restoreShotBrand(id: String, brand: BankBrand?) {
+        viewModelScope.launch { shotRepo.get(id)?.let { shotRepo.update(it.copy(brand = brand)) } }
+    }
+
     fun collapseGroup(group: CashbackBatch.Group, onReady: (String) -> Unit) {
         viewModelScope.launch {
             val first = shotRepo.get(group.ids.first()) ?: return@launch

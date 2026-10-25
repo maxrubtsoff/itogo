@@ -174,6 +174,9 @@ class DepositsViewModel(
         viewModelScope.launch { ids.forEach { id -> shotRepo.get(id)?.let { shotRepo.update(it.copy(brand = brand)) } } }
     }
 
+    /** «Вернуть» for a change made on the screen itself (a shot carried to another group, U-65). */
+    fun offerUndo(message: String, restore: () -> Unit) = undo.offer(message, restore = { restore() })
+
     /** Saves every ready group as a deposit and drops its shots; then [onDone]. */
     fun saveGroups(groups: List<DepositBatch.Group>, onDone: () -> Unit) {
         viewModelScope.launch {

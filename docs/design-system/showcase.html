@@ -1014,6 +1014,18 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
       </div>
       <p class="note"><span class="code">PendingShotsPlate</span>: под строкой действий раздела, во Вкладах и Кэшбэке одна. Касание открывает экран пакета. Статус с нулём не показывается.</p>
     </div>
+    <div class="card">
+      <h3>Перенос скрина пальцем <span class="st new">новое</span> <span class="tag n">U-65</span></h3>
+      <div class="stage">
+        <div class="row" style="gap:10px;align-items:center">
+          <span style="width:40px;height:64px;border-radius:8px;background:var(--inset);border:1px solid var(--brass-edge);transform:scale(1.08);box-shadow:0 0 18px rgba(215,167,74,.35)"></span>
+          <div style="flex:1;height:64px;border-radius:18px;border:1.5px solid var(--brass-edge);background:var(--brass-tint)"></div>
+        </div>
+        <div style="height:10px"></div>
+        <div style="height:48px;border-radius:18px;border:1.5px dashed var(--brass-line);display:grid;place-items:center;color:var(--brass2);font:400 14px/20px var(--text)">Отдельный вклад</div>
+      </div>
+      <p class="note"><span class="code">ShotDrag</span>: долгое нажатие поднимает миниатюру (×1,08, свечение), группа под пальцем подсвечена, над ней — вспышка и «Вернуть». Мимо — возврат на место.</p>
+    </div>
   </div>
 </section>
 
@@ -1207,6 +1219,7 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
         <tr><td>MoneyText, AmountText — пыль на месте цифр</td><td><span class="st chg">цикл 8</span></td><td>Crossfade с пылью «символы × 0,58 em» (B-44)</td></tr>
         <tr><td>SectionActions — строка действий раздела</td><td><span class="st new">цикл 8</span></td><td>«+» и счётчик в шапке и в разных местах списка (U-58)</td></tr>
         <tr><td>PendingShotsPlate — скрины ждут проверки</td><td><span class="st new">цикл 10</span></td><td>плашка во Вкладах и карусель внизу Кэшбэка (F-38, U-64)</td></tr>
+        <tr><td>ShotDrag — перенос скрина пальцем</td><td><span class="st new">цикл 10</span></td><td>только «Перенести в…» через шторку (U-65)</td></tr>
         <tr><td>ScreenHeader — шапка экрана</td><td><span class="st new">цикл 8</span></td><td>TopAppBar ×19 и 8 своих шапок с разными отступами (U-57)</td></tr>
         <tr><td>Motion — шкала движения</td><td><span class="st new">цикл 8</span></td><td>вся шкала из Motion: длительности, кривые, тряска ошибки, «Убрать анимации» (U-55)</td></tr>
         <tr><td>ScanningThumb, ScanReveal — скан скрина и появление полей</td><td><span class="st new">цикл 9</span></td><td>вспышка «распознаётся → результат» (F-34, B-51)</td></tr>

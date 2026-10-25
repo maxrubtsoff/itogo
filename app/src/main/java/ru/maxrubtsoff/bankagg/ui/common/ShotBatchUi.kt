@@ -64,9 +64,9 @@ fun BatchProgress(done: Int, total: Int) {
     }
 }
 
-/** A group's screenshots as small thumbnails; tapping one opens [onOpen]. */
+/** A group's screenshots as small thumbnails; tapping one opens [onOpen], a long press carries it when [drag] is given (U-65). */
 @Composable
-fun ShotThumbs(paths: List<Pair<String, String>>, onOpen: (String) -> Unit) {
+fun ShotThumbs(paths: List<Pair<String, String>>, onOpen: (String) -> Unit, drag: ShotDragState? = null) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         paths.forEach { (id, path) ->
             val shape = RoundedCornerShape(8.dp)
@@ -77,6 +77,7 @@ fun ShotThumbs(paths: List<Pair<String, String>>, onOpen: (String) -> Unit) {
                     .background(Slitok.Inset)
                     .border(1.dp, Slitok.Line, shape)
                     .clickable { onOpen(id) }
+                    .let { if (drag != null) it.shotDragSource(drag, id, path) else it }
             ) {
                 if (path.isNotBlank() && File(path).exists()) {
                     Image(
