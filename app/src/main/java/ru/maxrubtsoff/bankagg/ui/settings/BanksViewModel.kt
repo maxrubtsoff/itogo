@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.ui.settings
 
+import ru.maxrubtsoff.bankagg.domain.model.LogoChoice
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -124,11 +125,8 @@ class BanksViewModel(
     fun saveOwn(existing: BankBrand?, title: String, look: BrandDecor, picture: Uri?, usePicture: Boolean, onDone: (BankBrand) -> Unit) =
         viewModelScope.launch {
             val key = existing?.key ?: (BankBrand.USER_PREFIX + UUID.randomUUID())
-            val logo = when {
-                !usePicture -> null
-                picture != null -> logos.make(picture, key)
-                else -> existing?.logoFile
-            }
+            val made = if (usePicture && picture != null) logos.make(picture, key) else null
+            val logo = LogoChoice.resolve(usePicture, made, picture != null, existing?.logoFile)
             val base = existing ?: BankBrand(key, title.trim(), look.colorArgb)
             val bank = base.withDecor(title.trim(), look.copy(logoFile = logo))
             if (existing == null) banks.add(bank) else banks.update(bank)

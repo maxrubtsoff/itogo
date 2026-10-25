@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.ui.subscriptions
 
+import ru.maxrubtsoff.bankagg.domain.model.LogoChoice
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -101,11 +102,8 @@ class SubscriptionsViewModel(
      */
     fun saveWithPicture(s: Subscription, picked: Uri?, usePicture: Boolean, onDone: () -> Unit) = viewModelScope.launch {
         val look = s.look
-        val logo = when {
-            !usePicture -> null
-            picked != null -> logos?.make(picked, s.id)
-            else -> look.logoFile
-        }
+        val made = if (usePicture && picked != null) logos?.make(picked, s.id) else null
+        val logo = LogoChoice.resolve(usePicture, made, picked != null, look.logoFile)
         repo.save(s.copy(decor = look.copy(logoFile = logo)))
         onDone()
     }

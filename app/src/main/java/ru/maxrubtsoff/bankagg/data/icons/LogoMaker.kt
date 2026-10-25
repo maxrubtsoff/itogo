@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.maxrubtsoff.bankagg.domain.model.LogoBackground
@@ -20,7 +21,12 @@ class LogoMaker(context: Context) {
     private val dir = File(appContext.filesDir, "bank-logos")
 
     /** The saved file's path, or null if the picture can't be read. */
-    suspend fun make(uri: Uri, bankKey: String): String? = withContext(Dispatchers.IO) {
+    suspend fun make(uri: Uri, bankKey: String): String? =
+        runCatching { build(uri, bankKey) }
+            .onFailure { Log.w("LogoMaker", "Can't make a logo", it) }
+            .getOrNull()
+
+    private suspend fun build(uri: Uri, bankKey: String): String? = withContext(Dispatchers.IO) {
         // A 50 MP photo is decoded already shrunk: the logo is 192 px anyway (U-34).
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         appContext.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return@withContext null

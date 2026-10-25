@@ -1,5 +1,15 @@
 package ru.maxrubtsoff.bankagg.domain.model
 
+/** Which picture file a bank or subscription keeps after saving. */
+object LogoChoice {
+    /** Letters mode drops the picture; a failed new picture keeps the previous one. */
+    fun resolve(usePicture: Boolean, made: String?, hadPicked: Boolean, existing: String?): String? = when {
+        !usePicture -> null
+        hadPicked && made != null -> made
+        else -> existing
+    }
+}
+
 /**
  * How a bank or a subscription looks (F-33): up to three [letters] on [colorArgb],
  * or the user's own picture ([logoFile], a file in the app's storage). A null
