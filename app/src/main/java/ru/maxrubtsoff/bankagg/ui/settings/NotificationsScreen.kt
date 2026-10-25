@@ -139,6 +139,7 @@ fun NotificationsScreen(reminders: ReminderRepository, notifier: AppNotifier, fe
                     val on = allowed && when (name) {
                         "Новый банк" -> s.newBank
                         "Вклад заканчивается" -> s.depositEnding
+                        ReminderKind.SUBSCRIPTION.label -> s.subscriptions
                         else -> s.cashbackMonth
                     }
                     ToggleLine(name, icon, color, on) { v ->
@@ -146,6 +147,7 @@ fun NotificationsScreen(reminders: ReminderRepository, notifier: AppNotifier, fe
                             when (name) {
                                 "Новый банк" -> s.copy(newBank = v)
                                 "Вклад заканчивается" -> s.copy(depositEnding = v)
+                                ReminderKind.SUBSCRIPTION.label -> s.copy(subscriptions = v)
                                 else -> s.copy(cashbackMonth = v)
                             }
                         )

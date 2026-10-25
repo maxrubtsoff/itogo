@@ -327,7 +327,12 @@ class MainActivity : FragmentActivity() {
                             { openRoute.value = null }
                         ) { shared.value = emptyList() }
                     }
-                    if (isLocked) LockGate(container)
+                    // U-61: the lock dissolves instead of vanishing; it appears at once (the app must not show first).
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isLocked,
+                        enter = androidx.compose.animation.EnterTransition.None,
+                        exit = androidx.compose.animation.fadeOut(Motion.tween(Motion.NORMAL))
+                    ) { LockGate(container) }
                 }
             }
         }
@@ -607,12 +612,20 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     // It is the same screen only with the same section: «Капитал» on another part would end up
     // under the fade-out in the wrong place. The jump to the right section is tried once.
     var tourJumped by remember { mutableStateOf(false) }
+    // B-66: the tour began from «Обучение» (the close goes back there) and the examples that
+    // are already up while the app travels to the screen, so the person's own data never flashes.
+    var tourFromLearning by remember { mutableStateOf(false) }
+    var stagedTour by remember { mutableStateOf<TourSession?>(null) }
     LaunchedEffect(pendingTour, backStack) {
         val section = pendingTour ?: return@LaunchedEffect
         if (tour != null) { pendingTour = null; return@LaunchedEffect }
         val screen = tourScreenOf(section, features)
         val entry = backStack ?: return@LaunchedEffect
         if (entry.destination.route != screen.pattern) {
+            if (stagedTour?.section != section) {
+                tourFromLearning = entry.destination.route == Routes.LEARNING
+                stagedTour = TourSession(section, features, notifAccess, container.sandbox(features)).also { it.sandboxAlpha.snapTo(1f) }
+            }
             if (section == TourSection.GENERAL) openTab(screen.route) else nav.navigate(screen.route)
             return@LaunchedEffect
         }
@@ -624,7 +637,9 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
         entry.lifecycle.currentStateFlow.first { it == Lifecycle.State.RESUMED }
         pendingTour = null
         tourJumped = false
-        tour = TourSession(section, features, notifAccess, container.sandbox(features))
+        if (stagedTour == null) tourFromLearning = false
+        tour = stagedTour?.takeIf { it.section == section } ?: TourSession(section, features, notifAccess, container.sandbox(features))
+        stagedTour = null
     }
 
     val myBanks by container.banks.myBanks.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -943,7 +958,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             }
         }
         // The tour's examples over the screen it plays on (B-56); the bottom bar stays the real one.
-        tour?.let { TourSandboxLayer(it, padding) }
+        (tour ?: stagedTour)?.let { TourSandboxLayer(it, padding) }
         }
         }
     }
@@ -957,7 +972,11 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             // A closed tour counts as taken (F-30).
             onFinished = {
                 tourScope.launch { container.settings.markTourDone(session.section.key) }
+                // B-65: nothing of the tour is left to catch touches; B-66: back to «Обучение» if it began there.
                 tour = null
+                pendingTour = null
+                stagedTour = null
+                if (tourFromLearning) { tourFromLearning = false; nav.popBackStack(Routes.LEARNING, false) }
             },
             onAllowAccess = { Perms.openNotificationAccessSettings(context) }
         )

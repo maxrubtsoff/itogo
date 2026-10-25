@@ -23,6 +23,7 @@ class ReminderStore(context: Context) : ReminderRepository {
             .putBoolean(KEY_DEPOSIT, settings.depositEnding)
             .putInt(KEY_DAYS, settings.daysBefore)
             .putBoolean(KEY_CASHBACK, settings.cashbackMonth)
+            .putBoolean(KEY_SUB, settings.subscriptions)
             .apply()
         _settings.value = settings
     }
@@ -39,7 +40,8 @@ class ReminderStore(context: Context) : ReminderRepository {
         newBank = prefs.getBoolean(KEY_BANK, true),
         depositEnding = prefs.getBoolean(KEY_DEPOSIT, true),
         daysBefore = prefs.getInt(KEY_DAYS, 3),
-        cashbackMonth = prefs.getBoolean(KEY_CASHBACK, true)
+        cashbackMonth = prefs.getBoolean(KEY_CASHBACK, true),
+        subscriptions = prefs.getBoolean(KEY_SUB, true)
     )
 
     private companion object {
@@ -47,6 +49,7 @@ class ReminderStore(context: Context) : ReminderRepository {
         const val KEY_DEPOSIT = "deposit_ending"
         const val KEY_DAYS = "days_before"
         const val KEY_CASHBACK = "cashback_month"
+        const val KEY_SUB = "subscriptions"
         const val KEY_SENT = "sent"
         const val MAX_SENT = 300
     }
