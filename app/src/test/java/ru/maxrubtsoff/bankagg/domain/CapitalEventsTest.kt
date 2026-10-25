@@ -5,12 +5,14 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import ru.maxrubtsoff.bankagg.domain.model.Account
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CapitalEvents
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
 import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.DepositTopUp
 import ru.maxrubtsoff.bankagg.domain.model.HistoryKind
+import ru.maxrubtsoff.bankagg.domain.model.HistoryRow
 import ru.maxrubtsoff.bankagg.domain.model.HistoryTarget
 import ru.maxrubtsoff.bankagg.domain.model.Transaction
 import ru.maxrubtsoff.bankagg.domain.model.TransactionKind
@@ -176,5 +178,81 @@ class CapitalEventsTest {
         assertTrue(CapitalEvents.isAlive(HistoryTarget.Deposit("x"), listOf(dep("x"))))
         assertFalse(CapitalEvents.isAlive(HistoryTarget.Deposit("x"), emptyList()))
         assertTrue(CapitalEvents.isAlive(HistoryTarget.Section(CapitalPart.CASH), emptyList()))
+    }
+
+    // ---- F-39: grouping, own transfers ----
+
+    private val accA = Account("a", BankBrand.SBER, "Сбер", Money.ofMinor(0), "RUB", 0L)
+    private val accB = Account("b", BankBrand.SBER, "Тинькофф", Money.ofMinor(0), "RUB", 0L)
+
+    private fun op(id: String, acc: String, minor: Long, kind: TransactionKind, day: LocalDate = d1, who: String? = null) =
+        Transaction(id, BankBrand.SBER, acc, Money.ofMinor(minor), "RUB", kind, null, who, day.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli())
+
+    private fun eventsOf(vararg t: Transaction) =
+        CapitalEvents.build(t.toList(), kotlin.collections.listOf(accA, accB), emptyList(), emptyList(), null, emptyList(), today, ZoneOffset.UTC)
+
+    @Test fun ownTransferPairIsHidden() {
+        val e = eventsOf(op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "b", 5000, TransactionKind.TRANSFER))
+        assertTrue(e.isEmpty())
+    }
+
+    @Test fun transferToStrangerStays() {
+        val e = eventsOf(op("1", "a", -5000, TransactionKind.TRANSFER, who = "Иван"))
+        assertEquals(1, e.size)
+        assertEquals(HistoryKind.TRANSFER, e[0].kind)
+    }
+
+    @Test fun differentDayTransferNotPaired() {
+        assertEquals(2, listOf(op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "b", 5000, TransactionKind.TRANSFER, day = d0)).size)
+    }
+
+    @Test fun differentAmountNotPaired() {
+        assertEquals(2, listOf(op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "b", 4000, TransactionKind.TRANSFER)).size)
+    }
+
+    @Test fun sameAccountNotPaired() {
+        assertEquals(2, listOf(op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "a", 5000, TransactionKind.TRANSFER)).size)
+    }
+
+    @Test fun twoEqualPairsPairedOneToOne() {
+        val e = eventsOf(
+            op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "b", 5000, TransactionKind.TRANSFER),
+            op("3", "a", -5000, TransactionKind.TRANSFER), op("4", "b", 5000, TransactionKind.TRANSFER),
+            op("5", "a", -5000, TransactionKind.TRANSFER)
+        )
+        assertEquals(1, e.size)
+    }
+
+    @Test fun spendGroupedPerDay() {
+        val rows = CapitalEvents.group(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE)))
+        val g = rows.single() as HistoryRow.Group
+        assertEquals(2, g.count)
+        assertEquals(-400L, g.totalMinor)
+        assertEquals("Списания · 2", g.title)
+    }
+
+    @Test fun singleSpendStaysSingle() {
+        assertTrue(CapitalEvents.group(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE))).single() is HistoryRow.Single)
+    }
+
+    @Test fun spendAndTransferGroupedSeparately() {
+        val rows = CapitalEvents.group(
+            eventsOf(
+                op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -200, TransactionKind.EXPENSE),
+                op("3", "a", -300, TransactionKind.TRANSFER, who = "Иван"), op("4", "a", -400, TransactionKind.TRANSFER, who = "Анна")
+            )
+        )
+        assertEquals(kotlin.collections.listOf(HistoryKind.SPEND, HistoryKind.TRANSFER), rows.map { (it as HistoryRow.Group).kind })
+    }
+
+    @Test fun incomeNeverGrouped() {
+        val rows = CapitalEvents.group(eventsOf(op("1", "a", 100, TransactionKind.INCOME), op("2", "a", 200, TransactionKind.INCOME)))
+        assertEquals(2, rows.size)
+        assertTrue(rows.all { it is HistoryRow.Single })
+    }
+
+    @Test fun groupIdIsStableByDayAndKind() {
+        val g = CapitalEvents.group(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE))).single() as HistoryRow.Group
+        assertEquals("${d1.toEpochDay()}:SPEND", g.id)
     }
 }

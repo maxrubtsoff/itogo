@@ -17,6 +17,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,10 +44,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.CapitalChange
+import ru.maxrubtsoff.bankagg.domain.model.CapitalEvents
 import ru.maxrubtsoff.bankagg.domain.model.CapitalHistory
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
 import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
+import ru.maxrubtsoff.bankagg.domain.model.HistoryRow
 import ru.maxrubtsoff.bankagg.domain.model.HistoryTarget
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.RuDays
@@ -202,6 +206,8 @@ private fun Sum(minor: Long, signed: Boolean = false) {
 
 @Composable
 private fun Events(u: HistoryUi, scrubbed: LocalDate?, onTap: (HistoryEvent) -> Unit) {
+    // Folded groups of the list that are open, by id (F-39).
+    var groupsOpen by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     val events = if (scrubbed != null) u.events.filter { it.date == scrubbed } else u.events
     if (scrubbed != null) Caption(RuDays.dayMonth(scrubbed, u.today))
     when {
@@ -227,23 +233,47 @@ private fun Events(u: HistoryUi, scrubbed: LocalDate?, onTap: (HistoryEvent) -> 
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Faint, modifier = Modifier.size(20.dp))
                     }
                     if (expanded) {
-                        m.events.groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
+                        CapitalEvents.group(m.events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
                             HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
                             Text(dayCaption(day, u.today), style = MaterialTheme.typography.labelMedium, color = Slitok.Muted, modifier = Modifier.padding(start = 16.dp, top = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            list.forEach { EventRow(it, onTap) }
+                            list.forEach { RowItem(it, groupsOpen, { id -> groupsOpen = if (id in groupsOpen) groupsOpen - id else groupsOpen + id }, onTap) }
                         }
                     }
                 }
             }
         }
-        else -> events.groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
+        else -> CapitalEvents.group(events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
             Caption(dayCaption(day, u.today))
             Panel(Modifier.fillMaxWidth()) {
-                list.forEachIndexed { i, e ->
+                list.forEachIndexed { i, r ->
                     if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
-                    EventRow(e, onTap)
+                    RowItem(r, groupsOpen, { id -> groupsOpen = if (id in groupsOpen) groupsOpen - id else groupsOpen + id }, onTap)
                 }
             }
+        }
+    }
+}
+
+/** A single event, or a folded group that opens on tap into its events (F-39). */
+@Composable
+private fun RowItem(row: HistoryRow, opened: List<String>, toggle: (String) -> Unit, onTap: (HistoryEvent) -> Unit) {
+    when (row) {
+        is HistoryRow.Single -> EventRow(row.event, onTap)
+        is HistoryRow.Group -> {
+            val expanded = row.id in opened
+            Row(
+                Modifier.fillMaxWidth().clickable { toggle(row.id) }.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Dot(row.children.first().part.color())
+                Text(row.title, style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                MoneyText(signedSum(row.totalMinor), style = Amounts.Small, color = if (row.totalMinor > 0L) Slitok.Mint else Slitok.Fg)
+                Icon(
+                    if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null, tint = Slitok.Faint, modifier = Modifier.size(20.dp)
+                )
+            }
+            if (expanded) row.children.forEach { Box(Modifier.padding(start = 16.dp)) { EventRow(it, onTap) } }
         }
     }
 }

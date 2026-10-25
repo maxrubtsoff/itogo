@@ -21,7 +21,36 @@ data class HistoryEvent(
 )
 
 /** What an event is, so the list can tell them apart and the screen can lead to the object. */
-enum class HistoryKind { TRANSACTION, FX_DEAL, DEPOSIT_OPEN, DEPOSIT_TOPUP, DEPOSIT_CLOSE, INTEREST, REVALUATION, CASH }
+enum class HistoryKind {
+    /** An operation of unknown kind. */
+    TRANSACTION,
+    INCOME, SPEND,
+    /** Between the person's own accounts: never listed, kept for completeness. */
+    OWN_TRANSFER,
+    /** To another person. */
+    TRANSFER,
+    FX_DEAL, DEPOSIT_OPEN, DEPOSIT_TOPUP, DEPOSIT_CLOSE, INTEREST, REVALUATION, CASH
+}
+
+/** A row of the list: one event, or a day's spendings / transfers folded into a group (F-39). */
+sealed interface HistoryRow {
+    val date: LocalDate
+
+    data class Single(val event: HistoryEvent) : HistoryRow {
+        override val date: LocalDate get() = event.date
+    }
+
+    data class Group(
+        val id: String,
+        override val date: LocalDate,
+        val kind: HistoryKind,
+        val count: Int,
+        val totalMinor: Long,
+        val children: List<HistoryEvent>
+    ) : HistoryRow {
+        val title: String get() = (if (kind == HistoryKind.SPEND) "Списания" else "Переводы") + " · " + count
+    }
+}
 
 /** The object an event is about (F-44). */
 sealed interface HistoryTarget {
@@ -89,7 +118,8 @@ object CapitalEvents {
         val titleOf = accounts.associate { it.id to it.title }
         val out = ArrayList<HistoryEvent>()
 
-        transactions.forEach { t ->
+        val own = ownTransferIds(transactions, accounts, zone)
+        transactions.filter { it.id !in own }.forEach { t ->
             val title = when (t.kind) {
                 TransactionKind.INCOME -> "Пополнение"
                 TransactionKind.EXPENSE -> "Списание"
@@ -100,7 +130,13 @@ object CapitalEvents {
             val target = if (t.currency == Currencies.RUB) HistoryTarget.Section(CapitalPart.ACCOUNTS) else HistoryTarget.Currency(t.currency)
             out += HistoryEvent(
                 dayOf(t.postedAt, zone), part, title, t.counterparty ?: titleOf[t.accountId], t.amount.minor,
-                kind = HistoryKind.TRANSACTION, target = target
+                kind = when (t.kind) {
+                    TransactionKind.INCOME -> HistoryKind.INCOME
+                    TransactionKind.EXPENSE -> HistoryKind.SPEND
+                    TransactionKind.TRANSFER -> HistoryKind.TRANSFER
+                    TransactionKind.UNKNOWN -> HistoryKind.TRANSACTION
+                },
+                target = target
             )
         }
         fxOps.forEach { o ->
@@ -129,6 +165,45 @@ object CapitalEvents {
         }
         out += moved(points, fxOps, deposits, rates)
         return out.filter { !it.date.isAfter(today) }.sortedByDescending { it.date }
+    }
+
+    /**
+     * Ruble transfers that left one of the person's accounts and arrived at another the same day
+     * for the same sum: both legs are the same money, so neither is listed. Pairs are 1:1.
+     */
+    private fun ownTransferIds(transactions: List<Transaction>, accounts: List<Account>, zone: ZoneId): Set<String> {
+        val known = accounts.map { it.id }.toSet()
+        val legs = transactions.filter {
+            it.currency == Currencies.RUB && it.kind == TransactionKind.TRANSFER && it.accountId in known && it.amount.minor != 0L
+        }
+        val used = HashSet<String>()
+        for (out in legs.filter { it.amount.minor < 0L }) {
+            if (out.id in used) continue
+            val day = dayOf(out.postedAt, zone)
+            val back = legs.firstOrNull {
+                it.id !in used && it.amount.minor == -out.amount.minor && it.accountId != out.accountId && dayOf(it.postedAt, zone) == day
+            } ?: continue
+            used += out.id
+            used += back.id
+        }
+        return used
+    }
+
+    /** A day's spendings, and a day's transfers, fold into one row each when there are two or more (F-39). */
+    fun group(events: List<HistoryEvent>): List<HistoryRow> {
+        fun foldable(e: HistoryEvent) = e.kind == HistoryKind.SPEND || e.kind == HistoryKind.TRANSFER
+        val buckets = events.filter(::foldable).groupBy { it.date to it.kind }
+        val seen = HashSet<Pair<LocalDate, HistoryKind>>()
+        val out = ArrayList<HistoryRow>()
+        for (e in events) {
+            val list = if (foldable(e)) buckets.getValue(e.date to e.kind) else null
+            when {
+                list == null || list.size < 2 -> out += HistoryRow.Single(e)
+                seen.add(e.date to e.kind) ->
+                    out += HistoryRow.Group("${e.date.toEpochDay()}:${e.kind.name}", e.date, e.kind, list.size, list.sumOf { it.amountMinor ?: 0L }, list)
+            }
+        }
+        return out
     }
 
     /** «Проценты» and «Переоценка валюты»: what a part moved from one day to the next beyond the deals themselves. */
