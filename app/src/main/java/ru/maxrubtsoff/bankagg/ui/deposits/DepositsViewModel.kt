@@ -211,19 +211,6 @@ class DepositsViewModel(
         }
     }
 
-    /**
-     * A group that needs the user's hand: its facts go into the first shot, the
-     * other shots are dropped, and [onReady] opens that shot's full form.
-     */
-    fun collapseGroup(group: DepositBatch.Group, onReady: (String) -> Unit) {
-        viewModelScope.launch {
-            val first = shotRepo.get(group.ids.first()) ?: return@launch
-            shotRepo.update(first.copy(brand = group.brand, draft = group.draft, status = ShotStatus.NEEDS_INPUT))
-            group.ids.drop(1).forEach { shotRepo.delete(it) }
-            onReady(first.id)
-        }
-    }
-
     fun resumeIfStuck(shot: DepositShot) {
         if (shot.status != ShotStatus.PROCESSING || !inFlight.add(shot.id)) return
         viewModelScope.launch { recognise(shot) }
@@ -263,7 +250,7 @@ class DepositsViewModel(
         endDate: LocalDate,
         exitAmount: Money?,
         method: AccrualMethod,
-        shotIdToDiscard: String? = null,
+        shotIds: List<String> = emptyList(),
         onDone: () -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -281,7 +268,7 @@ class DepositsViewModel(
                 createdAt = createdAt
             )
             if (existingId == null) repo.add(deposit) else repo.update(deposit)
-            shotIdToDiscard?.let { shotRepo.setDepositId(listOf(it), deposit.id) }
+            if (shotIds.isNotEmpty()) shotRepo.setDepositId(shotIds, deposit.id)
             onDone()
         }
     }

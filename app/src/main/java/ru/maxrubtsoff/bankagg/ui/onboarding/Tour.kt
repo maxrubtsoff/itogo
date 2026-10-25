@@ -250,10 +250,10 @@ private fun ShotScreen(session: TourSession, factory: SandboxViewModelFactory) {
     androidx.compose.runtime.key(session.shotEpoch) {
         if (session.section == TourSection.CASHBACK) {
             val vm: CashbackViewModel = viewModel(factory = factory)
-            ShotPreviewScreen(vm, SampleCashbackShotRepository.EXAMPLE_ID, onBack = {})
+            ShotPreviewScreen(vm, listOf(SampleCashbackShotRepository.EXAMPLE_ID), onBack = {})
         } else {
             val vm: DepositsViewModel = viewModel(factory = factory)
-            DepositShotPreviewScreen(vm, SampleDepositShotRepository.EXAMPLE_ID, onBack = {})
+            DepositShotPreviewScreen(vm, listOf(SampleDepositShotRepository.EXAMPLE_ID), onBack = {})
         }
     }
 }

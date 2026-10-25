@@ -3,10 +3,12 @@ package ru.maxrubtsoff.bankagg.domain
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.CashbackBatch
 import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMerge
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMerge.Decision.ASK
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMerge.Decision.SAVE
+import ru.maxrubtsoff.bankagg.domain.model.ShotLine
 
 class CashbackMergeTest {
 
@@ -46,5 +48,20 @@ class CashbackMergeTest {
         val edited = health.copy(category = "Кафе", groupKey = "cafe", percent = 7.0)
         assertEquals(listOf("cafe"), CashbackMerge.replacedByEdit(edited, listOf(cafe, health)))
         assertEquals(emptyList<String>(), CashbackMerge.replacedByEdit(health.copy(percent = 4.0), listOf(cafe, health)))
+    }
+
+    // B-70: the edit form of a group gets the rows of every screen, once each.
+    @Test fun cashbackMergeKeepsLinesFromAllShots() {
+        val brand = BankBrand.SBER
+        val cafe = ShotLine("Кафе", "cafe", 5.0, "Кафе 5%")
+        val health = ShotLine("Здоровье", "health", 3.0, "Здоровье 3%")
+        val g = CashbackBatch.merge(listOf(
+            CashbackBatch.Item("s1", brand, "2026-10", listOf(cafe, health)),
+            CashbackBatch.Item("s2", null, "2026-10", listOf(health, ShotLine("Авто", "auto", 2.0, "Авто 2%")))
+        ))
+        assertEquals(listOf("s1", "s2"), g.ids)
+        assertEquals(brand, g.brand)
+        assertEquals(3, g.lines.size)
+        assertEquals(setOf("cafe", "health", "auto"), g.lines.map { it.groupKey }.toSet())
     }
 }

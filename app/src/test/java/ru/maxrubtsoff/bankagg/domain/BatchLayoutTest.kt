@@ -23,4 +23,10 @@ class BatchLayoutTest {
         // Moving the only shot of a group removes the empty group.
         assertEquals(listOf(listOf("a", "b", "c")), BatchLayout.move(g, "c", 0))
     }
+
+    @Test fun layoutMoveThenReconcileKeepsAllIds() {
+        val moved = BatchLayout.move(listOf(listOf("a", "b"), listOf("c")), "b", 1)
+        val back = BatchLayout.reconcile(moved, listOf("a", "b", "c"))
+        assertEquals(listOf("a", "b", "c"), back.flatten().sorted())
+    }
 }

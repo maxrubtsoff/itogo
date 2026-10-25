@@ -83,6 +83,7 @@ fun DepositBatchScreen(
     ids: List<String>,
     onBack: () -> Unit,
     onOpenShot: (String) -> Unit,
+    onEditGroup: (List<String>) -> Unit,
     onDone: () -> Unit
 ) {
     val shots by remember(ids) { vm.observeShots(ids) }.collectAsStateWithLifecycle(initialValue = null)
@@ -155,7 +156,7 @@ fun DepositBatchScreen(
                                 onChoose = { part, value -> chosen[g.ids.first()] = chosen[g.ids.first()].orEmpty() + (part to value) },
                                 onOpenShot = { moving = it },
                                 onRemoveShot = { vm.deleteShot(it) },
-                                onFill = { vm.collapseGroup(g) { id -> onOpenShot(id) } },
+                                onFill = { onEditGroup(g.ids) },
                                 drag = drag
                             )
                         }
@@ -242,9 +243,7 @@ private fun GroupCard(
             group.options.forEach { (part, values) -> OptionRow(part, values) { onChoose(part, it) } }
 
             ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag, onRemove = onRemoveShot)
-            if (!group.isSavable) {
-                PlateButton(onClick = onFill, modifier = Modifier.fillMaxWidth()) { Text("Дополнить") }
-            }
+            PlateButton(onClick = onFill, modifier = Modifier.fillMaxWidth()) { Text("Изменить") }
         }
     }
 }

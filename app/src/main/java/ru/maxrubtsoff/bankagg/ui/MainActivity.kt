@@ -199,8 +199,9 @@ private object Routes {
     const val SETTINGS = "settings"
     const val CASHBACK = "cashback?offset={offset}&section={section}"
     const val CASHBACK_BASE = "cashback"
-    const val CASHBACK_SHOT = "cashback/shot/{shotId}"
-    fun cashbackShot(shotId: String) = "cashback/shot/$shotId"
+    const val CASHBACK_SHOT = "cashback/shot/{shotId}?with={with}"
+    /** [with]: the other shots of the group (B-70). */
+    fun cashbackShot(shotId: String, with: List<String> = emptyList()) = "cashback/shot/$shotId?with=${with.joinToString(",")}"
     const val CASHBACK_BATCH = "cashback/batch/{ids}"
     fun cashbackBatch(ids: List<String>) = "cashback/batch/${ids.joinToString(",")}"
     const val CASHBACK_BANK_EDIT = "cashback/bank/{monthKey}/{brandKey}"
@@ -234,8 +235,8 @@ private object Routes {
     const val SHOWCASE = "debug/showcase"
     const val SETTINGS_PRIVACY = "settings/privacy"
     const val DEPOSITS_ADD = "deposits/add"
-    const val DEPOSITS_SHOT = "deposits/shot/{shotId}"
-    fun depositShot(shotId: String) = "deposits/shot/$shotId"
+    const val DEPOSITS_SHOT = "deposits/shot/{shotId}?with={with}"
+    fun depositShot(shotId: String, with: List<String> = emptyList()) = "deposits/shot/$shotId?with=${with.joinToString(",")}"
     const val DEPOSITS_BATCH = "deposits/batch/{ids}"
     fun depositBatch(ids: List<String>) = "deposits/batch/${ids.joinToString(",")}"
     const val DEPOSITS_MANUAL = "deposits/manual"
@@ -825,9 +826,13 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             ) { entry ->
                 CompositionLocalProvider(LocalNavScope provides this) { CurrencyDetailScreen(capitalVm, entry.arguments?.getString("code").orEmpty(), onBack = { nav.popBackStack() }) }
             }
-            composable(Routes.CASHBACK_SHOT) { entry ->
+            composable(
+                Routes.CASHBACK_SHOT,
+                arguments = listOf(navArgument("with") { type = NavType.StringType; defaultValue = "" })
+            ) { entry ->
                 val shotId = entry.arguments?.getString("shotId").orEmpty()
-                ShotPreviewScreen(cashbackVm, shotId, onBack = { nav.popBackStack() })
+                val with = entry.arguments?.getString("with").orEmpty().split(',').filter(String::isNotBlank)
+                ShotPreviewScreen(cashbackVm, listOf(shotId) + with, onBack = { nav.popBackStack() })
             }
             composable(Routes.CASHBACK_BATCH) { entry ->
                 val ids = entry.arguments?.getString("ids").orEmpty().split(',').filter(String::isNotBlank)
@@ -835,6 +840,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                     cashbackVm, ids,
                     onBack = { nav.popBackStack() },
                     onOpenShot = { id -> nav.navigate(Routes.cashbackShot(id)) },
+                    onEditGroup = { ids -> nav.navigate(Routes.cashbackShot(ids.first(), ids.drop(1))) },
                     onDone = { nav.popBackStack() }
                 )
             }
@@ -856,11 +862,15 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                     onManual = { nav.navigate(Routes.DEPOSITS_MANUAL) }
                 )
             }
-            composable(Routes.DEPOSITS_SHOT) { entry ->
+            composable(
+                Routes.DEPOSITS_SHOT,
+                arguments = listOf(navArgument("with") { type = NavType.StringType; defaultValue = "" })
+            ) { entry ->
                 val id = entry.arguments?.getString("shotId").orEmpty()
+                val with = entry.arguments?.getString("with").orEmpty().split(',').filter(String::isNotBlank)
                 // Opened from a batch check: back to it, so the rest can be saved too.
                 val fromBatch = nav.previousBackStackEntry?.destination?.route == Routes.DEPOSITS_BATCH
-                DepositShotPreviewScreen(depositsVm, id, onBack = { if (fromBatch) nav.popBackStack() else backToDeposits(nav) })
+                DepositShotPreviewScreen(depositsVm, listOf(id) + with, onBack = { if (fromBatch) nav.popBackStack() else backToDeposits(nav) })
             }
             composable(Routes.DEPOSITS_BATCH) { entry ->
                 val ids = entry.arguments?.getString("ids").orEmpty().split(',').filter(String::isNotBlank)
@@ -868,6 +878,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                     depositsVm, ids,
                     onBack = { nav.popBackStack() },
                     onOpenShot = { id -> nav.navigate(Routes.depositShot(id)) },
+                    onEditGroup = { ids -> nav.navigate(Routes.depositShot(ids.first(), ids.drop(1))) },
                     onDone = { backToDeposits(nav) }
                 )
             }

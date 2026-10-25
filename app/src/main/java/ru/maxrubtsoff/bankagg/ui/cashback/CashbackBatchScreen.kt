@@ -78,6 +78,7 @@ fun CashbackBatchScreen(
     ids: List<String>,
     onBack: () -> Unit,
     onOpenShot: (String) -> Unit,
+    onEditGroup: (List<String>) -> Unit,
     onDone: () -> Unit
 ) {
     val shots by remember(ids) { vm.observeShots(ids) }.collectAsStateWithLifecycle(initialValue = null)
@@ -171,7 +172,7 @@ fun CashbackBatchScreen(
                                 onPickBank = { vm.setShotsBrand(g.ids, it) },
                                 onOpenShot = { moving = it },
                                 onRemoveShot = { vm.deleteShot(it) },
-                                onFix = { vm.collapseGroup(g) { id -> onOpenShot(id) } },
+                                onFix = { onEditGroup(g.ids) },
                                 drag = drag
                             )
                         }
