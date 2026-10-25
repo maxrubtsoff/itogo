@@ -5,17 +5,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
@@ -29,6 +25,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
+import ru.maxrubtsoff.bankagg.ui.common.SheetList
+import ru.maxrubtsoff.bankagg.ui.common.SheetRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
@@ -91,26 +89,10 @@ private fun ToggleIcon(icon: ImageVector, label: String, on: Boolean, onClick: (
 internal fun MonthSheet(anchor: String, current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     SlitokSheet(onDismiss) {
         Text("Месяц", style = MaterialTheme.typography.titleLarge)
-        Column {
+        SheetList {
             for (offset in 1 downTo -6) {
                 val key = CashbackMonth.keyForOffset(anchor, offset)
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 52.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onPick(offset) }
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        CashbackMonth.label(key),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (offset == current) Slitok.Brass2 else Slitok.Fg,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (offset == current) Icon(Icons.Filled.Check, contentDescription = "Выбран", tint = Slitok.Brass2)
-                }
+                SheetRow(CashbackMonth.label(key), selected = offset == current, onClick = { onPick(offset) })
             }
         }
     }

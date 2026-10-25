@@ -208,6 +208,18 @@ h3 { font: 600 15px/20px var(--text); margin: 0; color: var(--fg); display: flex
 .phone .gesture { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); width: 108px; height: 4px; border-radius: 2px; background: rgba(238,243,240,.55); z-index: 3; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--panel-top); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 12px 20px 30px; display: flex; flex-direction: column; gap: 14px; z-index: 2; }
 .sheet .handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(238,243,240,.25); align-self: center; }
+.sgroup { border-radius: 16px; background: var(--inset); border: 1px solid var(--line); overflow: hidden; }
+.sgroup > * + * { border-top: 1px solid var(--line); }
+.srow { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; width: 100%; text-align: left; color: var(--fg); }
+.srow .st { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.srow .st b { font: 500 16px/22px var(--text); color: var(--fg); }
+.srow .st small { font: 400 12px/16px var(--text); color: var(--muted); }
+.srow .lead { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--muted); background: rgba(238,243,240,.04); flex: none; }
+.srow .ck { color: var(--brass2); }
+.srow .ar { color: var(--faint); }
+.srow.on .st b { color: var(--brass2); }
+.srow .tg { font: 600 12px/16px var(--text); padding: 2px 8px; border-radius: 8px; color: var(--muted); background: rgba(158,176,170,.12); }
+.srow .tg.brass { color: var(--brass2); background: var(--brass-pill, rgba(212,175,92,.14)); }
 .sheet h4, .dialog h4 { font: 600 18px/22px var(--display); margin: 0; }
 .dialog { position: absolute; left: 20px; right: 20px; top: 50%; transform: translateY(-50%); z-index: 2; padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 12px; }
 .dialog p { margin: 0; color: var(--muted); font-size: 14px; line-height: 20px; }
@@ -858,6 +870,27 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
       <p class="note">Всё, что выбирается или вводится поверх экрана. Заголовок — titleLarge белым (не латунью). Радиус 28.</p>
     </div>
     <div class="card">
+      <h3>SheetList + SheetRow — список в шторке <span class="st new">U-49</span></h3>
+      <div class="phone">
+        <div class="under"><div class="panel" style="height:90px"></div><div class="panel" style="height:70px"></div></div>
+        <div class="veil"></div>
+        <div class="sheet">
+          <div class="handle"></div>
+          <h4>Восстановить</h4>
+          <div class="sgroup">
+            <button class="srow"><span class="st"><b>Сегодня, 19:04</b><small>четверг</small></span></button>
+            <button class="srow"><span class="st"><b>Вчера, 21:42</b><small>среда</small></span><span class="tg brass">вручную</span></button>
+            <button class="srow on"><span class="st"><b>20 октября, 08:15</b><small>вторник</small></span><svg class="i ck" style="width:20px;height:20px"><use href="#i-check"/></svg></button>
+          </div>
+          <div class="sgroup">
+            <button class="srow"><span class="lead"><svg class="i" style="width:18px;height:18px"><use href="#i-edit"/></svg></span><span class="st"><b>Из файла…</b></span><svg class="i ar" style="width:18px;height:18px"><use href="#i-chev"/></svg></button>
+          </div>
+        </div>
+        <div class="gesture"></div>
+      </div>
+      <p class="note">Выбор из набора в шторке: копии, месяц, сортировка, банк. Латунь — выбранной строке и смысловой метке; тихое действие — отдельным блоком, без латуни.</p>
+    </div>
+    <div class="card">
       <h3>SlitokDialog — подтверждение <span class="st new">новое</span></h3>
       <div class="phone">
         <div class="under"><div class="panel" style="height:90px"></div><div class="panel" style="height:70px"></div></div>
@@ -1151,6 +1184,7 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
         <tr><td>CoachMark</td><td><span class="st new">новое</span></td><td>— (обучение F-30)</td></tr>
         <tr><td>StatTile</td><td><span class="st new">новое</span></td><td>Tile ×2, PartTile, FeatureTile</td></tr>
         <tr><td>SlitokDialog</td><td><span class="st new">новое</span></td><td>AlertDialog ×6</td></tr>
+        <tr><td>SheetList, SheetRow</td><td><span class="st new">цикл 9</span></td><td>свои Row + clickable + HorizontalDivider в шторках копий, месяца, сортировки, банка (U-49)</td></tr>
         <tr><td>SlitokSheet</td><td><span class="st chg">переезд</span></td><td>из capital/CashSheet.kt в ui/common</td></tr>
         <tr><td>LongPressMenu</td><td><span class="st chg">изменено</span></td><td>вид по U-44, затемнение по B-40</td></tr>
         <tr><td>EmptyState</td><td><span class="st new">новое</span></td><td>свои пустые блоки разделов и Обзора</td></tr>

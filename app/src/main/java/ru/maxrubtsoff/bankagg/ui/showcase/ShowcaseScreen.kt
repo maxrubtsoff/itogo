@@ -84,6 +84,9 @@ import ru.maxrubtsoff.bankagg.ui.common.SelectRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
 import ru.maxrubtsoff.bankagg.ui.common.SlitokField
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSwitch
+import ru.maxrubtsoff.bankagg.ui.common.SheetIconTile
+import ru.maxrubtsoff.bankagg.ui.common.SheetList
+import ru.maxrubtsoff.bankagg.ui.common.SheetRow
 import ru.maxrubtsoff.bankagg.ui.common.SlitokTag
 import ru.maxrubtsoff.bankagg.ui.common.StatTile
 import ru.maxrubtsoff.bankagg.ui.common.SectionActions
@@ -240,6 +243,20 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatTile("К выдаче", Modifier.weight(1f)) { MoneyText("1,33 млн", style = Amounts.Large) }
                 StatTile("Доход за срок", Modifier.weight(1f)) { MoneyText("+229 600", style = Amounts.Large, color = Slitok.Mint) }
+            }
+
+            Caption("Список в шторке")
+            Panel(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SheetList {
+                        SheetRow("Сегодня, 19:04", subtitle = "четверг", onClick = {})
+                        SheetRow("Вчера, 21:42", subtitle = "среда", trailing = { SlitokTag("вручную", TagTone.Brass) }, onClick = {})
+                        SheetRow("20 октября, 08:15", subtitle = "вторник", selected = true, onClick = {})
+                    }
+                    SheetList {
+                        SheetRow("Из файла…", leading = { SheetIconTile(Icons.Filled.Edit) }, arrow = true, onClick = {})
+                    }
+                }
             }
 
             Caption("Строка действий раздела")

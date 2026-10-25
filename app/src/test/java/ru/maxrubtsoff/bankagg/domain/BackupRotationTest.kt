@@ -55,4 +55,15 @@ class BackupRotationTest {
         assertEquals("15 октября", RuDays.relative(LocalDate.of(2026, 10, 15), today))
         assertEquals("31 декабря 2025", RuDays.relative(LocalDate.of(2025, 12, 31), today))
     }
+
+    @Test fun weekdayNamesAllSevenDays() {
+        // 2026-10-19 is a Monday: the week from its start to its end, then the next one begins again.
+        val monday = LocalDate.of(2026, 10, 19)
+        val names = listOf("понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье")
+        names.forEachIndexed { i, n -> assertEquals(n, RuDays.weekday(monday.plusDays(i.toLong()))) }
+        assertEquals("понедельник", RuDays.weekday(monday.plusDays(7)))
+        assertEquals("воскресенье", RuDays.weekday(monday.minusDays(1)))
+        // Across a year boundary: 2026-01-01 is a Thursday.
+        assertEquals("четверг", RuDays.weekday(LocalDate.of(2026, 1, 1)))
+    }
 }
