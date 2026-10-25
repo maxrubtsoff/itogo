@@ -26,4 +26,12 @@ class RuPluralTest {
         assertEquals("1 готов", RuPlural.readyShots(1))
         assertEquals("2 не прочитаны", RuPlural.unreadShots(2))
     }
+
+    @Test fun duplicatesSkippedForms() {
+        assertEquals("1 дубликат", RuPlural.duplicatesSkipped(1))
+        assertEquals("3 дубликата", RuPlural.duplicatesSkipped(3))
+        assertEquals("5 дубликатов", RuPlural.duplicatesSkipped(5))
+        assertEquals("11 дубликатов", RuPlural.duplicatesSkipped(11))
+        assertEquals("21 дубликат", RuPlural.duplicatesSkipped(21))
+    }
 }

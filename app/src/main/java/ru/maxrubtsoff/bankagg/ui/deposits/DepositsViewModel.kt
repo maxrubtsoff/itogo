@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.data.ocr.ShotImageStore
 import ru.maxrubtsoff.bankagg.domain.model.AccrualMethod
@@ -99,25 +100,37 @@ class DepositsViewModel(
         )
     }
 
-    private val allShots: StateFlow<List<DepositShot>> =
+    /** Shots that wait for review. */
+    val shots: StateFlow<List<DepositShot>> =
         shotRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Shots that wait for review: the ones already saved into a deposit are not here. */
-    val shots: StateFlow<List<DepositShot>> =
-        allShots.map { list -> list.filter { it.depositId == null } }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** U-66: screens of deposits already saved, set aside while the batch is open; «Вернуть» brings them back. */
+    private val stash = MutableStateFlow<List<DepositShot>>(emptyList())
+    val pendingDuplicates: StateFlow<Int> =
+        stash.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    /** F-38: shots waiting for review join a saved deposit. */
-    fun attachShots(ids: List<String>, depositId: String) {
-        viewModelScope.launch { shotRepo.setDepositId(ids, depositId) }
+    /** The skipped duplicates return to the batch as screens to check. */
+    fun restoreDuplicates() {
+        viewModelScope.launch {
+            val back = stash.value
+            stash.value = emptyList()
+            back.forEach { shotRepo.add(it.copy(status = ShotStatus.NEEDS_INPUT)) }
+        }
     }
 
-    /** F-38: a picture from the gallery goes straight to a saved deposit. */
-    fun addShotTo(depositId: String, uri: Uri) = addShot(uri) { id -> attachShots(listOf(id), depositId) }
+    /** The batch is over: the duplicates not brought back are gone for good, with their images. */
+    private fun dropStash() {
+        val left = stash.value
+        if (left.isEmpty()) return
+        stash.value = emptyList()
+        viewModelScope.launch { left.forEach { shotRepo.deleteImage(it.imagePath) } }
+    }
 
-    /** The screens a saved deposit was made from (B-64). */
-    fun observeDepositShots(depositId: String): Flow<List<DepositShot>> =
-        allShots.map { list -> list.filter { it.depositId == depositId } }
+    override fun onCleared() {
+        // The scope is cancelled by now: clean up on its own.
+        stash.value.forEach { runBlocking { shotRepo.deleteImage(it.imagePath) } }
+        super.onCleared()
+    }
 
     fun observeDeposit(id: String): Flow<Deposit?> = repo.observe(id)
 
@@ -204,10 +217,11 @@ class DepositsViewModel(
                     createdAt = System.currentTimeMillis()
                 )
                 repo.add(deposit)
-                // B-64: every screen of the group stays with the deposit, not just the first.
-                shotRepo.setDepositId(g.ids, deposit.id)
+                // U-66: the screens are not kept.
+                g.ids.forEach { shotRepo.delete(it) }
             }
             onDone()
+            dropStash()
         }
     }
 
@@ -218,8 +232,12 @@ class DepositsViewModel(
 
     private suspend fun recognise(shot: DepositShot) {
         try {
-            val draft = recognizeShot(shot)
-            if (shotRepo.get(shot.id) != null) {
+            val draft = recognizeShot(shot, repo.observeAll().first())
+            if (draft.duplicateOf != null) {
+                // U-66: a deposit that is already saved — set aside, not offered again.
+                shotRepo.get(shot.id)?.let { stash.value = stash.value + it.copy(brand = draft.brand, status = draft.status, draft = draft.fields) }
+                shotRepo.deleteKeepingImage(shot.id)
+            } else if (shotRepo.get(shot.id) != null) {
                 shotRepo.update(shot.copy(brand = draft.brand, status = draft.status, draft = draft.fields))
             }
         } finally {
@@ -268,7 +286,7 @@ class DepositsViewModel(
                 createdAt = createdAt
             )
             if (existingId == null) repo.add(deposit) else repo.update(deposit)
-            if (shotIds.isNotEmpty()) shotRepo.setDepositId(shotIds, deposit.id)
+            if (shotIds.isNotEmpty()) shotIds.forEach { shotRepo.delete(it) }
             onDone()
         }
     }
@@ -276,12 +294,11 @@ class DepositsViewModel(
     fun delete(id: String) {
         viewModelScope.launch {
             val deposit = repo.get(id) ?: return@launch
-            val linked = shotRepo.observeAll().first().filter { it.depositId == id }.map { it.id }
             repo.delete(id)
             undo.offer("Вклад удалён", restore = {
                 repo.add(deposit)
                 deposit.topUps.forEach { repo.addTopUp(deposit.id, it) }
-            }, finish = { linked.forEach { shotRepo.delete(it) } })
+            })
         }
     }
 
