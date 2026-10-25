@@ -1,6 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.capital
 
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
+import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import androidx.compose.ui.text.style.TextOverflow
 import ru.maxrubtsoff.bankagg.ui.common.AmountField
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
@@ -86,7 +87,7 @@ fun CashSheet(currentMinor: Long, onSave: (Long) -> Unit, onDismiss: () -> Unit)
         }
         AmountField(text, { text = it }, "₽", autoFocus = true)
         if (mode != CashEdit.Mode.SET) {
-            Text(
+            MoneyText(
                 when {
                     input == null -> "сейчас ${Money.ofMinor(currentMinor).format()}"
                     result == null -> "столько нет: сейчас ${Money.ofMinor(currentMinor).format()}"
