@@ -65,6 +65,8 @@ import ru.maxrubtsoff.bankagg.data.security.PhoneKeys
 import ru.maxrubtsoff.bankagg.ui.common.twoFingerSwipeDown
 import ru.maxrubtsoff.bankagg.ui.common.LocalRevealAmounts
 import ru.maxrubtsoff.bankagg.ui.common.LocalAmountsHidden
+import ru.maxrubtsoff.bankagg.ui.history.CapitalHistoryScreen
+import ru.maxrubtsoff.bankagg.ui.history.CapitalHistoryViewModel
 import ru.maxrubtsoff.bankagg.domain.model.FlipDetector
 import ru.maxrubtsoff.bankagg.domain.model.AppLock
 import kotlinx.coroutines.withContext
@@ -210,6 +212,9 @@ private object Routes {
     const val CAPITAL = "capital?section={section}"
     const val CAPITAL_BASE = "capital"
     fun capital(part: CapitalPart) = "capital?section=${part.key}"
+    /** F-36: the capital's history; [part] null — the total. */
+    const val CAPITAL_HISTORY = "history/capital?part={part}"
+    fun capitalHistory(part: CapitalPart?) = "history/capital?part=${part?.key ?: "total"}"
     const val CURRENCY = "currency/{code}"
     fun currency(code: String) = "currency/$code"
     const val SETTINGS_BANKS = "settings/banks"
@@ -705,6 +710,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         vm = capitalVm,
                         cashbackVm = cashbackVm,
                         onOpenCapital = { openPart(it) },
+                        onOpenHistory = { nav.navigate(Routes.capitalHistory(null)) },
                         onOpenCashback = { openTab(Routes.CASHBACK_BASE) },
                         onOpenCashbackNext = { jumpTo("cashback?offset=1") },
                         onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
@@ -782,6 +788,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         onOpenDepositBatch = { ids -> nav.navigate(Routes.depositBatch(ids)) },
                         onManualDeposit = { nav.navigate(Routes.DEPOSITS_MANUAL) },
                         onOpenCurrency = { code -> nav.navigate(Routes.currency(code)) },
+                        onOpenHistory = { nav.navigate(Routes.capitalHistory(it)) },
                         selectedPackages = selectedPackages,
                         onOpenBanks = { nav.navigate(Routes.SETTINGS_BANKS) },
                         onAddBank = { nav.navigate(Routes.BANKS_ADD) },
@@ -789,6 +796,13 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         onOpenLog = { nav.navigate(Routes.SETTINGS_LOG) }
                     ) }
                 }
+            }
+            composable(
+                Routes.CAPITAL_HISTORY,
+                arguments = listOf(navArgument("part") { type = NavType.StringType; nullable = true; defaultValue = null })
+            ) { entry ->
+                val historyVm: CapitalHistoryViewModel = viewModel(entry, factory = factory)
+                CapitalHistoryScreen(historyVm, entry.arguments?.getString("part"), onBack = { nav.popBackStack() })
             }
             composable(Routes.SETTINGS) {
                 TopLevel(padding) {

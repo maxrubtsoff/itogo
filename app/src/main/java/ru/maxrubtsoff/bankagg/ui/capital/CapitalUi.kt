@@ -28,7 +28,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ru.maxrubtsoff.bankagg.domain.model.CapitalHistory
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
+import ru.maxrubtsoff.bankagg.ui.common.DeltaLine
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.maxrubtsoff.bankagg.domain.model.Currencies
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.ui.common.AmountText
@@ -117,4 +122,16 @@ fun SectionHeroText(caption: String, amount: String, color: Color = Slitok.Fg) {
             AmountText(amount, style = MaterialTheme.typography.displaySmall, color = color, minSize = 20.sp)
         }
     }
+}
+
+/**
+ * The month's change under a section's hero sum (F-36): a line with the little
+ * graph; a tap opens the history with this part chosen. Absent until there are
+ * two days of history.
+ */
+@Composable
+fun HeroDelta(vm: CapitalViewModel, today: java.time.LocalDate, part: CapitalPart, onOpen: (CapitalPart) -> Unit) {
+    val days by vm.days.collectAsStateWithLifecycle()
+    val glance = remember(days, today, part) { CapitalHistory.glance(days, today, part) } ?: return
+    DeltaLine(Money.ofMinor(glance.change.deltaMinor), "за месяц", glance.spark, color = part.color(), onClick = { onOpen(part) })
 }

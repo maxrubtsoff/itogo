@@ -78,6 +78,38 @@ object RuDays {
     /** "понедельник" … "воскресенье": the day of the week, lower case. */
     fun weekday(day: LocalDate): String = WEEKDAYS[day.dayOfWeek.value - 1]
 
+    /** "обновлено сегодня в 14:32" / "обновлено вчера" / "обновлено 23 октября" (F-37). */
+    fun updated(epochMs: Long, today: LocalDate, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): String {
+        val at = java.time.Instant.ofEpochMilli(epochMs).atZone(zone)
+        val day = at.toLocalDate()
+        val label = if (day == today) "сегодня в %d:%02d".format(at.hour, at.minute) else relative(day, today)
+        return "обновлено $label"
+    }
+
+    /** "23 октября" / "23 октября 2025" — the date of a history line. */
+    fun dayMonth(day: LocalDate, today: LocalDate): String =
+        "${day.dayOfMonth} ${MONTHS[day.monthValue - 1]}" + if (day.year != today.year) " ${day.year}" else ""
+
+    /** "14 октября, вторник" — the date under the finger on the chart. */
+    fun dayWeekday(day: LocalDate, today: LocalDate): String = dayMonth(day, today) + ", " + weekday(day)
+
+    /** "Октябрь" / "Октябрь 2025" — a month in the folded list. */
+    fun monthTitle(month: java.time.YearMonth, today: LocalDate): String {
+        val name = MONTHS_NOM[month.monthValue - 1]
+        return if (month.year != today.year) "$name ${month.year}" else name
+    }
+
+    private val MONTHS_SHORT = listOf("янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек")
+
+    /** "14 окт" — an axis label of a short period; with [withYear] "окт 2025" — of a long one. */
+    fun axisLabel(day: LocalDate, withYear: Boolean): String =
+        if (withYear) "${MONTHS_SHORT[day.monthValue - 1]} ${day.year}" else "${day.dayOfMonth} ${MONTHS_SHORT[day.monthValue - 1]}"
+
+    private val MONTHS_NOM = listOf(
+        "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+        "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+    )
+
     fun relative(day: LocalDate, today: LocalDate): String = when (day) {
         today -> "сегодня"
         today.minusDays(1) -> "вчера"

@@ -81,6 +81,11 @@ import ru.maxrubtsoff.bankagg.ui.common.MoreMenu
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.AddShotTile
 import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
+import ru.maxrubtsoff.bankagg.ui.common.DeltaLine
+import ru.maxrubtsoff.bankagg.ui.common.PeriodChips
+import ru.maxrubtsoff.bankagg.ui.common.CapitalChart
+import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
+import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.ui.common.ShotDragLayer
 import ru.maxrubtsoff.bankagg.ui.common.ShotDropZone
 import ru.maxrubtsoff.bankagg.ui.common.ShotThumbs
@@ -285,6 +290,14 @@ fun ShowcaseScreen(onBack: () -> Unit) {
 
             Caption("Скрины ждут проверки")
             PendingShotsPlate(shots = 4, thumbs = listOf("", "", ""), ready = 2, check = 1, unread = 1, onOpen = {})
+
+            Caption("История капитала")
+            DeltaLine(Money.ofMinor(4_830_000), "за месяц", listOf(10L, 12, 11, 15, 14, 18, 20), onClick = {})
+            DeltaLine(Money.ofMinor(-400_000), "за неделю", null, onClick = {})
+            DeltaLine(Money.ZERO, "за месяц", null, onClick = {})
+            var period by remember { mutableStateOf(HistoryPeriod.MONTH) }
+            PeriodChips(period, onPick = { period = it })
+            CapitalChart(points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"), onScrub = {})
 
             Caption("Перенос скрина пальцем")
             ShotDragDemo()

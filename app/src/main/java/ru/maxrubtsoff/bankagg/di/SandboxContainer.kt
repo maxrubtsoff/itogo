@@ -58,6 +58,7 @@ class SandboxContainer(context: Context, val today: Today, features: Features) {
     val cashbackRepository: CashbackRepository = SampleCashbackRepository(sample.cashback)
     val cashbackShotRepository = SampleCashbackShotRepository()
     val subscriptionRepository: SubscriptionRepository = SampleSubscriptionRepository(sample.subscriptions)
+    val capitalHistory: ru.maxrubtsoff.bankagg.domain.repository.CapitalHistoryRepository = ru.maxrubtsoff.bankagg.data.repository.sample.SampleCapitalHistory()
 
     // Pickers and OCR are never really used in a tour; these only satisfy what the view-models ask for.
     val shotImageStore by lazy { ShotImageStore(appContext) }

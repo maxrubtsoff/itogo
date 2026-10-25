@@ -113,7 +113,9 @@ fun DepositsSection(
     onOpenDeposit: (String) -> Unit,
     onOpenShot: (String) -> Unit,
     onOpenBatch: (List<String>) -> Unit,
-    onManual: () -> Unit
+    onManual: () -> Unit,
+    /** Under the hero sum: the month's change (F-36). */
+    heroExtra: @Composable () -> Unit = {}
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val pending by vm.shots.collectAsStateWithLifecycle()
@@ -159,7 +161,7 @@ fun DepositsSection(
         if (state.isEmpty) {
             EmptyState(onAdd, LocalTourOffer.current(TourSection.DEPOSITS, false))
         } else {
-            HeroSummary(state.summary)
+            HeroSummary(state.summary, heroExtra)
             if (state.active.isNotEmpty()) {
                 if (state.order.sort == DepositSort.BANK) {
                     val groups = remember(state.active, state.order) {
@@ -212,7 +214,7 @@ fun DepositsSection(
  * what comes out — one quiet line under it, short figures, text colour (B-34).
  */
 @Composable
-private fun HeroSummary(summary: DepositMath.Summary) {
+private fun HeroSummary(summary: DepositMath.Summary, extra: @Composable () -> Unit = {}) {
     Panel(modifier = Modifier.fillMaxWidth(), radius = 22.dp) {
         Box(Modifier.fillMaxWidth().heroGlow(Slitok.Violet)) {
             Column(Modifier.padding(20.dp)) {
@@ -230,6 +232,7 @@ private fun HeroSummary(summary: DepositMath.Summary) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = Slitok.Muted
                 )
+                extra()
                 Spacer(Modifier.height(10.dp))
                 MoneyText(
                     "вложено ${MoneyCompact.format(summary.principal)}${RuText.DOT}к выдаче ${MoneyCompact.format(summary.payout)}".nbsp(),

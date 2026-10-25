@@ -1,6 +1,7 @@
 package ru.maxrubtsoff.bankagg.domain.model
 
 import java.time.LocalDate
+import java.time.ZoneId
 
 /** The four parts of total capital, in display order. */
 enum class CapitalPart(val key: String) {
@@ -24,7 +25,9 @@ data class CapitalSnapshot(
     val activeDeposits: List<Deposit>,
     val depositsAccruedMinor: Long,
     val currency: CurrencySummary,
-    val cash: CashBalance?
+    val cash: CashBalance?,
+    /** When the capital last changed by an event (F-37); null — never. Daily interest is not an event. */
+    val lastChangedAt: Long? = null
 ) {
     data class Part(
         val part: CapitalPart,
@@ -140,7 +143,33 @@ object CapitalCalculator {
             activeDeposits = active,
             depositsAccruedMinor = accruedMinor,
             currency = currency,
-            cash = cash
+            cash = cash,
+            lastChangedAt = lastChangeOf(accounts, cash, fxOps, deposits, today)
         )
+    }
+
+    /**
+     * The latest event that moved the capital (F-37): an account's balance, the
+     * cash, a currency deal, a deposit opened or topped up, or one that ended.
+     * The daily accrual of interest is not an event. Null when there is none.
+     */
+    fun lastChangeOf(
+        accounts: List<Account>,
+        cash: CashBalance?,
+        fxOps: List<FxOperation>,
+        deposits: List<Deposit>,
+        today: LocalDate,
+        zone: ZoneId = ZoneId.systemDefault()
+    ): Long? {
+        fun at(day: LocalDate) = day.atStartOfDay(zone).toInstant().toEpochMilli()
+        val times = accounts.map { it.updatedAt } +
+            listOfNotNull(cash?.updatedAt) +
+            fxOps.map { it.createdAt } +
+            deposits.flatMap { d ->
+                listOf(d.createdAt) +
+                    d.topUps.filter { !it.date.isAfter(today) }.map { at(it.date) } +
+                    (if (d.endDate.isBefore(today)) listOf(at(d.endDate.plusDays(1))) else emptyList())
+            }
+        return times.filter { it > 0L }.maxOrNull()
     }
 }

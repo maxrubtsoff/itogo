@@ -2,6 +2,7 @@ package ru.maxrubtsoff.bankagg.domain
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.maxrubtsoff.bankagg.domain.model.Account
@@ -118,4 +119,31 @@ class CapitalCalculatorTest {
         assertTrue(snap.parts.none { it.hasData })
         assertEquals(0L, snap.totalMinor)
     }
+
+    // ---- F-37: the last change of the capital ----
+
+    private val zone = java.time.ZoneOffset.UTC
+    private fun at(day: LocalDate) = day.atStartOfDay(zone).toInstant().toEpochMilli()
+
+    @Test fun lastChange_takesLatestOfAccountsCashFxDeposits() {
+        val acc = account(BankBrand.SBER, "RUB", 10).copy(updatedAt = 1_000L)
+        val cash = CashBalance(Money.ofMinor(100), 5_000L)
+        val op = buyUsd(1, 76).copy(createdAt = 3_000L)
+        val dep = deposit(100, today.minusMonths(1), today.plusMonths(1)).copy(createdAt = 4_000L)
+        assertEquals(5_000L, CapitalCalculator.lastChangeOf(listOf(acc), cash, listOf(op), listOf(dep), today, zone))
+        assertEquals(4_000L, CapitalCalculator.lastChangeOf(listOf(acc), cash.copy(updatedAt = 2_000L), listOf(op), listOf(dep), today, zone))
+        assertNull(CapitalCalculator.lastChangeOf(emptyList(), null, emptyList(), emptyList(), today, zone))
+    }
+
+    @Test fun lastChange_variantA_ignoresDailyAccrual() {
+        // A running deposit: today's interest is not an event, only its opening is.
+        val dep = deposit(100, today.minusMonths(1), today.plusMonths(1)).copy(createdAt = 4_000L)
+        assertEquals(4_000L, CapitalCalculator.lastChangeOf(emptyList(), null, emptyList(), listOf(dep), today, zone))
+    }
+
+    @Test fun lastChange_depositEnd_countsAsChange() {
+        val ended = deposit(100, today.minusMonths(3), today.minusDays(2)).copy(createdAt = 4_000L)
+        assertEquals(at(today.minusDays(1)), CapitalCalculator.lastChangeOf(emptyList(), null, emptyList(), listOf(ended), today, zone))
+    }
 }
+

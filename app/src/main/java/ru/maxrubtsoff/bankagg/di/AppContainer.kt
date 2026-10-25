@@ -42,6 +42,10 @@ import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.usecase.GetCapital
+import ru.maxrubtsoff.bankagg.domain.usecase.BuildCapitalHistory
+import ru.maxrubtsoff.bankagg.domain.usecase.RecordCapitalDay
+import ru.maxrubtsoff.bankagg.data.repository.CapitalHistoryRepositoryImpl
+import ru.maxrubtsoff.bankagg.domain.repository.CapitalHistoryRepository
 import ru.maxrubtsoff.bankagg.domain.usecase.MyBanksScope
 import ru.maxrubtsoff.bankagg.domain.usecase.RefreshRates
 import ru.maxrubtsoff.bankagg.data.settings.SettingsStore
@@ -165,6 +169,19 @@ class AppContainer(context: Context) {
     val refreshRates by lazy { RefreshRates(CbrRatesSource(), ratesRepository, settings) }
     val getCapital by lazy {
         GetCapital(ledgerRepository, depositRepository, fxRepository, ratesRepository, cashRepository, settings, today)
+    }
+
+    /** The capital's daily points (F-36). */
+    val capitalHistory: CapitalHistoryRepository by lazy { CapitalHistoryRepositoryImpl(db.capitalSnapshotDao()) }
+    val recordCapitalDay by lazy { RecordCapitalDay(getCapital, capitalHistory) }
+    val buildCapitalHistory by lazy {
+        BuildCapitalHistory(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today)
+    }
+
+    /** Rebuilds the past once when the history is empty, then keeps today's point up to date. */
+    suspend fun trackCapitalHistory() {
+        runCatching { buildCapitalHistory() }
+        recordCapitalDay.track()
     }
 
     /**

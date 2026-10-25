@@ -1,6 +1,7 @@
 package ru.maxrubtsoff.bankagg
 
 import ru.maxrubtsoff.bankagg.data.notify.ReminderWorker
+import ru.maxrubtsoff.bankagg.data.notify.CapitalSnapshotWorker
 import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -30,6 +31,9 @@ class App : Application(), ImageLoaderFactory {
         // Candidates noticed by the old, looser check that aren't banks go away (B-25).
         MainScope().launch { container.newBankAnswers.sweep() }
         ReminderWorker.schedule(this)
+        CapitalSnapshotWorker.schedule(this)
+        // The capital's history: the past is rebuilt once, today's point follows every change (F-36).
+        MainScope().launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { container.trackCapitalHistory() } }
         container.autoBackup.start()
         // Pictures saved before F-26 get sealed with the phone's key.
         MainScope().launch(kotlinx.coroutines.Dispatchers.IO) {
