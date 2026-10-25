@@ -29,7 +29,9 @@ class LogoMaker(context: Context) {
     private suspend fun build(uri: Uri, bankKey: String): String? = withContext(Dispatchers.IO) {
         // A 50 MP photo is decoded already shrunk: the logo is 192 px anyway (U-34).
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        appContext.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return@withContext null
+        val boundsStream = appContext.contentResolver.openInputStream(uri) ?: return@withContext null
+        boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
         var sample = 1
         while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= SIZE) sample *= 2
         val opts = BitmapFactory.Options().apply { inSampleSize = sample }
