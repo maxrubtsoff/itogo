@@ -93,7 +93,8 @@ fun SlitokSheet(onDismiss: () -> Unit, scroll: Boolean = true, imeField: Boolean
         return
     }
     if (imeField) {
-        ImeSheet(onDismiss, scroll, content)
+        // A sheet with the keyboard always scrolls: a tall form must not push its title under the status bar (B-62).
+        ImeSheet(onDismiss, scroll = true, content)
         return
     }
     ModalBottomSheet(

@@ -134,7 +134,7 @@ fun FxOperationSheet(vm: CapitalViewModel, request: FxSheetRequest, onDone: () -
     val check = candidate?.let { FxPortfolio.checkSave(ops, it) }
     val blocked = (check as? FxPortfolio.Check.Blocked)?.message
 
-    SlitokSheet(onDone, imeField = existing == null) {
+    SlitokSheet(onDone, scroll = true, imeField = existing == null) {
         Text(
             when {
                 existing != null && kind == FxKind.BUY -> "Покупка"
