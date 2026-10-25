@@ -25,17 +25,21 @@ fun BankPickSheet(selected: BankBrand?, onPick: (BankBrand) -> Unit, onDismiss: 
     SlitokSheet(onDismiss) {
         Text("Банк", style = MaterialTheme.typography.titleLarge, color = Slitok.Fg)
         if (all.size > SEARCH_FROM) SlitokField(query, { query = it }, placeholder = "Найти банк")
-        SheetList {
-            if (onClear != null && query.isBlank()) {
-                SheetRow("Не указан", selected = selected == null, onClick = { onClear(); onDismiss() })
-            }
-            shown.forEach { b ->
-                SheetRow(
-                    b.title,
-                    leading = { BankIcon(b, size = 36.dp) },
-                    selected = b.key == selected?.key,
-                    onClick = { onPick(b); onDismiss() }
-                )
+        val clearRow = onClear != null && query.isBlank()
+        // A search that finds nothing leaves no empty frame behind.
+        if (shown.isNotEmpty() || clearRow) {
+            SheetList {
+                if (clearRow) {
+                    SheetRow("Не указан", selected = selected == null, onClick = { onClear?.invoke(); onDismiss() })
+                }
+                shown.forEach { b ->
+                    SheetRow(
+                        b.title,
+                        leading = { BankIcon(b, size = 36.dp) },
+                        selected = b.key == selected?.key,
+                        onClick = { onPick(b); onDismiss() }
+                    )
+                }
             }
         }
     }

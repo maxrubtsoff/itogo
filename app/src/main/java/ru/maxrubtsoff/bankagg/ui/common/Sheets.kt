@@ -1,50 +1,34 @@
 package ru.maxrubtsoff.bankagg.ui.common
 
 import android.os.Build
+import android.view.View
+import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import ru.maxrubtsoff.bankagg.domain.model.TourTarget
-import android.view.View
-import android.view.Window
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -58,13 +42,33 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import kotlinx.coroutines.launch
+import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import java.time.Instant
 import java.time.LocalDate
@@ -114,25 +118,43 @@ fun SlitokSheet(onDismiss: () -> Unit, scroll: Boolean = true, imeField: Boolean
     }
 }
 
-/** The keyboard's height seen in this run; before the first one a usual numeric keyboard stands in. */
-private var knownImePx = 0
+/** The keyboard's height the last time a sheet had one; 0 until the first one, when a usual numeric keyboard stands in. */
+private var lastImePx = 0
 private val DefaultIme = 280.dp
+
+/** What one sheet has seen of the keyboard: how tall it got, and whether it has started to go. */
+private class ImeSeen {
+    var peak = 0
+    var leaving = false
+
+    fun commit() {
+        if (peak > 0) lastImePx = peak
+    }
+}
 
 /**
  * Room for the keyboard under a sheet's content (B-58): the height the keyboard
- * had last time, held from the first frame instead of growing with it, and
- * never less than the gesture bar. If the keyboard turns out taller, it grows to fit.
+ * had the last time, held from the first frame instead of growing with it, and
+ * never less than the gesture bar. If the keyboard turns out taller, it grows to
+ * fit. Once the keyboard starts to go, the room goes with it — no empty tail.
  */
 @Composable
 private fun ImeReserve() {
     val ime = WindowInsets.ime
     val bars = WindowInsets.navigationBars
     val fallback = with(LocalDensity.current) { DefaultIme.roundToPx() }
+    val seen = remember { ImeSeen() }
+    DisposableEffect(seen) { onDispose { seen.commit() } }
     Spacer(
         Modifier.layout { measurable, constraints ->
             val now = ime.getBottom(this)
-            if (now > knownImePx) knownImePx = now
-            val height = maxOf(if (knownImePx > 0) knownImePx else fallback, bars.getBottom(this))
+            if (now > seen.peak) seen.peak = now
+            if (seen.peak > 0 && now < seen.peak) {
+                seen.leaving = true
+                seen.commit()
+            }
+            val held = if (seen.leaving) 0 else if (lastImePx > 0) lastImePx else fallback
+            val height = maxOf(held, now, bars.getBottom(this))
             val placeable = measurable.measure(constraints)
             layout(placeable.width, height) {}
         }
@@ -142,7 +164,8 @@ private fun ImeReserve() {
 /**
  * The sheet of a field with the keyboard (B-58): same veil, shape and handle as
  * [SlitokSheet], but it rises in one move on the motion scale (no spring) with the
- * keyboard's room already in it, and the field takes focus at once. With
+ * keyboard's room already in it, and the field takes focus at once. It goes as a
+ * [SlitokSheet] does: down with a finger on it or by the veil. With
  * «Remove animations» on it is simply there.
  */
 @Composable
@@ -160,6 +183,8 @@ private fun ImeSheet(onDismiss: () -> Unit, scroll: Boolean, content: @Composabl
         }
         Unit
     }
+    val latestClose by rememberUpdatedState(close)
+    val flingPx = with(LocalDensity.current) { FlingDismiss.toPx() }
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         ClearSystemBars(dim = 0f)
         LaunchedEffect(Unit) { progress.animateTo(1f, Motion.tween(Motion.NORMAL)) }
@@ -178,6 +203,30 @@ private fun ImeSheet(onDismiss: () -> Unit, scroll: Boolean, content: @Composabl
                     .graphicsLayer { translationY = (1f - progress.value) * size.height }
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(Slitok.PanelTop)
+                    // Down with a finger: the panel follows it; past a third of its height
+                    // or with a flick it goes, otherwise it settles back.
+                    .pointerInput(flingPx) {
+                        val tracker = VelocityTracker()
+                        var pulled = 0f
+                        var level = 1f
+                        detectVerticalDragGestures(
+                            onDragStart = { tracker.resetTracking(); pulled = 0f; level = progress.value },
+                            onVerticalDrag = { change, dy ->
+                                if (leaving || size.height == 0) return@detectVerticalDragGestures
+                                pulled += dy
+                                tracker.addPosition(change.uptimeMillis, Offset(0f, pulled))
+                                level = (level - dy / size.height).coerceIn(0f, 1f)
+                                val target = level
+                                scope.launch { progress.snapTo(target) }
+                            },
+                            onDragEnd = {
+                                val v = tracker.calculateVelocity().y
+                                if (v > flingPx || (v > -flingPx && level < 1f - DragDismissShare)) latestClose()
+                                else scope.launch { progress.animateTo(1f, Motion.tween(Motion.FAST)) }
+                            },
+                            onDragCancel = { scope.launch { progress.animateTo(1f, Motion.tween(Motion.FAST)) } }
+                        )
+                    }
                     .clickable(interactionSource = none, indication = null) {},
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -197,6 +246,12 @@ private fun ImeSheet(onDismiss: () -> Unit, scroll: Boolean, content: @Composabl
         }
     }
 }
+
+/** The share of the panel pulled down after which letting go closes it. */
+private const val DragDismissShare = 1f / 3f
+
+/** A flick down faster than this closes the panel however far it got. */
+private val FlingDismiss = 700.dp
 
 /**
  * Where a tour draws the sheets of the screens it plays on (U-54): a real sheet

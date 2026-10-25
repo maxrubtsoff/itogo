@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
@@ -70,7 +71,7 @@ fun SheetRow(
                 val y = size.height - 0.5.dp.toPx()
                 drawLine(Slitok.Line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
             }
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .heightIn(min = 52.dp)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
