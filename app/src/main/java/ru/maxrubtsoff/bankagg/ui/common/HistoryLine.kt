@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,22 +69,26 @@ fun HistoryLine(
     ) {
         lead?.invoke()
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (subtitle != null || kind != RowKind.SUM) {
+            val chevron: @Composable () -> Unit = {
+                Icon(
+                    when {
+                        kind == RowKind.GO -> Icons.AutoMirrored.Filled.KeyboardArrowRight
+                        expanded -> Icons.Filled.KeyboardArrowUp
+                        else -> Icons.Filled.KeyboardArrowDown
+                    },
+                    contentDescription = null, tint = Slitok.Muted, modifier = Modifier.size(14.dp)
+                )
+            }
+            // No line under the title: the chevron closes the title instead of hanging alone below it.
+            val inTitle = subtitle == null && kind != RowKind.SUM
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (inTitle) { Spacer(Modifier.width(4.dp)); chevron() }
+            }
+            if (subtitle != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (subtitle != null) {
-                        MoneyText(subtitle, Modifier.weight(1f, fill = false), MaterialTheme.typography.bodySmall, Slitok.Muted, maxLines = subtitleLines)
-                    }
-                    if (kind != RowKind.SUM) {
-                        Icon(
-                            when {
-                                kind == RowKind.GO -> Icons.AutoMirrored.Filled.KeyboardArrowRight
-                                expanded -> Icons.Filled.KeyboardArrowUp
-                                else -> Icons.Filled.KeyboardArrowDown
-                            },
-                            contentDescription = null, tint = Slitok.Muted, modifier = Modifier.size(14.dp)
-                        )
-                    }
+                    MoneyText(subtitle, Modifier.weight(1f, fill = false), MaterialTheme.typography.bodySmall, Slitok.Muted, maxLines = subtitleLines)
+                    if (kind != RowKind.SUM) chevron()
                 }
             }
         }
