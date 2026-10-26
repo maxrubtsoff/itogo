@@ -101,7 +101,7 @@ fun CapitalChart(
 
     val density = LocalDensity.current.density
     val measurer = rememberTextMeasurer()
-    val labelStyle = MaterialTheme.typography.labelSmall
+    val labelStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
     val hidden = LocalAmountsHidden.current
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     // Where each sum goes is worked out once per data and size, not in every frame.
@@ -170,7 +170,7 @@ fun CapitalChart(
                     }
                 }
                 spots.forEach { s ->
-                    drawText(s.layout, color = Slitok.Bg, topLeft = s.topLeft, drawStyle = Stroke(3.dp.toPx(), join = StrokeJoin.Round))
+                    drawText(s.layout, color = Slitok.Bg, topLeft = s.topLeft, drawStyle = Stroke(1.5.dp.toPx(), join = StrokeJoin.Round))
                     drawText(s.layout, color = Slitok.Muted, topLeft = s.topLeft)
                 }
             }
