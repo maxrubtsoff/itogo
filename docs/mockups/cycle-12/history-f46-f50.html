@@ -1,0 +1,497 @@
+<title>История капитала · цикл 12</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --page:#0F0F10;
+  --bg:#0A0F0E; --panel-top:#18211F; --panel-bottom:#111917; --inset:#0C1211;
+  --fg:#EEF3F0; --muted:#8EA39B; --faint:#56655F; --line:rgba(255,255,255,.08);
+  --brass:#D7A74A; --brass2:#F0C878; --on-brass:#14120E;
+  --brass-tint:rgba(215,167,74,.12); --brass-pill:rgba(215,167,74,.15); --brass-line:rgba(215,167,74,.33); --brass-edge:rgba(215,167,74,.55);
+  --mint:#59E2A6; --coral:#FF8468; --violet:#9A86F5; --sky:#6CC4E8; --sand:#CBB89A;
+  --scrim:rgba(5,8,7,.72);
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --text:"Golos Text","Segoe UI",system-ui,sans-serif;
+  --shadow:0 12px 28px rgba(0,0,0,.55),0 2px 6px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--fg);font-family:var(--text);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 60px}
+h1{font-family:var(--display);font-weight:600;font-size:22px;margin:4px 0 6px}
+h2{font-family:var(--display);font-weight:600;font-size:18px;margin:8px 0 6px}
+h3{font-family:var(--display);font-weight:500;font-size:15px;margin:0}
+p.lead{color:var(--muted);max-width:900px;line-height:1.45;margin:0 0 18px;font-size:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 22px}
+.tabs button{font:500 14px var(--text);color:var(--muted);background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:9px 14px;cursor:pointer}
+.tabs button.on{background:var(--brass-pill);color:var(--brass2);border-color:var(--brass-line)}
+.tab{display:none}.tab.on{display:block}
+.variants{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.col{width:min(390px,100%);min-width:0}
+.vh{display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+.badge{font:600 11px var(--text);letter-spacing:.04em;text-transform:uppercase;color:var(--on-brass);background:var(--brass);border-radius:8px;padding:3px 8px}
+.badge.q{background:var(--inset);color:var(--muted);border:1px solid var(--line)}
+.badge.data{background:transparent;color:var(--coral);border:1px solid var(--coral)}
+ul.notes{color:var(--muted);font-size:13px;line-height:1.45;padding-left:18px;margin:12px 0 0}
+ul.notes b{color:var(--fg);font-weight:600}
+ul.notes .plus{color:var(--mint)} ul.notes .minus{color:var(--coral)}
+.ann{font-size:12.5px;color:var(--brass2);margin:8px 0 0;line-height:1.4}
+.ann::before{content:"↑ "}
+.scrollx{overflow-x:auto;max-width:100%}
+.sep{height:1px;background:var(--line);margin:34px 0 22px}
+.rules{border-collapse:collapse;font-size:13px;min-width:720px}
+.rules th,.rules td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+.rules th{color:var(--muted);font-weight:500}
+.rules td:first-child{white-space:nowrap;font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 20px}
+.legend .card{background:linear-gradient(var(--panel-top),var(--panel-bottom));border-radius:20px;padding:14px 16px;width:min(300px,100%);box-shadow:var(--shadow)}
+.legend .card p{color:var(--muted);font-size:13px;margin:6px 0 0;line-height:1.4}
+
+/* phone */
+.phone{width:390px;height:844px;background:var(--bg);border-radius:44px;border:1px solid rgba(255,255,255,.07);box-shadow:0 30px 60px rgba(0,0,0,.6);overflow:hidden;position:relative;flex:none}
+.phone.short{height:auto;min-height:0;padding-bottom:18px}
+.sb{height:36px;display:flex;justify-content:space-between;align-items:center;padding:0 28px;font:600 14px var(--text);color:var(--fg)}
+.hdr{height:64px;display:flex;align-items:center;gap:6px;padding:0 8px}
+.hdr .back{width:44px;height:44px;display:grid;place-items:center}
+.hdr .ttl{font:500 18px var(--display);letter-spacing:-.01em}
+.scr{padding:0 16px;display:flex;flex-direction:column;gap:12px}
+.ptabs{display:flex;background:var(--inset);border-radius:12px;padding:3px;margin-top:4px;gap:2px}
+.ptabs span{flex:1;text-align:center;font:500 13px var(--text);color:var(--muted);padding:8px 0;border-radius:10px}
+.ptabs span.on{background:var(--brass-pill);color:var(--brass2)}
+.panel{background:linear-gradient(var(--panel-top),var(--panel-bottom));border-radius:20px;box-shadow:var(--shadow);overflow:hidden;position:relative}
+.hero{border-radius:22px}
+.hero .in{padding:16px 18px 12px;position:relative}
+.glow-brass{background:radial-gradient(130% 70% at 0% 0%,rgba(215,167,74,.17),transparent 62%)}
+.glow-violet{background:radial-gradient(130% 70% at 0% 0%,rgba(154,134,245,.2),transparent 62%)}
+.glow-sky{background:radial-gradient(130% 70% at 0% 0%,rgba(108,196,232,.17),transparent 62%)}
+.glow-sand{background:radial-gradient(130% 70% at 0% 0%,rgba(203,184,154,.15),transparent 62%)}
+.hsum{font:500 34px var(--display);letter-spacing:-.02em;line-height:1.15}
+.hsum .k{font-size:.7em;opacity:.55}
+.dl{display:flex;gap:8px;align-items:baseline;margin-top:2px;font-size:14px;flex-wrap:wrap}
+.dl .d{font-weight:600}
+.mint{color:var(--mint)} .muted{color:var(--muted)} .b2{color:var(--brass2)} .faint{color:var(--faint)}
+.seldate{font:500 12px var(--text);color:var(--brass2);margin-top:2px}
+.selday{display:flex;gap:6px;align-items:baseline;font-size:14px;margin-top:2px;flex-wrap:wrap}
+.chart{margin-top:12px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.axis{display:flex;justify-content:space-between;font:400 11px var(--text);color:var(--faint);margin-top:4px}
+.chips{display:flex;gap:6px;margin-top:10px}
+.chip{font:500 12px var(--text);color:var(--muted);background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:6px 11px}
+.chip.on{background:var(--brass-pill);color:var(--brass2);border-color:var(--brass-line)}
+.cap{font:500 12px var(--text);color:var(--muted);padding:4px 4px 0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cap.on{color:var(--brass2)}
+.reset{font:500 12px var(--text);color:var(--fg);background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:5px 10px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 16px;position:relative;min-height:56px}
+.row + .row{box-shadow:inset 0 1px 0 var(--line)}
+.row.sub{padding-left:36px;min-height:48px}
+.row + .row.sub{box-shadow:none}
+.row.sub::after{content:"";position:absolute;left:19px;top:0;bottom:0;width:1px;background:var(--line)}
+.sv{display:inline-block;width:14px;height:14px;flex:none;vertical-align:-2px;margin-left:2px}
+.rt .s.one,.mh .s{display:flex;align-items:center;min-width:0}
+.rt .s.one .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.row .amt,.mh .amt{margin-left:auto}
+.row.hl{background:none}
+.row.hl::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--brass2)}
+.row.dim{opacity:.45}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.rt{flex:1;min-width:0}
+.rt .t{font:400 16px var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt .s{font:400 12px var(--text);color:var(--muted);margin-top:2px;line-height:1.35}
+.rt .s.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amt{font:500 13px var(--display);white-space:nowrap}
+.chev{width:20px;height:20px;flex:none}
+.bank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 11px var(--text);flex:none}
+.ctile{width:24px;height:24px;border-radius:8px;background:var(--inset);display:grid;place-items:center;font:600 12px var(--text);color:var(--muted);flex:none;border:1px solid var(--line)}
+.mpanel .mh{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.mpanel .mh .t{font:400 16px var(--text)}
+.mpanel .mh .s{font:400 12px var(--text);color:var(--muted)}
+.shelf{font:600 11px var(--text);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 16px 2px;box-shadow:inset 0 1px 0 var(--line)}
+.fade{position:absolute;left:0;right:0;bottom:0;height:70px;background:linear-gradient(transparent,var(--bg))}
+.more{font:400 12px var(--text);color:var(--faint);padding:8px 16px 12px}
+.scrim{position:absolute;inset:0;background:var(--scrim)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(var(--panel-top),var(--panel-bottom));border-radius:28px 28px 0 0;padding:10px 20px 26px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--faint);margin:0 auto 14px}
+.sheet .st{font:500 18px var(--display)}
+.slist{background:var(--inset);border:1px solid var(--line);border-radius:16px;margin-top:14px;overflow:hidden}
+.srow{display:flex;align-items:center;gap:12px;padding:8px 14px;min-height:52px}
+.srow + .srow{box-shadow:inset 0 1px 0 var(--line)}
+.btn-plate{margin-top:14px;text-align:center;font:500 15px var(--display);color:var(--fg);background:var(--inset);border:1px solid var(--line);border-radius:16px;padding:14px}
+.offset{transition:none}
+.mini{display:flex;flex-direction:column;gap:6px;margin-top:12px;padding-top:10px;box-shadow:inset 0 1px 0 var(--line)}
+.mini .mr{display:flex;align-items:center;gap:10px;font-size:13px}
+.mini .mr .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vrow{display:flex;align-items:center;gap:12px;padding:12px 16px;min-height:56px;position:relative}
+.vrow + .vrow,.vgrp + .vrow,.vrow + .vgrp,.vgrp + .vgrp{box-shadow:inset 0 1px 0 var(--line)}
+.vrow.hl::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--brass2)}
+.vrow .amt{margin-left:auto}
+.ics{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-left:2px}
+.guide{position:relative}
+.guide::before{content:"";position:absolute;left:19px;top:0;bottom:14px;width:1px;background:var(--line);box-shadow:0 0 0 .5px rgba(255,255,255,.06)}
+.guide .vrow{padding-left:36px;min-height:48px;box-shadow:none}
+.vinset{background:var(--inset);border:1px solid var(--line);border-radius:14px;margin:0 12px 12px}
+.vinset .vrow{min-height:46px;padding:9px 12px}
+.vinset .vrow + .vrow{box-shadow:inset 0 1px 0 var(--line)}
+.cnt{font:600 11px var(--text);color:var(--muted);background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.lead24{width:24px;height:24px;display:grid;place-items:center;flex:none}
+.blocks{display:flex;flex-wrap:wrap;gap:20px}
+.blocks .bl{width:min(358px,100%)}
+.bl h3{margin-bottom:8px;font-size:13px;color:var(--muted);font-family:var(--text);font-weight:600}
+</style>
+
+<h1>История капитала · цикл 12</h1>
+<p class="lead">F-46…F-50 продуманы вместе: одна логика строк, подсветка по графику, точки на графике и группы по смыслу. Только выбранные варианты: во вкладке «Вместе» — сборка целиком, дальше — по каждому пункту. Сегодня в примерах — 26 октября 2026, понедельник.</p>
+
+<div class="tabs" id="tabs">
+  <button data-t="all">Вместе</button>
+  <button data-t="f46">F-46 · график → строки</button>
+  <button data-t="f47">F-47 · пояснение</button>
+  <button data-t="f48">F-48 · группы</button>
+  <button data-t="f49">F-49 · точки</button>
+  <button data-t="f50">F-50 · списания</button>
+</div>
+
+<!-- ============ ВМЕСТЕ ============ -->
+<section class="tab" id="all">
+  <h2>Одно правило для строки</h2>
+  <p class="lead">Справа — только сумма, всегда по одному краю. Что строка умеет, говорит маленький значок в конце серой подписи. Подсветка (F-46) — полоса слева.</p>
+  <div class="legend" id="legend"></div>
+  <div class="variants" id="all-v"></div>
+</section>
+
+<section class="tab" id="f46">
+  <h2>F-46. Касание графика — что на него повлияло</h2>
+  <p class="lead">«Повлияли» — события между предыдущей точкой линии и выбранной: за неделю и месяц это один день, за год и всё время точка — неделя, тогда подсвечивается вся неделя. Сейчас лента только прокручивается к ближайшему дню; дальше — как это сделать видно.</p>
+  <div class="variants" id="f46-v"></div>
+  <div class="sep"></div>
+  <h2>По шагам</h2>
+  <div class="variants" id="f46-s"></div>
+</section>
+
+<section class="tab" id="f47">
+  <h2>F-47. Что именно изменилось</h2>
+  <p class="lead">«Проценты» и «Переоценка валюты» — это сумма за день по нескольким вкладам или валютам. Пояснение — разложить её на части: какой вклад сколько дал, какая валюта на сколько подорожала. Каждая часть ведёт в свой вклад или свою валюту.</p>
+  <div class="variants" id="f47-v"></div>
+</section>
+
+<section class="tab" id="f48">
+  <h2>F-48. Группы по смыслу вкладки</h2>
+  <p class="lead">Пример — «Вклады», период «Год», раскрыт октябрь. Сейчас месяц раскрывается в ленту по дням: проценты каждый день заслоняют новые вклады и пополнения.</p>
+  <div class="variants" id="f48-v"></div>
+  <div class="sep"></div>
+  <h2>По вкладкам</h2>
+  <p class="lead">Группы внутри месяца (Год, Всё). За неделю и месяц лента остаётся по дням, а внутри дня одинаковое сворачивается так же: «Пополнения · 2», «Проценты» по вкладам.</p>
+  <div class="scrollx"><table class="rules" id="rules"></table></div>
+  <div style="height:20px"></div>
+  <div class="blocks" id="f48-b"></div>
+</section>
+
+<section class="tab" id="f49">
+  <h2>F-49. Значимые точки на графике</h2>
+  <p class="lead">Точки — только действия (новый вклад, пополнение, покупка валюты, крупное поступление), не проценты и не переоценка: те идут каждый день и уже видны линией. Пример — «Вклады», «Месяц».</p>
+  <div class="variants" id="f49-v"></div>
+  <div class="sep"></div>
+  <h2>По вкладкам</h2>
+  <div class="blocks" id="f49-b"></div>
+</section>
+
+<section class="tab" id="f50">
+  <h2>F-50. Списания и переводы без раскрытия</h2>
+  <p class="lead">Переходить из списания некуда, раскрывать — незачем. Строка должна выглядеть как итог, а не как кнопка: без стрелки и без отклика на касание. Это же касается одиночного списания, поступления и перевода в рублях — у них сейчас стрелка ведёт в «Счета» целиком.</p>
+  <div class="variants" id="f50-v"></div>
+</section>
+
+<script>
+/* ---------- helpers ---------- */
+const NB=' ';
+const fmt=n=>Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g,NB);
+const sgn=n=>n>0?'+':n<0?'−':'';
+const rub=n=>sgn(n)+fmt(n)+NB+'₽';
+const amt=(n,o={})=>`<span class="amt ${n>0?'mint':''}">${o.txt||rub(n)}</span>`;
+const PC={acc:'var(--brass)',dep:'var(--violet)',fx:'var(--sky)',cash:'var(--sand)',all:'var(--brass2)'};
+const CH={
+ r:'<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="#56655F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ d:'<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="#56655F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ u:'<svg class="chev" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" fill="none" stroke="#56655F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ n:''
+};
+const SV=d=>`<svg class="sv" viewBox="0 0 24 24"><path d="${d}" fill="none" stroke="#8EA39B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const CS={r:SV('M9 6l6 6-6 6'),d:SV('M6 9l6 6 6-6'),u:SV('M6 15l6-6 6 6')};
+const BANK={t:['#FFDD2D','#111','Т'],a:['#EF3124','#fff','А'],s:['#21A038','#fff','С'],v:['#0A2896','#fff','В']};
+function row(o){
+  let lead='';
+  if(o.bank){const b=BANK[o.bank];lead=`<span class="bank" style="background:${b[0]};color:${b[1]}">${b[2]}</span>`}
+  else if(o.cur){lead=`<span class="ctile">${o.cur}</span>`}
+  else if(o.c){lead=`<span class="dot" style="background:${PC[o.c]}"></span>`}
+  return `<div class="row ${o.sub?'sub':''} ${o.hl?'hl':''} ${o.dim?'dim':''}">${lead}
+   <div class="rt"><div class="t">${o.t}</div>${o.s||o.ar?`<div class="s one"><span class="tx">${o.s||''}</span>${o.ar?CS[o.ar]:''}</div>`:''}</div>
+   ${o.a!=null?amt(o.a,{txt:o.at}):''}</div>`;
+}
+const rows=a=>a.map(row).join('');
+const day=(cap,rs,o={})=>`<div class="cap ${o.on?'on':''}"><span>${cap}</span>${o.reset?'<span class="reset">Сбросить</span>':''}</div><div class="panel">${rows(rs)}</div>`;
+function phone(inner,o={}){
+  return `<div class="phone ${o.short?'short':''}"><div class="sb"><span>14:32</span><span>▲ ● ▮</span></div>
+  <div class="hdr"><div class="back"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="#EEF3F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="ttl">История капитала</div></div>
+  <div class="scr" style="${o.shift?`margin-top:-${o.shift}px`:''}">${inner}</div>${o.over||''}${o.fade===false?'':'<div class="fade"></div>'}</div>`;
+}
+const tabsRow=on=>`<div class="ptabs">${['Всё','Счета','Вклады','Валюта','Наличные'].map(t=>`<span class="${t===on?'on':''}">${t}</span>`).join('')}</div>`;
+const chips=on=>`<div class="chips">${['Неделя','Месяц','Год','Всё'].map(t=>`<span class="chip ${t===on?'on':''}">${t}</span>`).join('')}</div>`;
+const hsum=(n,k='47')=>`<div class="hsum">${fmt(n)}<span class="k">,${k}</span> ₽</div>`;
+
+/* ---------- series ---------- */
+function sTotal(){let v=4560000,a=[];for(let i=0;i<31;i++){v+=-2600-1800*Math.abs(Math.sin(i*1.7))+900*Math.sin(i*.9);if(i===4)v+=95000;if(i===18)v+=180000;if(i===12)v+=3000;a.push(v)}return a}
+function sDep(){let v=2380000,a=[];for(let i=0;i<31;i++){v+=780+i*5;if(i===6)v+=300000;if(i===18)v+=50000;if(i===22)v-=150000;if(i===24)v+=200000;a.push(v)}return a}
+function sDepYear(){let v=1650000,a=[];for(let i=0;i<53;i++){v+=4200;if(i===9)v+=250000;if(i===20)v+=150000;if(i===31)v-=200000;if(i===40)v+=120000;if(i===46)v+=300000;if(i===49)v+=200000;a.push(v)}return a}
+function sAcc(){let v=1820000,a=[];for(let i=0;i<31;i++){v+=-2600-1800*Math.abs(Math.sin(i*1.7));if(i===4)v+=95000;if(i===18)v+=180000;if(i===6)v-=300000;if(i===24)v-=200000;if(i===22)v+=150000;a.push(v)}return a}
+function sFx(){let v=96000,a=[];for(let i=0;i<31;i++){v+=1300*Math.sin(i*.8)+300;if(i===12)v+=80740;if(i===25)v-=47200;a.push(v)}return a}
+function sCash(){let v=45000,a=[];for(let i=0;i<31;i++){if(i===9)v+=20000;if(i===21)v-=15000;a.push(v)}return a}
+const AX_M=['26 сен','3 окт','11 окт','18 окт','26 окт'];
+const AX_Y=['окт 25','янв','апр','июл','окт 26'];
+
+let gid=0;
+function chart(c){
+  const W=322,H=130,top=c.ticks?0:0,data=c.data,n=data.length;
+  let mn=Math.min(...data),mx=Math.max(...data);const avg=(mn+mx)/2;let r=mx-mn;const minr=avg*.02;if(r<minr){mn=avg-minr/2;mx=avg+minr/2;r=minr}
+  const X=i=>6+i*(W-12)/(n-1), Y=v=>14+(1-(v-mn)/r)*(H-30);
+  const id='g'+(gid++);const col=c.color;
+  let line=data.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
+  let fill=line+` L${X(n-1)} ${H} L${X(0)} ${H} Z`;
+  let s=`<svg viewBox="0 0 ${W} ${H+(c.ticks?16:0)}"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${col};stop-opacity:.28"/><stop offset="1" style="stop-color:${col};stop-opacity:0"/></linearGradient><filter id="${id}b"><feGaussianBlur stdDeviation="4"/></filter></defs>`;
+  if(c.range){const [a,b]=c.range;s+=`<rect x="${X(a)}" y="0" width="${X(b)-X(a)}" height="${H}" style="fill:rgba(240,200,120,.10)"/>`}
+  s+=`<path d="${fill}" style="fill:url(#${id})"/><path d="${line}" style="fill:none;stroke:${col};stroke-width:6;opacity:.35" filter="url(#${id}b)"/><path d="${line}" style="fill:none;stroke:${col};stroke-width:2;stroke-linejoin:round"/>`;
+  // marks: сначала все точки, потом подписи (крупные первыми) в свободное место
+  const marks=c.marks||[];
+  const val=m=>m.label?Math.abs(parseFloat(m.label.replace(/[^\d,]/g,'').replace(',','.'))||0):0;
+  const obst=[];// точки-препятствия: линия (с шагом 2px) и все отметки
+  for(let i=0;i<n-1;i++){const x0=X(i),y0=Y(data[i]),x1=X(i+1),y1=Y(data[i+1]);const st=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/2));for(let k=0;k<=st;k++)obst.push({x:x0+(x1-x0)*k/st,y:y0+(y1-y0)*k/st,r:2})}
+  marks.forEach(m=>{
+    const x=X(m.i),y=Y(data[m.i]);
+    if(c.ticks){s+=`<rect x="${x-1.5}" y="${H+4}" width="3" height="${m.big?10:6}" rx="1.5" style="fill:${m.col||col}"/>`;return}
+    obst.push({x,y,r:7});
+    if(m.kind==='ring')s+=`<circle cx="${x}" cy="${y}" r="4.5" style="fill:#111917;stroke:${m.col||col};stroke-width:2"/>`;
+    else if(m.kind==='dot')s+=`<circle cx="${x}" cy="${y}" r="3" style="fill:${m.col||col};stroke:#111917;stroke-width:1.5"/>`;
+    else s+=`<circle cx="${x}" cy="${y}" r="5" style="fill:${m.col||col};stroke:#111917;stroke-width:2"/>`;
+  });
+  if(c.sel==null)obst.push({x:X(n-1),y:Y(data[n-1]),r:7});
+  const placed=[];
+  const free=b=>b.x>=0&&b.x+b.w<=W&&b.y>=0&&b.y+14<=H&&!obst.some(o=>o.x>b.x-o.r&&o.x<b.x+b.w+o.r&&o.y>b.y-o.r&&o.y<b.y+14+o.r)&&!placed.some(p=>b.x<p.x+p.w+6&&p.x<b.x+b.w+6&&b.y<p.y+16&&p.y<b.y+16);
+  if(!c.ticks&&!c.quiet)marks.filter(m=>m.label).sort((a,b)=>val(b)-val(a)).forEach(m=>{
+    const x=X(m.i),y=Y(data[m.i]),w=m.label.length*5.6+4;
+    const cand=[{x:x-w/2,y:y-22},{x:x-w/2,y:y+9},{x:x-w-9,y:y-7},{x:x+9,y:y-7},{x:x-w-9,y:y-22},{x:x+9,y:y+9},{x:x-w/2,y:y-36}];
+    const b=cand.map(q=>({x:q.x,y:q.y,w})).find(free);
+    if(!b)return;// места нет — остаётся только точка
+    placed.push(b);
+    s+=`<text x="${b.x+w/2}" y="${b.y+11}" text-anchor="middle" style="font:500 11px 'Golos Text',sans-serif;fill:#8EA39B;stroke:#111917;stroke-width:3px;paint-order:stroke;stroke-linejoin:round">${m.label}</text>`;
+  });
+  if(c.sel!=null){const x=X(c.sel),y=Y(data[c.sel]);s+=`<line x1="${x}" y1="0" x2="${x}" y2="${H}" style="stroke:#EEF3F0;stroke-opacity:.28;stroke-width:1;stroke-dasharray:3 3"/><circle cx="${x}" cy="${y}" r="6" style="fill:${col};stroke:#EEF3F0;stroke-width:2"/>`;
+    if(c.callout){const w=Math.max(...c.callout.map(t=>t.length))*6.3+20;let lx=Math.min(Math.max(x-w/2,0),W-w);const ly=Math.max(y-52,0);
+      s+=`<rect x="${lx}" y="${ly}" width="${w}" height="38" rx="10" style="fill:#0C1211;stroke:rgba(215,167,74,.55)"/><text x="${lx+10}" y="${ly+15}" style="font:500 11px 'Golos Text',sans-serif;fill:#EEF3F0">${c.callout[0]}</text><text x="${lx+10}" y="${ly+30}" style="font:600 11px 'Golos Text',sans-serif;fill:#59E2A6">${c.callout[1]}</text>`}}
+  else{const x=X(n-1),y=Y(data[n-1]);s+=`<circle cx="${x}" cy="${y}" r="4" style="fill:${col};stroke:#111917;stroke-width:2"/>`}
+  s+='</svg>';
+  return `<div class="chart">${s}<div class="axis">${(c.axis||AX_M).map(t=>`<span>${t}</span>`).join('')}</div></div>`;
+}
+function hero(o){
+  const d=o.data, last=d[d.length-1], first=d[0];
+  const val=o.sel!=null?d[o.sel]:last;
+  let line;
+  if(o.selLine) line=o.selLine;
+  else {const dd=last-first; line=`<div class="dl"><span class="d ${dd>0?'mint':''}">${rub(dd)} · ${sgn(dd)}${Math.abs(dd/first*100).toFixed(1).replace('.',',')}${NB}%</span><span class="muted">с ${o.from||'26 сентября'}</span></div>`}
+  return `<div class="panel hero"><div class="in ${'glow-'+o.glow}">${hsum(val)}${line}${chart(Object.assign({axis:o.axis},o))}${o.extra||''}${chips(o.period||'Месяц')}</div></div>`;
+}
+
+/* ---------- common data ---------- */
+const TOT=sTotal(), DEP=sDep(), DEPY=sDepYear(), ACC=sAcc(), FX=sFx(), CASH=sCash();
+const dTot=TOT[18]-TOT[17];
+const ALLMARKS=[{i:4,label:'+95 тыс',plus:1,col:PC.acc},{i:6,kind:'dot',col:PC.dep},{i:12,kind:'dot',col:PC.fx},{i:18,label:'+180 тыс',plus:1,col:PC.acc},{i:24,kind:'dot',col:PC.dep}];
+const DEPMARKS=[{i:6,label:'+300 тыс',plus:1},{i:18,kind:'dot'},{i:22,kind:'ring',label:'−150 тыс',below:1},{i:24,label:'+200 тыс',plus:1}];
+
+/* ---------- ЛЕГЕНДА ---------- */
+document.getElementById('legend').innerHTML=[
+ ['Значок › — ведёт',`<div class="panel">${row({c:'dep',t:'Новый вклад',s:'Т-Банк «Копилка»',a:300000,ar:'r'})}</div>`,'Открывает вклад или валюту, о которых строка. Пролёт вправо, «Назад» — обратно сюда.'],
+ ['Значок ⌄ — раскрывается',`<div class="panel">${row({c:'dep',t:'Проценты',s:'3 вклада',a:935,ar:'d'})}</div>`,'Сумма из частей: проценты по вкладам, переоценка по валютам, пополнения за месяц. Раскрывается на месте, части — на направляющей слева.'],
+ ['Без значка — только итог',`<div class="panel">${row({c:'acc',t:'Списания',s:'4 операции',a:-6230})}</div>`,'Касание ничего не делает и не подсвечивается. Списания, переводы, поступления в рублях.']
+].map(([h,html,p])=>`<div class="card"><h3>${h}</h3><div style="margin-top:10px">${html}</div><p>${p}</p></div>`).join('');
+
+/* ---------- ВМЕСТЕ ---------- */
+(function(){
+  const scr1=tabsRow('Всё')+hero({data:TOT,color:PC.all,glow:'brass',sel:18,marks:ALLMARKS,
+     selLine:`<div class="seldate">14 октября, среда</div>`})+
+    day('14 октября',[
+      {c:'acc',t:'Поступление',s:'ООО «Ромашка»',a:180000,hl:1},
+      {c:'acc',t:'Списания',s:'4 операции',a:-6230,hl:1},
+      {c:'dep',t:'Проценты',s:'3 вклада',a:912,ar:'u',hl:1},
+      {bank:'t',sub:1,t:'«Копилка»',s:'Т-Банк',a:402,ar:'r',hl:1},
+      {bank:'a',sub:1,t:'«Альфа-Вклад»',s:'Альфа-Банк',a:348,ar:'r',hl:1},
+      {bank:'s',sub:1,t:'«Лучший %»',s:'Сбер',a:162,ar:'r',hl:1}
+    ],{on:1,reset:1})+day('13 октября',[{c:'acc',t:'Списания',s:'3 операции',a:-2870},{c:'dep',t:'Проценты',s:'3 вклада',a:910,ar:'d'}]);
+  const scr2=tabsRow('Вклады')+hero({data:DEPY,color:PC.dep,glow:'violet',period:'Год',axis:AX_Y,from:'26 октября 2025',
+     marks:[{i:9,label:'+250 тыс',plus:1},{i:20,kind:'dot'},{i:31,kind:'ring'},{i:40,kind:'dot'},{i:46,label:'+300 тыс',plus:1},{i:49,label:'+200 тыс',plus:1}]})+
+    `<div class="panel mpanel"><div class="mh"><div class="rt"><div class="t">Октябрь</div><div class="s"><span class="tx">9 событий</span>${CS.u}</div></div>${amt(424180)}</div>
+     ${rows([{c:'dep',t:'Новые вклады · 2',s:'Т-Банк, Сбер',a:500000,ar:'d'},{c:'dep',t:'Пополнения · 3',s:'Т-Банк «Копилка», Альфа',a:90000,ar:'d'},{c:'dep',t:'Проценты',s:'3 вклада',a:24180,ar:'d'},{c:'dep',t:'Вклад закрыт',s:'ВТБ «Выгодный» · 18 октября',a:-190000,ar:'r'}])}</div>
+     <div class="panel mpanel"><div class="mh"><div class="rt"><div class="t">Сентябрь</div><div class="s"><span class="tx">4 события</span>${CS.r}</div></div>${amt(21900)}</div></div>`;
+  document.getElementById('all-v').innerHTML=`
+   <div class="col"><div class="vh"><h3>Всё · Месяц · выбран день</h3><span class="badge">рекомендую</span></div>${phone(scr1,{shift:0})}
+     <ul class="notes"><li>F-49: на линии крупные поступления с суммой, вклады и валюта — точками.</li><li>F-46: выбран 14 октября — строки этого дня подсвечены, подпись дня латунью, «Сбросить» рядом.</li><li>F-47: «Проценты» раскрываются по вкладам, каждый ведёт в свой вклад.</li><li>F-50: «Поступление», «Списания» — без стрелки.</li></ul></div>
+   <div class="col"><div class="vh"><h3>Вклады · Год · октябрь раскрыт</h3><span class="badge">рекомендую</span></div>${phone(scr2)}
+     <ul class="notes"><li>F-48: внутри месяца — группы по смыслу вкладки: новые вклады, пополнения, проценты, закрытые.</li><li>F-49: новые вклады — точка с суммой (до трёх подписей), пополнения — малая точка, закрытие — кольцо.</li></ul></div>`;
+})();
+
+/* ---------- F-46 ---------- */
+(function(){
+  const dayRows=hl=>[{c:'acc',t:'Поступление',s:'ООО «Ромашка»',a:180000,hl},{c:'acc',t:'Списания',s:'4 операции',a:-6230,hl},{c:'dep',t:'Проценты',s:'3 вклада',a:912,ar:'d',hl}];
+  const selLine=`<div class="seldate">14 октября, среда</div><div class="selday"><span class="mint" style="font-weight:600">${rub(dTot)}</span><span class="muted">за день</span></div>`;
+  const hA=hero({data:TOT,color:PC.all,glow:'brass',sel:18,marks:ALLMARKS,selLine});
+  const A=tabsRow('Всё')+hA+day('15 октября',[{c:'acc',t:'Списания',s:'2 операции',a:-3140},{c:'dep',t:'Проценты',s:'3 вклада',a:915,ar:'d'}])+day('14 октября',dayRows(1),{on:1,reset:1})+day('13 октября',[{c:'acc',t:'Списания',s:'3 операции',a:-2870}]);
+  const extraB=`<div class="mini">${[['acc','Поступление · ООО «Ромашка»',180000],['acc','Списания · 4',-6230],['dep','Проценты · 3 вклада',912]].map(([c,t,a])=>`<div class="mr"><span class="dot" style="background:${PC[c]}"></span><span class="t">${t}</span>${amt(a)}</div>`).join('')}</div>`;
+  const B=tabsRow('Всё')+hero({data:TOT,color:PC.all,glow:'brass',sel:18,marks:ALLMARKS,selLine,extra:extraB})+day('Сегодня',[{c:'dep',t:'Проценты',s:'3 вклада',a:935,ar:'d'},{c:'fx',t:'Переоценка валюты',s:'$ 81,92 → 80,74 ₽',a:-1240,ar:'d'}])+day('Вчера',[{c:'acc',t:'Списания',s:'3 операции',a:-2870}]);
+  const C=tabsRow('Всё')+hA+day('14 октября',dayRows(0),{on:1,reset:1})+`<div class="more" style="padding-left:4px">Остальные дни скрыты до «Сбросить»</div>`;
+  document.getElementById('f46-v').innerHTML=`
+   <div class="col"><div class="vh"><h3>A · Подсветка строк в ленте</h3><span class="badge">рекомендую</span></div>${phone(A)}
+     <p class="ann">отпустили палец на 14 октября — лента сама доехала до дня</p>
+     <ul class="notes"><li>В герое — сумма на день и <b>изменение за день</b>: видно, что строки ниже складываются в эту цифру.</li><li>Повлиявшие строки: фон <b>BrassTint</b> и полоса <b>Brass2</b> слева; подпись дня латунью, «Сбросить» рядом (как сейчас).</li><li class="plus">Лента не фильтруется — решение F-41 сохраняется.</li><li>Подсветка появляется за <b>Motion.NORMAL</b>, с «Убрать анимации» — сразу.</li></ul></div>
+   <div class="col"><div class="vh"><h3>B · Сводка дня в герое</h3><span class="badge q">вариант</span></div>${phone(B)}
+     <ul class="notes"><li>Под графиком — до трёх событий дня, лента не двигается.</li><li class="plus">Видно сразу, не уходя от графика.</li><li class="minus">Дублирует ленту; герой растёт и прыгает при каждом движении пальца; у дня с 6 событиями — «ещё 3».</li></ul></div>
+   <div class="col"><div class="vh"><h3>C · Лента только за выбранный день</h3><span class="badge q">вариант</span></div>${phone(C)}
+     <ul class="notes"><li>После отпускания остаются строки этого дня.</li><li class="plus">Ничего лишнего.</li><li class="minus">Против F-41 («лента не фильтруется»): соседние дни пропадают, не сравнить; страница резко укорачивается.</li></ul></div>`;
+
+  // states of A
+  const s1=tabsRow('Всё')+hero({data:TOT,color:PC.all,glow:'brass',marks:ALLMARKS})+day('Сегодня',[{c:'dep',t:'Проценты',s:'3 вклада',a:935,ar:'d'},{c:'fx',t:'Переоценка валюты',s:'$ 81,92 → 80,74 ₽',a:-1240,ar:'d'}])+day('Вчера',[{c:'acc',t:'Списания',s:'3 операции',a:-2870}]);
+  const s2=tabsRow('Всё')+hA+day('Сегодня',[{c:'dep',t:'Проценты',s:'3 вклада',a:935,ar:'d'},{c:'fx',t:'Переоценка валюты',s:'$ 81,92 → 80,74 ₽',a:-1240,ar:'d'}]);
+  const s4=tabsRow('Всё')+hero({data:TOT,color:PC.all,glow:'brass',sel:15,marks:ALLMARKS,selLine:`<div class="seldate">11 октября, суббота</div><div class="selday"><span class="muted">без изменений за день</span></div>`})+day('Сегодня',[{c:'dep',t:'Проценты',s:'3 вклада',a:935,ar:'d'}]);
+  const yr=sTotal().concat([]); // reuse shape
+  const s5=tabsRow('Всё')+hero({data:DEPY,color:PC.all,glow:'brass',period:'Год',axis:AX_Y,sel:50,range:[49,50],selLine:`<div class="seldate">8 – 14 октября</div><div class="selday"><span class="mint" style="font-weight:600">${rub(232400)}</span><span class="muted">за неделю</span></div>`})+
+    `<div class="panel mpanel"><div class="mh"><div class="rt"><div class="t">Октябрь</div><div class="s"><span class="tx">24 события</span>${CS.u}</div></div>${amt(412300)}</div>${rows([{c:'acc',t:'Поступления · 2',s:'ООО «Ромашка»',a:275000,ar:'d',hl:1},{c:'acc',t:'Списания · 41',s:'в том числе 9 за неделю',a:-48300,hl:1},{c:'dep',t:'Новые вклады · 2',s:'Т-Банк, Сбер',a:500000,ar:'d'},{c:'dep',t:'Проценты',s:'3 вклада',a:24180,ar:'d',hl:1}])}</div>`;
+  document.getElementById('f46-s').innerHTML=`
+   <div class="col"><div class="vh"><h3>1 · Обычное</h3></div>${phone(s1)}</div>
+   <div class="col"><div class="vh"><h3>2 · Палец на графике</h3></div>${phone(s2)}<p class="ann">ведём по линии — сумма, дата и «за день» меняются; лента стоит, чтобы не дёргалась под пальцем</p></div>
+   <div class="col"><div class="vh"><h3>3 · Отпустили</h3></div>${phone(A,{shift:0})}<p class="ann">лента прокручивается к 14 октября, строки дня подсвечены; свёрнутое раскрывается само</p></div>
+   <div class="col"><div class="vh"><h3>4 · День без событий</h3></div>${phone(s4)}<p class="ann">«без изменений за день»; лента, как сейчас, едет к ближайшему дню с событиями</p></div>
+   <div class="col"><div class="vh"><h3>5 · Год: точка — неделя</h3></div>${phone(s5)}<p class="ann">полоса недели на графике; месяц раскрылся, подсвечены группы, в которых есть события недели</p></div>`;
+})();
+
+/* ---------- F-47 ---------- */
+(function(){
+  const base=tabsRow('Всё');
+  const A=base+day('Сегодня',[
+      {c:'dep',t:'Проценты',s:'3 вклада',a:935,ar:'u'},
+      {bank:'t',sub:1,t:'«Копилка»',s:'Т-Банк',a:412,ar:'r'},
+      {bank:'a',sub:1,t:'«Альфа-Вклад»',s:'Альфа-Банк',a:356,ar:'r'},
+      {bank:'s',sub:1,t:'«Лучший %»',s:'Сбер',a:167,ar:'r'},
+      {c:'fx',t:'Переоценка валюты',s:'$ −1,18 ₽ · € +0,22 ₽',a:-1240,ar:'u'},
+      {cur:'$',sub:1,t:'Доллар США',s:'81,92 → 80,74 ₽ · 1 200 $',a:-1416,ar:'r'},
+      {cur:'€',sub:1,t:'Евро',s:'94,10 → 94,32 ₽ · 800 €',a:176,ar:'r'}
+    ])+day('Вчера',[{c:'fx',t:'Переоценка валюты',s:'$ +0,27 ₽ · остаток изменён',a:5320,ar:'u'},{cur:'$',sub:1,t:'Доллар США',s:'81,65 → 81,92 ₽ · 1 200 $',a:324,ar:'r'},{sub:1,cur:'✎',t:'Остаток изменили вручную',s:'Доллар США',a:4996},{c:'dep',t:'Проценты',s:'Т-Банк «Копилка»',a:410,ar:'r'}]);
+  const listB=base+day('Сегодня',[{c:'dep',t:'Проценты',s:'3 вклада',a:935,ar:'r'},{c:'fx',t:'Переоценка валюты',s:'$ −1,18 ₽ · € +0,22 ₽',a:-1240,ar:'r'}])+day('Вчера',[{c:'acc',t:'Списания',s:'3 операции',a:-2870}]);
+  const sheet=`<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="st">Переоценка валюты</div>
+    <div class="dl" style="margin-top:6px"><span class="amt">${rub(-1240)}</span><span class="muted">сегодня</span></div>
+    <div class="slist">
+      <div class="srow"><span class="ctile">$</span><div class="rt"><div class="t">Доллар США</div><div class="s one">81,92 → 80,74 ₽ · 1 200 $</div></div>${amt(-1416)}${CH.r}</div>
+      <div class="srow"><span class="ctile">€</span><div class="rt"><div class="t">Евро</div><div class="s one">94,10 → 94,32 ₽ · 800 €</div></div>${amt(176)}${CH.r}</div>
+    </div></div>`;
+  const C=base+day('Сегодня',[{c:'dep',t:'Проценты',s:'Т-Банк +412 · Альфа +356 · Сбер +167',a:935,ar:'r',two:1},{c:'fx',t:'Переоценка валюты',s:'$ 81,92 → 80,74 ₽ · € 94,10 → 94,32 ₽',a:-1240,ar:'r',two:1}])+day('Вчера',[{c:'fx',t:'Переоценка валюты',s:'$ 81,65 → 81,92 ₽ · остаток изменили вручную',a:5320,ar:'r',two:1}]);
+  document.getElementById('f47-v').innerHTML=`
+   <div class="col"><div class="vh"><h3>A · Раскрытие на месте</h3><span class="badge">рекомендую</span></div>${phone(A)}
+     <ul class="notes"><li>«Проценты» и «Переоценка» — со значком ⌄ в подписи, раскрываются как группы. Каждая часть — со значком ›: в свой вклад, в свою валюту.</li><li>Подпись свёрнутой переоценки — без слов, сразу цифры: одна валюта — «$ 81,92 → 80,74 ₽» (курс был → стал); несколько — «$ −1,18 ₽ · € +0,22 ₽» (на сколько изменился курс каждой). В раскрытии — строка на валюту: курс было → стало, сколько её у вас и итог в рублях. Была ручная правка — «· остаток изменён».</li><li>Один вклад — строка сразу ведёт в него, в подписи его название.</li><li class="plus">Одна механика с группами F-48; пояснение не уводит с экрана.</li><li>Проценты по вкладам за день считаются раскладкой (DepositMath), остаток копеек — крупнейшему вкладу; сумма частей = сумме строки.</li></ul></div>
+   <div class="col"><div class="vh"><h3>B · Шторка «что изменилось»</h3><span class="badge q">вариант</span></div>${phone(listB,{over:sheet,fade:false})}
+     <ul class="notes"><li>Касание строки открывает <b>SlitokSheet</b> с разбором (<b>SheetList</b>), из части — переход.</li><li class="plus">Места под разбор много.</li><li class="minus">Лишний шаг; стрелка вправо обещает экран, а открывается шторка; две механики рядом с группами.</li></ul></div>
+   <div class="col"><div class="vh"><h3>C · Две строки подписи всегда</h3><span class="badge q">вариант</span></div>${phone(C)}
+     <ul class="notes"><li>Разбор прямо в подписи, переход — в раздел, как сейчас.</li><li class="plus">Ноль касаний.</li><li class="minus">Шумно каждый день; в конкретный вклад не попасть — главный запрос F-47 не закрыт.</li></ul></div>`;
+})();
+
+/* ---------- F-48 ---------- */
+(function(){
+  const hY=hero({data:DEPY,color:PC.dep,glow:'violet',period:'Год',axis:AX_Y,from:'26 октября 2025'});
+  const mh=(t,s,a,ar)=>`<div class="mh"><div class="rt"><div class="t">${t}</div><div class="s"><span class="tx">${s}</span>${CS[ar]}</div></div>${amt(a)}</div>`;
+  const A=tabsRow('Вклады')+`<div class="panel mpanel">${mh('Октябрь','30 событий',424180,'u')}
+    <div class="shelf" style="text-transform:none;letter-spacing:0;font-weight:500;font-size:12px">Сегодня</div>${row({c:'dep',t:'Проценты',s:'3 вклада',a:935,ar:'d'})}
+    <div class="shelf" style="text-transform:none;letter-spacing:0;font-weight:500;font-size:12px">Вчера</div>${row({c:'dep',t:'Проценты',s:'3 вклада',a:930,ar:'d'})}
+    <div class="shelf" style="text-transform:none;letter-spacing:0;font-weight:500;font-size:12px">24 октября</div>${row({c:'dep',t:'Проценты',s:'3 вклада',a:928,ar:'d'})}
+    <div class="shelf" style="text-transform:none;letter-spacing:0;font-weight:500;font-size:12px">20 октября</div>${rows([{c:'dep',t:'Новый вклад',s:'Сбер «Лучший %»',a:200000,ar:'r'},{c:'dep',t:'Проценты',s:'2 вклада',a:640,ar:'d'}])}
+    <div class="more">…ещё 18 дней</div></div>`;
+  const B=tabsRow('Вклады')+hY+`<div class="panel mpanel">${mh('Октябрь','9 событий',424180,'u')}
+    ${rows([{c:'dep',t:'Новые вклады · 2',s:'Т-Банк, Сбер',a:500000,ar:'u'},
+      {bank:'s',sub:1,t:'«Лучший %»',s:'Сбер · 20 октября',a:200000,ar:'r'},
+      {bank:'t',sub:1,t:'«Копилка»',s:'Т-Банк · 2 октября',a:300000,ar:'r'},
+      {c:'dep',t:'Пополнения · 3',s:'Т-Банк «Копилка», Альфа',a:90000,ar:'d'},
+      {c:'dep',t:'Проценты',s:'3 вклада',a:24180,ar:'d'},
+      {c:'dep',t:'Вклад закрыт',s:'ВТБ «Выгодный» · 18 октября',a:-190000,ar:'r'}])}</div>
+    <div class="panel mpanel">${mh('Сентябрь','4 события',21900,'r')}</div>`;
+  const C=tabsRow('Вклады')+`<div class="panel mpanel">${mh('Октябрь','9 событий',424180,'u')}
+    ${row({c:'dep',t:'Проценты за октябрь',s:'3 вклада',a:24180,ar:'d'})}
+    <div class="shelf" style="text-transform:none;letter-spacing:0;font-weight:500;font-size:12px">20 октября</div>${row({c:'dep',t:'Новый вклад',s:'Сбер «Лучший %»',a:200000,ar:'r'})}
+    <div class="shelf" style="text-transform:none;letter-spacing:0;font-weight:500;font-size:12px">18 октября</div>${row({c:'dep',t:'Вклад закрыт',s:'ВТБ «Выгодный»',a:-190000,ar:'r'})}
+    <div class="shelf" style="text-transform:none;letter-spacing:0;font-weight:500;font-size:12px">14 октября</div>${row({c:'dep',t:'Пополнение вклада',s:'Т-Банк «Копилка»',a:50000,ar:'r'})}
+    <div class="shelf" style="text-transform:none;letter-spacing:0;font-weight:500;font-size:12px">2 октября</div>${rows([{c:'dep',t:'Новый вклад',s:'Т-Банк «Копилка»',a:300000,ar:'r'},{c:'dep',t:'Пополнение вклада',s:'Альфа «Альфа-Вклад»',a:20000,ar:'r'}])}
+    <div class="more">…ещё 1 день</div></div>`;
+  document.getElementById('f48-v').innerHTML=`
+   <div class="col"><div class="vh"><h3>A · По дням, одинаковое в дне свёрнуто</h3><span class="badge q">вариант</span></div>${phone(A)}
+     <ul class="notes"><li>Как сейчас, но в дне сворачивается любой вид, не только списания.</li><li class="plus">Почти без изменений.</li><li class="minus">Проценты всё равно каждый день — 30 строк, новый вклад теряется.</li></ul></div>
+   <div class="col"><div class="vh"><h3>B · Группы по видам внутри месяца</h3><span class="badge">рекомендую</span></div>${phone(B)}
+     <ul class="notes"><li>Раскрытый месяц — короткий список групп по смыслу вкладки, крупные сверху. Группа раскрывается в события с датой в подписи.</li><li>Одно событие вида — обычной строкой, без группы.</li><li class="plus">Месяц читается за секунду: «два новых вклада на 500 тыс, проценты 24 тыс».</li><li>Год и Всё. За неделю и месяц — по дням (как A), потому что там важен день.</li></ul></div>
+   <div class="col"><div class="vh"><h3>C · Начисления итогом, действия по дням</h3><span class="badge q">вариант</span></div>${phone(C)}
+     <ul class="notes"><li>Проценты/переоценка — одной строкой за месяц сверху, ниже действия по дням.</li><li class="plus">Видна хронология.</li><li class="minus">Длиннее B; у «Счетов» без процентов почти не отличается от сегодняшнего.</li></ul></div>`;
+
+  document.getElementById('rules').innerHTML=`<tr><th>Вкладка</th><th>Группы внутри месяца (сверху вниз — по модулю суммы)</th><th>Раскрывается в</th></tr>
+   <tr><td>Всё</td><td>Поступления · N · Списания · N · Переводы · N · Новые вклады · N · Пополнения вкладов · N · Проценты · Покупки валюты · N · Продажи валюты · N · Переоценка валюты · Наличные</td><td>как в своей вкладке; точка — цвет части</td></tr>
+   <tr><td>Счета</td><td>Поступления · N · Списания · N · Переводы · N · Операции · N (вид неизвестен)</td><td>поступления — события с датой; <b>списания и переводы не раскрываются</b> (F-50)</td></tr>
+   <tr><td>Вклады</td><td>Новые вклады · N · Пополнения · N · Проценты · Закрыты · N</td><td>вклады с датой → вклад; проценты — по вкладам за месяц → вклад</td></tr>
+   <tr><td>Валюта</td><td>Покупки · N · Продажи · N · Переоценка · Поступления/Списания в валюте · N</td><td>сделки с датой → валюта; переоценка — по валютам за месяц → валюта</td></tr>
+   <tr><td>Наличные</td><td>Изменения · N</td><td>даты изменений — история хранится с этого обновления, раньше — одна точка</td></tr>`;
+
+  const blk=(h,inner)=>`<div class="bl"><h3>${h}</h3>${inner}</div>`;
+  document.getElementById('f48-b').innerHTML=
+   blk('Всё · октябрь',`<div class="panel mpanel">${mh('Октябрь','58 событий',412300,'u')}${rows([{c:'dep',t:'Новые вклады · 2',s:'Т-Банк, Сбер',a:500000,ar:'d'},{c:'acc',t:'Поступления · 2',s:'ООО «Ромашка»',a:275000,ar:'d'},{c:'acc',t:'Списания · 41',a:-48300},{c:'fx',t:'Покупки валюты · 1',s:'1 000 $',a:80740,ar:'d'},{c:'dep',t:'Проценты',s:'3 вклада',a:24180,ar:'d'},{c:'acc',t:'Переводы · 6',a:-31500},{c:'fx',t:'Переоценка валюты',s:'$ −1,66 ₽ · € +1,02 ₽',a:-2160,ar:'d'}])}</div>`)+
+   blk('Счета · октябрь',`<div class="panel mpanel">${mh('Октябрь','49 событий',195200,'u')}${rows([{c:'acc',t:'Поступления · 2',s:'ООО «Ромашка»',a:275000,ar:'u'},{c:'acc',sub:1,t:'ООО «Ромашка»',s:'14 октября',a:180000},{c:'acc',sub:1,t:'ООО «Ромашка»',s:'30 сентября',a:95000},{c:'acc',t:'Списания · 41',a:-48300},{c:'acc',t:'Переводы · 6',a:-31500}])}</div>`)+
+   blk('Валюта · октябрь',`<div class="panel mpanel">${mh('Октябрь','23 события',31380,'u')}${rows([{c:'fx',t:'Купили 1 000 $',s:'за 80 740 ₽ · 8 октября',a:80740,ar:'r'},{c:'fx',t:'Продали 500 €',s:'получили 47 200 ₽ · 21 октября',a:-47200,ar:'r'},{c:'fx',t:'Переоценка',s:'$ −1,66 ₽ · € +1,02 ₽',a:-2160,ar:'u'},{cur:'$',sub:1,t:'Доллар США',s:'82,40 → 80,74 ₽ за месяц',a:-2980,ar:'r'},{cur:'€',sub:1,t:'Евро',s:'93,30 → 94,32 ₽ за месяц',a:820,ar:'r'}])}</div>`)+
+   blk('Наличные · октябрь',`<div class="panel mpanel">${mh('Октябрь','2 события',5000,'u')}${rows([{c:'cash',t:'Изменения · 2',s:'5 и 17 октября',a:5000,ar:'d'}])}</div>`);
+})();
+
+/* ---------- F-49 ---------- */
+(function(){
+  const mk=(o)=>hero(Object.assign({data:DEP,color:PC.dep,glow:'violet'},o));
+  const A=tabsRow('Вклады')+mk({marks:DEPMARKS});
+  const B=tabsRow('Вклады')+mk({marks:DEPMARKS.map(m=>({i:m.i,big:!!m.label})),ticks:1});
+  const C=tabsRow('Вклады')+mk({marks:DEPMARKS,quiet:1,sel:24,callout:['Новый вклад · Сбер «Лучший %»','+200 000 ₽'],selLine:`<div class="seldate">20 октября, вторник</div>`});
+  const short=s=>phone(s,{fade:false});
+  document.getElementById('f49-v').innerHTML=`
+   <div class="col"><div class="vh"><h3>A · Точки с суммой на линии</h3><span class="badge">рекомендую</span></div>${phone(A,{fade:false})}
+     <p class="ann">касание рядом с точкой (±12 dp) прилипает к ней — день выбран, строки подсвечены (F-46)</p>
+     <ul class="notes"><li>Крупное действие — точка 10 dp в цвете части с подписью суммы (compact: «+300 тыс»): подпись <b>Muted</b>, без плашки и без зелёного.</li><li>Подпись ищет свободное место (над, под, слева, справа) — не наезжает на линию, точки и другие подписи; места нет — только точка.</li><li>Мелкое — точка 6 dp без подписи. Закрытие вклада — кольцо.</li><li>Подписей не больше трёх, крупнейшие по модулю.</li><li>Проявляются вместе с ростом линии; с «Убрать анимации» — сразу.</li></ul></div>
+   <div class="col"><div class="vh"><h3>B · Засечки под линией</h3><span class="badge q">вариант</span></div>${phone(B,{fade:false})}
+     <ul class="notes"><li>Цветные засечки над осью: высокая — крупное, низкая — мелкое.</li><li class="plus">Линия чистая.</li><li class="minus">Суммы не видно — вопрос «сколько» решается только касанием.</li></ul></div>
+   <div class="col"><div class="vh"><h3>C · Точки без подписи, выноска при выборе</h3><span class="badge q">вариант</span></div>${phone(C,{fade:false})}
+     <ul class="notes"><li>На линии только точки; выбранная показывает выноску «Новый вклад · Сбер · +200 000 ₽».</li><li class="plus">Подробно про одно событие.</li><li class="minus">Выноска повторяет строку, которая и так подсвечена в ленте (F-46); закрывает линию.</li></ul></div>`;
+
+  const blk=(h,o,notes)=>`<div class="bl"><h3>${h}</h3>${hero(o)}<ul class="notes">${notes}</ul></div>`;
+  document.getElementById('f49-b').innerHTML=
+   blk('Всё',{data:TOT,color:PC.all,glow:'brass',marks:ALLMARKS},'<li>Крупные события любой части; точка — цвет части. Подпись — у трёх крупнейших.</li><li>Перевод между своими счетами и вклад со своего счёта на «Всё» не отмечаются: капитал не изменился.</li>')+
+   blk('Счета',{data:ACC,color:PC.acc,glow:'brass',marks:[{i:4,label:'+95 тыс',plus:1},{i:6,label:'−300 тыс',below:1},{i:18,label:'+180 тыс',plus:1},{i:22,kind:'dot'},{i:24,kind:'dot'}]},'<li>Поступления и списания больше 10% среднего остатка счетов за период, в т.ч. ушло на вклад.</li><li>Мелкие траты не отмечаются.</li>')+
+   blk('Валюта',{data:FX,color:PC.sky,glow:'sky',marks:[{i:12,label:'+1 000 $',plus:1},{i:25,label:'−500 €',below:1}]},'<li>Каждая покупка и продажа; подпись — в валюте сделки, не в рублях.</li>')+
+   blk('Наличные',{data:CASH,color:PC.sand,glow:'sand',marks:[{i:9,label:'+20 тыс',plus:1},{i:21,label:'−15 тыс',below:1}]},'<li>Каждое ручное изменение суммы.</li>');
+})();
+
+/* ---------- F-50 ---------- */
+(function(){
+  const base=tabsRow('Счета');
+  const now=base+day('Сегодня',[{c:'acc',t:'Списания · 4',a:-6230,ar:'d'},{c:'acc',t:'Переводы · 2',a:-12000,ar:'d'},{c:'acc',t:'Поступление',s:'ООО «Ромашка»',a:180000,ar:'r'}])+day('Вчера',[{c:'acc',t:'Списание',s:'Пятёрочка',a:-870,ar:'r'}]);
+  const A=base+day('Сегодня',[{c:'acc',t:'Списания',s:'4 операции',a:-6230},{c:'acc',t:'Переводы',s:'2 операции',a:-12000},{c:'acc',t:'Поступление',s:'ООО «Ромашка»',a:180000}])+day('Вчера',[{c:'acc',t:'Списание',s:'Пятёрочка',a:-870}])+day('24 октября',[{c:'acc',t:'Списания',s:'6 операций',a:-9410},{c:'dep',t:'Пополнение вклада',s:'Т-Банк «Копилка»',a:50000,ar:'r'}]);
+  const B=base+day('Сегодня',[{c:'acc',t:'Списания · 4',s:'Пятёрочка, Яндекс Такси и ещё 2',a:-6230},{c:'acc',t:'Переводы · 2',s:'Анна К., Сергей П.',a:-12000},{c:'acc',t:'Поступление',s:'ООО «Ромашка»',a:180000}])+day('Вчера',[{c:'acc',t:'Списание',s:'Пятёрочка',a:-870}]);
+  const C=base+day('Сегодня',[{c:'acc',t:'Расходы',s:'4 списания, 2 перевода',a:-18230},{c:'acc',t:'Поступление',s:'ООО «Ромашка»',a:180000}])+day('Вчера',[{c:'acc',t:'Расходы',s:'1 списание',a:-870}]);
+  document.getElementById('f50-v').innerHTML=`
+   <div class="col"><div class="vh"><h3>Сейчас</h3><span class="badge q">было</span></div>${phone(now)}<ul class="notes"><li>Группа со стрелкой вниз раскрывается; одиночное списание со стрелкой вправо ведёт в «Счета» целиком.</li></ul></div>
+   <div class="col"><div class="vh"><h3>A · Итог без значка</h3><span class="badge">рекомендую</span></div>${phone(A)}
+     <ul class="notes"><li>«Списания», подпись «4 операции», сумма; без стрелки, без отклика касания.</li><li>Одиночные рублёвые списание, перевод, поступление — тоже без стрелки (<b>target = null</b>).</li><li>Число — в подписи, как «3 вклада» у процентов: заголовок короче, сумма не прыгает.</li></ul></div>
+   <div class="col"><div class="vh"><h3>B · Итог с получателями</h3><span class="badge q">вариант</span></div>${phone(B)}
+     <ul class="notes"><li>То же, но в подписи — кому: «Пятёрочка, Яндекс Такси и ещё 2».</li><li class="plus">Видно, куда ушло, без раскрытия.</li><li class="minus">Получатель есть не у всех уведомлений; длинная подпись у каждого дня.</li></ul></div>
+   <div class="col"><div class="vh"><h3>C · Расходы одной строкой</h3><span class="badge q">вариант</span></div>${phone(C)}
+     <ul class="notes"><li>Списания и переводы дня — одна строка «Расходы».</li><li class="plus">Короче всех.</li><li class="minus">Смешивает два вида; в группах месяца F-48 их всё равно придётся делить.</li></ul></div>`;
+})();
+
+/* ---------- tabs ---------- */
+const btns=[...document.querySelectorAll('#tabs button')];
+function show(t){btns.forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id===t))}
+btns.forEach(b=>b.onclick=()=>show(b.dataset.t));
+document.querySelectorAll('.variants .col').forEach(c=>{const b=c.querySelector('.vh .badge');if(b&&!b.textContent.includes('рекомендую')&&!c.closest('#f46-s'))c.remove();else if(b&&b.textContent.includes('рекомендую'))b.textContent='выбрано'});
+document.querySelectorAll('.sep').forEach(e=>e.remove());
+const h=(location.hash||'').slice(1);show(btns.some(b=>b.dataset.t===h)?h:'all');
+</script>
