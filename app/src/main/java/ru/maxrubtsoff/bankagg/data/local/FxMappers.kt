@@ -1,6 +1,7 @@
 package ru.maxrubtsoff.bankagg.data.local
 
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
+import ru.maxrubtsoff.bankagg.domain.model.CashChange
 import ru.maxrubtsoff.bankagg.domain.model.FxKind
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
 import ru.maxrubtsoff.bankagg.domain.model.FxRate
@@ -32,3 +33,7 @@ fun FxRateEntity.toDomain(): FxRate = FxRate(code, LocalDate.ofEpochDay(epochDay
 fun FxRate.toEntity(): FxRateEntity = FxRateEntity(currency, date.toEpochDay(), rubPerUnitMicro)
 
 fun CashEntity.toDomain(): CashBalance = CashBalance(Money.ofMinor(amountMinor), updatedAt)
+
+fun CashChangeEntity.toDomain(): CashChange = CashChange(atMs, Money.ofMinor(amountMinor), Money.ofMinor(deltaMinor))
+
+fun CashChange.toEntity(): CashChangeEntity = CashChangeEntity(atMs = atMs, amountMinor = amount.minor, deltaMinor = delta.minor)

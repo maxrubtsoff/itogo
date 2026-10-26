@@ -56,4 +56,19 @@ interface FxDao {
 
     @Query("DELETE FROM cash")
     suspend fun clearCash()
+
+    @Insert
+    suspend fun insertCashChange(change: CashChangeEntity)
+
+    @Insert
+    suspend fun insertCashChanges(list: List<CashChangeEntity>)
+
+    @Query("SELECT * FROM cash_changes ORDER BY atMs, id")
+    fun observeCashChanges(): Flow<List<CashChangeEntity>>
+
+    @Query("SELECT * FROM cash_changes ORDER BY atMs, id")
+    suspend fun cashChanges(): List<CashChangeEntity>
+
+    @Query("DELETE FROM cash_changes")
+    suspend fun clearCashChanges()
 }

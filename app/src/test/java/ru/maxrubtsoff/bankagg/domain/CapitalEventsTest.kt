@@ -126,8 +126,9 @@ class CapitalEventsTest {
 
     private fun build(
         deps: List<Deposit> = emptyList(), tx: List<Transaction> = emptyList(), ops: List<FxOperation> = emptyList(),
-        points: List<CapitalPoint> = emptyList(), rates: List<FxRate> = emptyList(), cash: CashBalance? = null
-    ) = CapitalEvents.build(tx, emptyList(), ops, deps, cash, points, today, ZoneOffset.UTC, rates)
+        points: List<CapitalPoint> = emptyList(), rates: List<FxRate> = emptyList(), cash: CashBalance? = null,
+        cashChanges: List<ru.maxrubtsoff.bankagg.domain.model.CashChange> = emptyList()
+    ) = CapitalEvents.build(tx, emptyList(), ops, deps, cash, points, today, ZoneOffset.UTC, rates, cashChanges)
 
     private fun txOf(cur: String) = Transaction(
         "t", BankBrand.SBER, "a", Money.ofMinor(100), cur, TransactionKind.INCOME, null, null,
@@ -383,5 +384,23 @@ class CapitalEventsTest {
     @Test fun operationsPlural() {
         assertEquals(listOf("1 операция", "2 операции", "5 операций", "11 операций", "21 операция", "22 операции"),
             listOf(1, 2, 5, 11, 21, 22).map { RuPlural.operations(it) })
+    }
+
+    // ---- F-48: cash edits ----
+
+    private val cashAt = d1.atTime(10, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+
+    @Test fun cashChangesBecomeEvents() {
+        val c = ru.maxrubtsoff.bankagg.domain.model.CashChange(cashAt, Money.ofMinor(9_000), Money.ofMinor(-1_000))
+        val e = build(cash = CashBalance(Money.ofMinor(9_000), cashAt), cashChanges = listOf(c)).filter { it.kind == HistoryKind.CASH }
+        assertEquals(1, e.size)
+        assertEquals(-1_000L, e.single().amountMinor)
+        assertEquals(d1, e.single().date)
+    }
+
+    @Test fun legacyCashEventOnlyWithoutChanges() {
+        val legacy = build(cash = CashBalance(Money.ofMinor(9_000), cashAt)).filter { it.kind == HistoryKind.CASH }
+        assertEquals(1, legacy.size)
+        assertNull(legacy.single().amountMinor)
     }
 }

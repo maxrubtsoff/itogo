@@ -2,11 +2,15 @@ package ru.maxrubtsoff.bankagg.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import androidx.room.withTransaction
+import ru.maxrubtsoff.bankagg.data.local.AppDatabase
 import ru.maxrubtsoff.bankagg.data.local.CashEntity
 import ru.maxrubtsoff.bankagg.data.local.FxDao
 import ru.maxrubtsoff.bankagg.data.local.toDomain
 import ru.maxrubtsoff.bankagg.data.local.toEntity
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
+import ru.maxrubtsoff.bankagg.domain.model.CashChange
+import ru.maxrubtsoff.bankagg.domain.model.CashHistory
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
 import ru.maxrubtsoff.bankagg.domain.model.FxRate
 import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
@@ -30,9 +34,16 @@ class RatesRepositoryImpl(private val dao: FxDao) : RatesRepository {
         dao.latestOnOrBefore(currency, date.toEpochDay())?.toDomain()
 }
 
-class CashRepositoryImpl(private val dao: FxDao) : CashRepository {
+class CashRepositoryImpl(private val db: AppDatabase) : CashRepository {
+    private val dao = db.fxDao()
+
     override fun observe(): Flow<CashBalance?> = dao.observeCash().map { it?.toDomain() }
     override suspend fun get(): CashBalance? = dao.cash()?.toDomain()
-    override suspend fun set(balance: CashBalance) =
+    override fun observeChanges(): Flow<List<CashChange>> = dao.observeCashChanges().map { l -> l.map { it.toDomain() } }
+    override suspend fun set(balance: CashBalance) = db.withTransaction {
+        val prev = dao.cash()?.toDomain()
         dao.setCash(CashEntity(amountMinor = balance.amount.minor, updatedAt = balance.updatedAt))
+        CashHistory.change(prev, balance)?.let { dao.insertCashChange(it.toEntity()) }
+        Unit
+    }
 }

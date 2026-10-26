@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
+import ru.maxrubtsoff.bankagg.domain.model.CashChange
+import ru.maxrubtsoff.bankagg.domain.model.CashHistory
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
 import ru.maxrubtsoff.bankagg.domain.model.FxRate
 import ru.maxrubtsoff.bankagg.domain.model.FxRates
@@ -60,7 +62,12 @@ class SampleCashRepository(balance: CashBalance?) : CashRepository {
 
     override suspend fun get(): CashBalance? = state.value
 
+    private val changes = MutableStateFlow<List<CashChange>>(emptyList())
+
+    override fun observeChanges(): Flow<List<CashChange>> = changes
+
     override suspend fun set(balance: CashBalance) {
+        CashHistory.change(state.value, balance)?.let { c -> changes.update { it + c } }
         state.value = balance
     }
 }

@@ -12,6 +12,7 @@ import ru.maxrubtsoff.bankagg.domain.model.Account
 import ru.maxrubtsoff.bankagg.domain.model.CapitalChange
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPoint
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
+import ru.maxrubtsoff.bankagg.domain.model.CashChange
 import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
 import ru.maxrubtsoff.bankagg.domain.model.FxRate
@@ -86,13 +87,14 @@ class CapitalHistoryViewModel(
 
     private val inputs: Flow<Inputs> = combine(
         history.observeDays(), ledger.observeTransactions(Int.MAX_VALUE), ledger.observeAccounts(), fx.observeAll(), deposits.observeAll()
-    ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null, emptyList()) }
+    ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null, emptyList(), emptyList()) }
         .combine(cash.observe()) { i, c -> i.copy(cash = c) }
+        .combine(cash.observeChanges()) { i, c -> i.copy(cashChanges = c) }
         .combine(rates.observeAll()) { i, r -> i.copy(rates = r) }
 
     val state: StateFlow<HistoryScreenUi?> = combine(inputs, settings.features, _period, _part, today.date) { i, features, period, part, day ->
         val kept = CapitalPart.entries.filter { it in features.capitalParts }
-        val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day, rates = i.rates)
+        val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day, rates = i.rates, cashChanges = i.cashChanges)
         val long = period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL
         val pages = CapitalHistory.sections(kept).map { p ->
             val full = CapitalHistory.series(i.days, period, day, p)
@@ -114,6 +116,7 @@ class CapitalHistoryViewModel(
         val ops: List<FxOperation>,
         val deps: List<Deposit>,
         val cash: CashBalance?,
-        val rates: List<FxRate>
+        val rates: List<FxRate>,
+        val cashChanges: List<CashChange>
     )
 }

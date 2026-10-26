@@ -33,6 +33,17 @@ data class FxRate(val currency: String, val date: LocalDate, val rubPerUnitMicro
 /** Cash rubles at home: one amount and when it was last changed. */
 data class CashBalance(val amount: Money, val updatedAt: Long)
 
+/** F-48: one hand edit of the cash — when, the new amount and by how much it moved. */
+data class CashChange(val atMs: Long, val amount: Money, val delta: Money)
+
+object CashHistory {
+    /** The change [next] makes over [prev]; `null` when the amount stayed the same. */
+    fun change(prev: CashBalance?, next: CashBalance): CashChange? {
+        val delta = next.amount - (prev?.amount ?: Money.ZERO)
+        return if (delta.minor == 0L) null else CashChange(next.updatedAt, next.amount, delta)
+    }
+}
+
 /** Rate arithmetic shared by the portfolio, the forms and the capital. BigDecimal, HALF_UP to the kopeck. */
 object FxMath {
 

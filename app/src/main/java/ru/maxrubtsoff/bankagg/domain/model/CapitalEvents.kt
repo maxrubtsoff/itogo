@@ -131,7 +131,8 @@ object CapitalEvents {
         points: List<CapitalPoint>,
         today: LocalDate,
         zone: ZoneId = ZoneId.systemDefault(),
-        rates: List<FxRate> = emptyList()
+        rates: List<FxRate> = emptyList(),
+        cashChanges: List<CashChange> = emptyList()
     ): List<HistoryEvent> {
         val titleOf = accounts.associate { it.id to it.title }
         val out = ArrayList<HistoryEvent>()
@@ -179,7 +180,11 @@ object CapitalEvents {
             }
             if (d.endDate.isBefore(today)) out += HistoryEvent(d.endDate, CapitalPart.DEPOSITS, "Вклад закрыт", name, null, kind = HistoryKind.DEPOSIT_CLOSE, target = to)
         }
-        if (cash != null && cash.updatedAt > 0L) {
+        // F-48: every hand edit is an event with its delta; the lone «updatedAt» one is for cash edited before the log.
+        cashChanges.forEach { c ->
+            out += HistoryEvent(dayOf(c.atMs, zone), CapitalPart.CASH, "Наличные", "изменили вручную", c.delta.minor, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH))
+        }
+        if (cash != null && cash.updatedAt > 0L && cashChanges.none { it.atMs == cash.updatedAt }) {
             out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", null, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH))
         }
         out += moved(points, fxOps, deposits, rates)

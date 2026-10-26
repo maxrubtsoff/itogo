@@ -22,6 +22,7 @@ import ru.maxrubtsoff.bankagg.data.local.CashbackShotEntity
 import ru.maxrubtsoff.bankagg.data.local.DepositEntity
 import ru.maxrubtsoff.bankagg.data.local.DepositShotEntity
 import ru.maxrubtsoff.bankagg.data.local.EventEntity
+import ru.maxrubtsoff.bankagg.data.local.CashChangeEntity
 import ru.maxrubtsoff.bankagg.data.local.CashEntity
 import ru.maxrubtsoff.bankagg.data.local.FxOperationEntity
 import ru.maxrubtsoff.bankagg.data.local.FxRateEntity
@@ -397,6 +398,11 @@ class BackupManager(
         fx.cash()?.let { c ->
             root.put("cash", JSONObject().apply { put("amountMinor", c.amountMinor); put("updatedAt", c.updatedAt) })
         }
+        root.put("cashChanges", JSONArray().apply {
+            fx.cashChanges().forEach { c ->
+                put(JSONObject().apply { put("atMs", c.atMs); put("amountMinor", c.amountMinor); put("deltaMinor", c.deltaMinor) })
+            }
+        })
         root.put("capitalParts", JSONArray().apply { settings.currentCapitalParts().forEach { put(it.key) } })
         // v6: the user's banks (F-22), in their order; own banks with their letters and colours.
         // v7: an own bank's picture goes along as base64 (F-25).
@@ -447,6 +453,7 @@ class BackupManager(
         val depositShots: List<DepositShotEntity>,
         val fxOperations: List<FxOperationEntity>,
         val cash: CashEntity?,
+        val cashChanges: List<CashChangeEntity> = emptyList(),
         val capitalParts: Set<CapitalPart>?,
         val rates: List<FxRateEntity>,
         val banks: List<BankBrand>? = null,
@@ -488,6 +495,7 @@ class BackupManager(
             depositShots.clear()
             fx.clear()
             fx.clearCash()
+            fx.clearCashChanges()
             subscriptions.clear()
             restoredSubscriptions.forEach { subscriptions.upsert(it) }
             snapshot.accounts.forEach { ledger.upsertAccount(it) }
@@ -501,6 +509,7 @@ class BackupManager(
             snapshot.depositShots.forEach { depositShots.upsert(it) }
             snapshot.fxOperations.forEach { fx.upsert(it) }
             snapshot.cash?.let { fx.setCash(it) }
+            fx.insertCashChanges(snapshot.cashChanges)
             if (snapshot.rates.isNotEmpty()) fx.upsertRates(snapshot.rates)
         }
         // Subscription pictures go back into the app's files only after the data is in: a rolled-back restore erases nothing.
@@ -649,6 +658,10 @@ class BackupManager(
             },
             cash = root.optJSONObject("cash")?.let { o ->
                 CashEntity(amountMinor = o.getLong("amountMinor"), updatedAt = o.getLong("updatedAt"))
+            },
+            // F-48: older copies have no cash log.
+            cashChanges = root.objects("cashChanges").map { o ->
+                CashChangeEntity(atMs = o.getLong("atMs"), amountMinor = o.getLong("amountMinor"), deltaMinor = o.getLong("deltaMinor"))
             },
             capitalParts = root.optJSONArray("capitalParts")?.let { arr ->
                 (0 until arr.length()).mapNotNull { CapitalPart.fromKey(arr.getString(it)) }.toSet()

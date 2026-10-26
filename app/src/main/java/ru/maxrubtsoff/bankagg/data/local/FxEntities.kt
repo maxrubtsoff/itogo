@@ -31,3 +31,12 @@ data class CashEntity(
     val amountMinor: Long,
     val updatedAt: Long
 )
+
+/** F-48: the log of cash hand edits; [deltaMinor] is how much the amount moved. */
+@Entity(tableName = "cash_changes")
+data class CashChangeEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val atMs: Long,
+    val amountMinor: Long,
+    val deltaMinor: Long
+)

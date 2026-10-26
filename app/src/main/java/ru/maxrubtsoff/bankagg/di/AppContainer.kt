@@ -113,7 +113,7 @@ class AppContainer(context: Context) {
     }
     val fxRepository: FxRepository by lazy { FxRepositoryImpl(db.fxDao()) }
     val ratesRepository: RatesRepository by lazy { RatesRepositoryImpl(db.fxDao()) }
-    val cashRepository: CashRepository by lazy { CashRepositoryImpl(db.fxDao()) }
+    val cashRepository: CashRepository by lazy { CashRepositoryImpl(db) }
 
     // OCR (offline Tesseract) — behind the domain port; falls back gracefully if
     // the language model isn't present.

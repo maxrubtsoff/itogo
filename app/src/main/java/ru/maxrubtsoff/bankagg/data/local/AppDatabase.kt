@@ -13,10 +13,10 @@ import androidx.room.RoomDatabase
         EventEntity::class, AccountEntity::class, TransactionEntity::class,
         CashbackEntity::class, CashbackShotEntity::class,
         DepositEntity::class, DepositShotEntity::class,
-        FxOperationEntity::class, FxRateEntity::class, CashEntity::class, SubscriptionEntity::class,
+        FxOperationEntity::class, FxRateEntity::class, CashEntity::class, CashChangeEntity::class, SubscriptionEntity::class,
         DepositTopUpEntity::class, CapitalSnapshotEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,6 +42,16 @@ abstract class AppDatabase : RoomDatabase() {
         // destructive fallback rather than migrated. From v10 on, real data lives
         // here, so each new version comes with a migration that keeps it.
         // v11: an account can be left out of the capital (U-18).
+        /** F-48: the log of cash hand edits. Starts empty — the past deltas are unknown, none are invented. */
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `cash_changes` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`atMs` INTEGER NOT NULL, `amountMinor` INTEGER NOT NULL, `deltaMinor` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         /** U-66: deposits keep no screens; the ones tied to a deposit go (the image files are cleaned apart). */
         private val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -130,7 +140,7 @@ abstract class AppDatabase : RoomDatabase() {
                         .apply { passphrase?.let { openHelperFactory(SupportOpenHelperFactory(it)) } }
                         // Data is rebuilt from notifications and protected by backup,
                         // so a schema bump rebuilds rather than crashing on update.
-                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                         .fallbackToDestructiveMigration()
                         .build()
                         .also { instance = it }
