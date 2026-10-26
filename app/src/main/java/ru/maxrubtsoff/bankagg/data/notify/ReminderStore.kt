@@ -28,12 +28,20 @@ class ReminderStore(context: Context) : ReminderRepository {
         _settings.value = settings
     }
 
-    override suspend fun sent(): Set<String> = prefs.getStringSet(KEY_SENT, emptySet())?.toSet() ?: emptySet()
+    override suspend fun sent(): Set<String> = ordered().toSet()
 
-    // Old ids are dropped past a few hundred: a deposit or month told about long ago won't come back.
+    // Old ids are dropped past a few hundred, the oldest first: a deposit or month told about
+    // long ago won't come back. The order is kept (a StringSet has none), B-96.
     override suspend fun markSent(ids: Collection<String>) {
-        val all = (sent() + ids).toList().takeLast(MAX_SENT).toSet()
-        prefs.edit().putStringSet(KEY_SENT, all).apply()
+        val all = (ordered() - ids.toSet() + ids).takeLast(MAX_SENT)
+        prefs.edit().putString(KEY_SENT_ORDER, all.joinToString(SEP)).remove(KEY_SENT).apply()
+    }
+
+    /** Oldest first. Ids saved by older versions (a plain set, no order) come before the rest. */
+    private fun ordered(): List<String> {
+        val legacy = prefs.getStringSet(KEY_SENT, null).orEmpty()
+        val stored = prefs.getString(KEY_SENT_ORDER, null).orEmpty().split(SEP).filter { it.isNotEmpty() }
+        return (legacy - stored.toSet()).toList() + stored
     }
 
     private fun read() = ReminderSettings(
@@ -51,6 +59,8 @@ class ReminderStore(context: Context) : ReminderRepository {
         const val KEY_CASHBACK = "cashback_month"
         const val KEY_SUB = "subscriptions"
         const val KEY_SENT = "sent"
+        const val KEY_SENT_ORDER = "sent_order"
+        const val SEP = ""
         const val MAX_SENT = 300
     }
 }
