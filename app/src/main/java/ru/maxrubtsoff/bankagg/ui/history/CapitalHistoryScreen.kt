@@ -266,26 +266,23 @@ private fun Events(
                 val expanded = key in open
                 Panel(Modifier.fillMaxWidth()) {
                     HistoryLine(
-                        RuDays.monthTitle(m.month, u.today), RuPlural.events(m.events.size), m.deltaMinor, RowKind.OPEN,
+                        RuDays.monthTitle(m.month, u.today), RuPlural.events(m.count), m.deltaMinor, RowKind.OPEN,
                         expanded = expanded, onClick = { setOpen(if (expanded) open - key else open + key) }
                     )
                     if (expanded) {
-                        HistoryRows.days(m.events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
+                        m.rows.forEach { r ->
                             HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
-                            Text(
-                                dayCaption(day, u.today), style = MaterialTheme.typography.labelMedium, color = if (day == picked) Slitok.Brass2 else Slitok.Muted,
-                                modifier = mark(day).padding(start = 16.dp, top = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis
-                            )
-                            list.forEach { RowItem(it, groupsOpen, { id -> groupsOpen = if (id in groupsOpen) groupsOpen - id else groupsOpen + id }, onTap) }
+                            RowItem(r, groupsOpen, { id -> groupsOpen = if (id in groupsOpen) groupsOpen - id else groupsOpen + id }, onTap)
                         }
                     }
                 }
             }
         }
-        else -> HistoryRows.days(events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
+        else -> u.days.forEach { d ->
+            val day = d.date
             Caption(dayCaption(day, u.today), if (day == picked) Slitok.Brass2 else Slitok.Muted, mark(day))
             Panel(Modifier.fillMaxWidth()) {
-                list.forEachIndexed { i, r ->
+                d.rows.forEachIndexed { i, r ->
                     if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
                     RowItem(r, groupsOpen, { id -> groupsOpen = if (id in groupsOpen) groupsOpen - id else groupsOpen + id }, onTap)
                 }
@@ -309,7 +306,9 @@ private fun RowItem(row: HistoryRow, opened: List<String>, toggle: (String) -> U
             val kind = row.rowKind
             HistoryLine(
                 row.title, row.subtitle, row.totalMinor, kind, expanded = expanded,
-                lead = { Dot(row.children.first().part.color()) }, onClick = { toggle(row.id) }
+                lead = { Dot(row.children.first().part.color()) },
+                // A month's interest on one deposit leads to it; the other groups open.
+                onClick = { if (kind == RowKind.GO) onTap(row.children.first()) else toggle(row.id) }
             )
             if (expanded && kind == RowKind.OPEN) row.children.forEach { EventRow(it, onTap, nested = true) }
         }

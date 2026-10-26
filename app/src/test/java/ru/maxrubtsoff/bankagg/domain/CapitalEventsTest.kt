@@ -153,7 +153,7 @@ class CapitalEventsTest {
 
     @Test fun fxDealPointsToCurrency() {
         val e = build(ops = listOf(buy("EUR", d0, 100, 1000))).single()
-        assertEquals(HistoryKind.FX_DEAL, e.kind)
+        assertEquals(HistoryKind.FX_BUY, e.kind)
         assertEquals(HistoryTarget.Currency("EUR"), e.target)
     }
 
@@ -300,7 +300,7 @@ class CapitalEventsTest {
     }
 
     @Test fun spendGroupedPerDay() {
-        val rows = HistoryRows.days(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE)))
+        val rows = dayRows(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE)))
         val g = rows.single() as HistoryRow.Group
         assertEquals(2, g.count)
         assertEquals(-400L, g.totalMinor)
@@ -310,11 +310,11 @@ class CapitalEventsTest {
     }
 
     @Test fun singleSpendStaysSingle() {
-        assertTrue(HistoryRows.days(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE))).single() is HistoryRow.Single)
+        assertTrue(dayRows(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE))).single() is HistoryRow.Single)
     }
 
     @Test fun spendAndTransferGroupedSeparately() {
-        val rows = HistoryRows.days(
+        val rows = dayRows(
             eventsOf(
                 op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -200, TransactionKind.EXPENSE),
                 op("3", "a", -300, TransactionKind.TRANSFER, who = "Иван"), op("4", "a", -400, TransactionKind.TRANSFER, who = "Анна")
@@ -323,18 +323,20 @@ class CapitalEventsTest {
         assertEquals(kotlin.collections.listOf(HistoryKind.SPEND, HistoryKind.TRANSFER), rows.map { (it as HistoryRow.Group).kind })
     }
 
-    @Test fun incomeNeverGrouped() {
-        val rows = HistoryRows.days(eventsOf(op("1", "a", 100, TransactionKind.INCOME), op("2", "a", 200, TransactionKind.INCOME)))
-        assertEquals(2, rows.size)
-        assertTrue(rows.all { it is HistoryRow.Single })
+    @Test fun incomeGroupedToo() {
+        val g = dayRows(eventsOf(op("1", "a", 100, TransactionKind.INCOME), op("2", "a", 200, TransactionKind.INCOME))).single() as HistoryRow.Group
+        assertEquals("Поступления · 2", g.title)
+        assertEquals(RowKind.OPEN, g.rowKind)
     }
 
     @Test fun groupIdIsStableByDayAndKind() {
-        val g = HistoryRows.days(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE))).single() as HistoryRow.Group
-        assertEquals("${d1.toEpochDay()}:SPEND", g.id)
+        val g = dayRows(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE))).single() as HistoryRow.Group
+        assertEquals("d:${d1.toEpochDay()}:SPEND:ACCOUNTS", g.id)
     }
 
     // ---- F-41: the day nearest to the picked one ----
+
+    private fun dayRows(events: List<HistoryEvent>) = HistoryRows.days(events, null).flatMap { it.rows }
 
     private fun ev(day: LocalDate) = HistoryEvent(day, CapitalPart.ACCOUNTS, "t", null, 1L)
 
@@ -370,14 +372,14 @@ class CapitalEventsTest {
     }
 
     @Test fun transferGroupIsSum() {
-        val g = HistoryRows.days(eventsOf(op("1", "a", -300, TransactionKind.TRANSFER, who = "Иван"), op("2", "a", -400, TransactionKind.TRANSFER, who = "Анна"))).single() as HistoryRow.Group
+        val g = dayRows(eventsOf(op("1", "a", -300, TransactionKind.TRANSFER, who = "Иван"), op("2", "a", -400, TransactionKind.TRANSFER, who = "Анна"))).single() as HistoryRow.Group
         assertEquals("Переводы", g.title)
         assertEquals(RowKind.SUM, g.rowKind)
     }
 
     @Test fun currencySpendGroupOpens() {
         val usd = { id: String -> txOf("USD").copy(id = id, kind = TransactionKind.EXPENSE) }
-        val g = HistoryRows.days(CapitalEvents.build(listOf(usd("1"), usd("2")), emptyList(), emptyList(), emptyList(), null, emptyList(), today, ZoneOffset.UTC)).single() as HistoryRow.Group
+        val g = dayRows(CapitalEvents.build(listOf(usd("1"), usd("2")), emptyList(), emptyList(), emptyList(), null, emptyList(), today, ZoneOffset.UTC)).single() as HistoryRow.Group
         assertEquals(RowKind.OPEN, g.rowKind)
     }
 

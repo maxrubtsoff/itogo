@@ -21,7 +21,9 @@ data class HistoryEvent(
     /** What the line opens into (F-47); empty — it does not open. */
     val parts: List<HistoryEvent> = emptyList(),
     /** The bank of a part that is a deposit, for its icon (F-47). */
-    val bank: BankBrand? = null
+    val bank: BankBrand? = null,
+    /** A currency deal's sum in its own currency (F-48). */
+    val foreign: ForeignAmount? = null
 )
 
 /** What an event is, so the list can tell them apart and the screen can lead to the object. */
@@ -33,36 +35,51 @@ enum class HistoryKind {
     OWN_TRANSFER,
     /** To another person. */
     TRANSFER,
-    FX_DEAL, DEPOSIT_OPEN, DEPOSIT_TOPUP, DEPOSIT_CLOSE, INTEREST, REVALUATION, CASH
+    FX_BUY, FX_SELL, DEPOSIT_OPEN, DEPOSIT_TOPUP, DEPOSIT_CLOSE, INTEREST, REVALUATION, CASH
 }
 
-/** A row of the list: one event, or a day's spendings / transfers folded into a group (F-39). */
+/**
+ * A row of the list (F-39, F-48): one event, or several of one kind folded into a group.
+ * [sources] are the events inside, whatever the row shows — what the chart's picked days touch (F-46).
+ */
 sealed interface HistoryRow {
     val date: LocalDate
+    val id: String
+    val sources: List<HistoryEvent>
 
-    data class Single(val event: HistoryEvent) : HistoryRow {
-        override val date: LocalDate get() = event.date
+    data class Single(
+        val event: HistoryEvent,
         /** Stable key for the opened state of an event with parts (F-47). */
-        val id: String get() = "${event.date.toEpochDay()}:${event.kind.name}:${event.title}"
+        override val id: String = "${event.date.toEpochDay()}:${event.kind.name}:${event.title}",
+        override val sources: List<HistoryEvent> = listOf(event)
+    ) : HistoryRow {
+        override val date: LocalDate get() = event.date
     }
 
     data class Group(
-        val id: String,
+        override val id: String,
         override val date: LocalDate,
         val kind: HistoryKind,
         val count: Int,
         val totalMinor: Long,
-        val children: List<HistoryEvent>
-    ) : HistoryRow {
-        val title: String get() = when (kind) {
-            HistoryKind.SPEND -> "Списания"
-            HistoryKind.TRANSFER -> "Переводы"
-            else -> "Операции"
-        }
-        val subtitle: String get() = RuPlural.operations(count)
-        val rowKind: RowKind get() = HistoryRows.groupKind(kind, children)
-    }
+        val children: List<HistoryEvent>,
+        val title: String,
+        val subtitle: String?,
+        val rowKind: RowKind,
+        /** Where a tap leads when [rowKind] is GO (a month's interest on one deposit). */
+        val target: HistoryTarget? = null,
+        override val sources: List<HistoryEvent> = children
+    ) : HistoryRow
 }
+
+/** A day of the list with its rows (F-48). */
+data class HistoryDay(val date: LocalDate, val rows: List<HistoryRow>)
+
+/** A month of the list with its rows grouped by meaning (F-48). */
+data class HistoryMonth(val month: YearMonth, val count: Int, val deltaMinor: Long, val rows: List<HistoryRow>)
+
+/** A sum in a foreign currency, signed, in hundredths (F-48). */
+data class ForeignAmount(val currency: String, val minor: Long)
 
 /** The object an event is about (F-44). */
 sealed interface HistoryTarget {
@@ -167,18 +184,20 @@ object CapitalEvents {
                 o.date, CapitalPart.CURRENCY,
                 if (o.kind == FxKind.BUY) "Купили $sum $sym" else "Продали $sum $sym",
                 if (o.kind == FxKind.BUY) "за $rub" else "получили $rub",
-                null,
-                kind = HistoryKind.FX_DEAL, target = HistoryTarget.Currency(o.currency)
+                // The change of the «Валюта» part, in rubles (as in [moved]'s `dealt`).
+                if (o.kind == FxKind.BUY) o.rubMinor else -o.rubMinor,
+                kind = if (o.kind == FxKind.BUY) HistoryKind.FX_BUY else HistoryKind.FX_SELL, target = HistoryTarget.Currency(o.currency),
+                foreign = ForeignAmount(o.currency, if (o.kind == FxKind.BUY) o.amountMinor else -o.amountMinor)
             )
         }
         deposits.forEach { d ->
             val name = d.title ?: d.brand.title
             val to = HistoryTarget.Deposit(d.id)
-            out += HistoryEvent(d.startDate, CapitalPart.DEPOSITS, "Новый вклад", name, d.principal.minor, kind = HistoryKind.DEPOSIT_OPEN, target = to)
+            out += HistoryEvent(d.startDate, CapitalPart.DEPOSITS, "Новый вклад", name, d.principal.minor, kind = HistoryKind.DEPOSIT_OPEN, target = to, bank = d.brand)
             d.topUps.forEach {
-                out += HistoryEvent(it.date, CapitalPart.DEPOSITS, "Пополнение вклада", name, it.amount.minor, kind = HistoryKind.DEPOSIT_TOPUP, target = to)
+                out += HistoryEvent(it.date, CapitalPart.DEPOSITS, "Пополнение вклада", name, it.amount.minor, kind = HistoryKind.DEPOSIT_TOPUP, target = to, bank = d.brand)
             }
-            if (d.endDate.isBefore(today)) out += HistoryEvent(d.endDate, CapitalPart.DEPOSITS, "Вклад закрыт", name, null, kind = HistoryKind.DEPOSIT_CLOSE, target = to)
+            if (d.endDate.isBefore(today)) out += HistoryEvent(d.endDate, CapitalPart.DEPOSITS, "Вклад закрыт", name, -DepositMath.valueOn(d, d.endDate), kind = HistoryKind.DEPOSIT_CLOSE, target = to, bank = d.brand)
         }
         // F-48: every hand edit is an event with its delta; the lone «updatedAt» one is for cash edited before the log.
         cashChanges.forEach { c ->

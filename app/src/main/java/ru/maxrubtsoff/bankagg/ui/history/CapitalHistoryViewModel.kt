@@ -23,7 +23,9 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.domain.model.DayValue
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
 import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
-import ru.maxrubtsoff.bankagg.domain.model.MonthEvents
+import ru.maxrubtsoff.bankagg.domain.model.HistoryDay
+import ru.maxrubtsoff.bankagg.domain.model.HistoryMonth
+import ru.maxrubtsoff.bankagg.domain.model.HistoryRows
 import ru.maxrubtsoff.bankagg.domain.repository.CapitalHistoryRepository
 import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.DepositRepository
@@ -58,8 +60,10 @@ data class HistoryUi(
     val series: List<DayValue>,
     val change: CapitalChange?,
     val events: List<HistoryEvent>,
-    /** Events by month, for a year and for everything. */
-    val months: List<MonthEvents>
+    /** Rows by day, for a week and a month (F-48). */
+    val days: List<HistoryDay>,
+    /** Rows by month, for a year and for everything (F-48). */
+    val months: List<HistoryMonth>
 ) {
     val drawable: Boolean get() = CapitalHistory.drawable(series)
 }
@@ -103,7 +107,8 @@ class CapitalHistoryViewModel(
                 period = period, part = p, kept = kept, today = day,
                 series = CapitalHistory.thin(full), change = CapitalHistory.change(full),
                 events = shown,
-                months = if (long) CapitalEvents.byMonth(shown, i.days, p) else emptyList()
+                days = if (long) emptyList() else HistoryRows.days(shown, p),
+                months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList()
             )
         }
         HistoryScreenUi(period, part, kept, day, pages, i.deps.map { it.id }.toSet())
