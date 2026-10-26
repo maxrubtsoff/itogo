@@ -42,6 +42,8 @@ sealed interface HistoryRow {
 
     data class Single(val event: HistoryEvent) : HistoryRow {
         override val date: LocalDate get() = event.date
+        /** Stable key for the opened state of an event with parts (F-47). */
+        val id: String get() = "${event.date.toEpochDay()}:${event.kind.name}:${event.title}"
     }
 
     data class Group(
@@ -88,19 +90,25 @@ object RevaluationText {
     fun formatRate(micro: Long): String =
         java.math.BigDecimal.valueOf(micro, 6).setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',')
 
+    /** The folded line: figures only, no «cheaper / dearer» (F-47). */
     fun subtitle(reason: RevaluationReason): String {
         val legs = reason.legs
-        val manual = if (reason.manualMinor != 0L) " · остаток изменили вручную" else ""
-        return when {
-            legs.isEmpty() -> "Курс или остаток изменились"
-            legs.size == 1 -> {
-                val l = legs[0]
-                "${l.currency} ${formatRate(l.fromRateMicro)} → ${formatRate(l.toRateMicro)} ₽ · " +
-                    Money.ofMinor(l.qtyMinor).format(l.currency) + manual
-            }
-            else -> "Курс " + legs.joinToString(", ") { it.currency } + manual
+        if (legs.isEmpty()) return "Курс или остаток изменились"
+        val manual = if (reason.manualMinor != 0L) " · остаток изменён" else ""
+        return if (legs.size == 1) {
+            val l = legs[0]
+            "${Currencies.symbolOf(l.currency)} ${formatRate(l.fromRateMicro)} → ${formatRate(l.toRateMicro)} ₽" + manual
+        } else {
+            legs.joinToString(" · ") { l ->
+                val d = l.toRateMicro - l.fromRateMicro
+                "${Currencies.symbolOf(l.currency)} ${if (d < 0) "−" else "+"}${formatRate(kotlin.math.abs(d))} ₽"
+            } + manual
         }
     }
+
+    /** A currency's own line inside the opened revaluation: rate was → became · quantity. */
+    fun partSubtitle(l: RevaluationLeg): String =
+        "${formatRate(l.fromRateMicro)} → ${formatRate(l.toRateMicro)} ₽ · " + Money.ofMinor(l.qtyMinor).format(l.currency)
 }
 
 /** Events of one month, for the folded list of a year (F-36). */
@@ -213,23 +221,62 @@ object CapitalEvents {
             }
             val interest = cur.valueOf(CapitalPart.DEPOSITS) - prev.valueOf(CapitalPart.DEPOSITS) - own
             val liveDeps = deposits.filter { DepositMath.isActive(it, cur.date) && !cur.date.isBefore(it.startDate) }
-            val live = liveDeps.size
-            if (interest > 0L && live > 0) {
-                val target = if (live == 1) HistoryTarget.Deposit(liveDeps[0].id) else HistoryTarget.Section(CapitalPart.DEPOSITS)
-                out += HistoryEvent(cur.date, CapitalPart.DEPOSITS, "Проценты", RuPlural.deposits(live), interest, kind = HistoryKind.INTEREST, target = target)
+            if (interest > 0L && liveDeps.isNotEmpty()) {
+                // A deposit's weight: what it grew by, without what was put into it that day.
+                val weights = liveDeps.map { d ->
+                    val put = (if (d.startDate == cur.date) d.principal.minor else 0L) + d.topUps.filter { it.date == cur.date }.sumOf { it.amount.minor }
+                    d to maxOf(0L, DepositMath.valueOn(d, cur.date) - DepositMath.valueOn(d, prev.date) - put)
+                }
+                val shares = splitInterest(interest, weights, cur.date)
+                fun name(d: Deposit) = d.title ?: d.brand.title
+                if (shares.size >= 2) {
+                    val parts = shares.map { (d, share) ->
+                        HistoryEvent(cur.date, CapitalPart.DEPOSITS, d.title?.let { "«$it»" } ?: d.brand.title, d.title?.let { d.brand.title }, share,
+                            kind = HistoryKind.INTEREST, target = HistoryTarget.Deposit(d.id), bank = d.brand)
+                    }
+                    out += HistoryEvent(cur.date, CapitalPart.DEPOSITS, "Проценты", RuPlural.deposits(shares.size), interest, kind = HistoryKind.INTEREST, parts = parts)
+                } else {
+                    val d = shares.single().first
+                    out += HistoryEvent(cur.date, CapitalPart.DEPOSITS, "Проценты", name(d), interest, kind = HistoryKind.INTEREST,
+                        target = HistoryTarget.Deposit(d.id), bank = d.brand)
+                }
             }
             val dealt = fxOps.filter { it.date == cur.date }.sumOf { if (it.kind == FxKind.BUY) it.rubMinor else -it.rubMinor }
             val revalued = cur.valueOf(CapitalPart.CURRENCY) - prev.valueOf(CapitalPart.CURRENCY) - dealt
             if (revalued != 0L) {
                 val reason = reasonOf(prev.date, cur.date, revalued, fxOps, rates)
+                val parts = reason.legs.map { l ->
+                    HistoryEvent(cur.date, CapitalPart.CURRENCY, Currencies.nameOf(l.currency), RevaluationText.partSubtitle(l), l.effectMinor,
+                        kind = HistoryKind.REVALUATION, target = HistoryTarget.Currency(l.currency))
+                } + (if (reason.manualMinor != 0L) listOf(
+                    HistoryEvent(cur.date, CapitalPart.CURRENCY, "Остаток изменили вручную", reason.legs.singleOrNull()?.let { Currencies.nameOf(it.currency) },
+                        reason.manualMinor, kind = HistoryKind.REVALUATION)
+                ) else emptyList())
                 out += HistoryEvent(cur.date, CapitalPart.CURRENCY, "Переоценка валюты", RevaluationText.subtitle(reason), revalued, reason,
-                    kind = HistoryKind.REVALUATION,
+                    kind = HistoryKind.REVALUATION, parts = if (parts.size >= 2) parts else emptyList(),
                     target = reason.legs.maxByOrNull { kotlin.math.abs(it.effectMinor) }?.let { HistoryTarget.Currency(it.currency) }
                         ?: HistoryTarget.Section(CapitalPart.CURRENCY)
                 )
             }
         }
         return out
+    }
+
+    /**
+     * [total] interest by [weights] (a deposit's growth that day), floor per deposit; the
+     * rest goes to the largest deposit, so the parts always add up to [total]. No weight at all —
+     * everything to the largest. Parts of nothing are dropped.
+     */
+    internal fun splitInterest(total: Long, weights: List<Pair<Deposit, Long>>, on: LocalDate): List<Pair<Deposit, Long>> {
+        if (weights.isEmpty()) return emptyList()
+        val largest = weights.map { it.first }.sortedWith(compareByDescending<Deposit> { DepositMath.valueOn(it, on) }.thenBy { it.id }).first()
+        val sum = weights.sumOf { it.second }
+        val shares = weights.associate { (d, w) ->
+            d.id to if (sum <= 0L) 0L
+            else java.math.BigDecimal(total).multiply(java.math.BigDecimal(w)).divide(java.math.BigDecimal(sum), 0, java.math.RoundingMode.FLOOR).toLong()
+        }
+        val rest = total - shares.values.sum()
+        return weights.map { it.first }.map { d -> d to shares.getValue(d.id) + if (d.id == largest.id) rest else 0L }.filter { it.second != 0L }
     }
 
     /** Rates explain what they can: balance on [from] times the rate change; the rest is a manual change. */

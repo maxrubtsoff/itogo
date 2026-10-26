@@ -120,6 +120,10 @@ object DepositMath {
      */
     fun isActive(deposit: Deposit, today: LocalDate): Boolean = !today.isAfter(deposit.endDate)
 
+    /** The deposit's value on [date]: nothing before it starts (F-47). */
+    fun valueOn(deposit: Deposit, date: LocalDate): Long =
+        if (date.isBefore(deposit.startDate)) 0L else project(deposit, date, seriesPoints = 2).currentValue.minor
+
     /** Not started yet: valued at the principal, nothing accrued. */
     fun isUpcoming(deposit: Deposit, today: LocalDate): Boolean = today.isBefore(deposit.startDate)
 

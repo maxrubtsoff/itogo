@@ -10,6 +10,7 @@ import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CapitalEvents
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
 import ru.maxrubtsoff.bankagg.domain.model.Deposit
+import ru.maxrubtsoff.bankagg.domain.model.DepositMath
 import ru.maxrubtsoff.bankagg.domain.model.DepositTopUp
 import ru.maxrubtsoff.bankagg.domain.model.HistoryKind
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRow
@@ -59,7 +60,8 @@ class CapitalEventsTest {
         assertEquals(1, r.legs.size)
         assertEquals(250_000L, r.legs[0].effectMinor)
         assertEquals(0L, r.manualMinor)
-        assertEquals("USD 90,00 → 92,50 ₽ · " + Money.ofMinor(100_000).format("USD"), e.subtitle)
+        assertEquals("$ 90,00 → 92,50 ₽", e.subtitle)
+        assertTrue(e.parts.isEmpty())
     }
 
     @Test fun revaluationWithManualRemainder() {
@@ -71,7 +73,10 @@ class CapitalEventsTest {
             )
         )
         assertEquals(500_000L, e.reason!!.manualMinor)
-        assertTrue(e.subtitle!!.endsWith("остаток изменили вручную"))
+        assertTrue(e.subtitle!!.endsWith(" · остаток изменён"))
+        assertEquals(2, e.parts.size)
+        assertNull(e.parts[1].target)
+        assertEquals(500_000L, e.parts[1].amountMinor)
     }
 
     @Test fun revaluationWithoutRatesFallsBackToManual() {
@@ -92,7 +97,10 @@ class CapitalEventsTest {
             )
         )
         assertEquals(2, e.reason!!.legs.size)
-        assertEquals("Курс USD, EUR", e.subtitle)
+        assertEquals("$ +2,00 ₽ · € +4,00 ₽", e.subtitle)
+        assertEquals(listOf(HistoryTarget.Currency("USD"), HistoryTarget.Currency("EUR")), e.parts.map { it.target })
+        assertEquals(e.amountMinor, e.parts.sumOf { it.amountMinor!! })
+        assertEquals("90,00 → 92,00 ₽ · " + Money.ofMinor(100_000).format("USD"), e.parts[0].subtitle)
     }
 
     @Test fun rateFormat() {
@@ -158,9 +166,73 @@ class CapitalEventsTest {
         assertEquals(HistoryTarget.Deposit("x"), e.target)
     }
 
-    @Test fun interestManyDepositsTargetsSection() {
+    @Test fun interestPartsLeadToEachDeposit() {
         val e = build(deps = listOf(dep("x"), dep("y")), points = depPoints(110)).single { it.kind == HistoryKind.INTEREST }
-        assertEquals(HistoryTarget.Section(CapitalPart.DEPOSITS), e.target)
+        assertNull(e.target)
+        assertEquals(listOf(HistoryTarget.Deposit("x"), HistoryTarget.Deposit("y")), e.parts.map { it.target })
+        assertEquals(BankBrand.SBER, e.parts[0].bank)
+        assertEquals(e.amountMinor, e.parts.sumOf { it.amountMinor!! })
+        assertEquals("2 вклада", e.subtitle)
+    }
+
+    @Test fun oneDepositLeadsToIt() {
+        val e = build(deps = listOf(dep("x", end = today.plusDays(10))), points = depPoints(110)).single { it.kind == HistoryKind.INTEREST }
+        assertTrue(e.parts.isEmpty())
+        assertEquals(BankBrand.SBER.title, e.subtitle)
+    }
+
+    @Test fun interestSplitsByDepositMath() {
+        val big = dep("big").copy(principal = Money.ofMinor(300_000))
+        val e = build(deps = listOf(big, dep("small")), points = depPoints(100 + 300)).single { it.kind == HistoryKind.INTEREST }
+        val (a, b) = e.parts
+        assertEquals(e.amountMinor, a.amountMinor!! + b.amountMinor!!)
+        assertTrue(a.amountMinor!! > 2 * b.amountMinor!!)
+    }
+
+    @Test fun interestRemainderGoesToLargest() {
+        val small = dep("a")
+        val big = dep("b").copy(principal = Money.ofMinor(500_000))
+        val r = CapitalEvents.splitInterest(101, listOf(small to 1L, big to 1L), d1)
+        assertEquals(listOf(50L, 51L), r.map { it.second })
+        assertEquals("b", r[1].first.id)
+    }
+
+    @Test fun interestZeroWeightsGoToLargest() {
+        val r = CapitalEvents.splitInterest(7, listOf(dep("a") to 0L, dep("b").copy(principal = Money.ofMinor(900_000)) to 0L), d1)
+        assertEquals(1, r.size)
+        assertEquals("b", r[0].first.id)
+        assertEquals(7L, r[0].second)
+    }
+
+    @Test fun depositOpenedTodayDoesNotCountPrincipal() {
+        val fresh = dep("n", start = d1)
+        val old = dep("o")
+        val e = build(deps = listOf(old, fresh), points = depPoints(100 + 100_000 + 43)).single { it.kind == HistoryKind.INTEREST }
+        // all of the interest is the old deposit's: the new one only brought its principal
+        assertTrue(e.parts.isEmpty())
+        assertEquals(HistoryTarget.Deposit("o"), e.target)
+    }
+
+    @Test fun valueOnBeforeStartIsZero() {
+        assertEquals(0L, DepositMath.valueOn(dep("x"), d0.minusDays(10)))
+        assertTrue(DepositMath.valueOn(dep("x"), d1) >= 100_000L)
+    }
+
+    @Test fun revaluationOneLegHasNoParts() {
+        val e = reval(events(listOf(pointFx(d0, 9_000_000), pointFx(d1, 9_250_000)), listOf(buy("USD", d0, 100_000, 9_000_000)),
+            listOf(FxRate("USD", d0, 90_000_000), FxRate("USD", d1, 92_500_000))))
+        assertTrue(e.parts.isEmpty())
+        assertEquals(HistoryTarget.Currency("USD"), e.target)
+    }
+
+    @Test fun revaluationTextNegativeAndNoLegs() {
+        val leg = ru.maxrubtsoff.bankagg.domain.model.RevaluationLeg("USD", 81_920_000, 80_740_000, 120_000, -1)
+        val eur = ru.maxrubtsoff.bankagg.domain.model.RevaluationLeg("EUR", 90_000_000, 90_220_000, 100, 1)
+        assertEquals("$ 81,92 → 80,74 ₽", RevaluationText.subtitle(ru.maxrubtsoff.bankagg.domain.model.RevaluationReason(listOf(leg), 0)))
+        assertEquals("$ −1,18 ₽ · € +0,22 ₽", RevaluationText.subtitle(ru.maxrubtsoff.bankagg.domain.model.RevaluationReason(listOf(leg, eur), 0)))
+        assertEquals("$ 81,92 → 80,74 ₽ · остаток изменён", RevaluationText.subtitle(ru.maxrubtsoff.bankagg.domain.model.RevaluationReason(listOf(leg), 5)))
+        assertEquals("Курс или остаток изменились", RevaluationText.subtitle(ru.maxrubtsoff.bankagg.domain.model.RevaluationReason(emptyList(), 5)))
+        assertEquals("81,92 → 80,74 ₽ · " + Money.ofMinor(120_000).format("USD"), RevaluationText.partSubtitle(leg))
     }
 
     @Test fun revaluationTargetsLargestLeg() {

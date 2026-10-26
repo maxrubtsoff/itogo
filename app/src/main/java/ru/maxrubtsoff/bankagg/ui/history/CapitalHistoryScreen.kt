@@ -73,6 +73,8 @@ import ru.maxrubtsoff.bankagg.ui.common.AmountText
 import ru.maxrubtsoff.bankagg.ui.common.CapitalChart
 import ru.maxrubtsoff.bankagg.ui.common.Dot
 import ru.maxrubtsoff.bankagg.ui.common.EmptyState
+import ru.maxrubtsoff.bankagg.ui.common.BankIcon
+import ru.maxrubtsoff.bankagg.ui.capital.CurrencyBadge
 import ru.maxrubtsoff.bankagg.ui.common.HistoryLine
 import ru.maxrubtsoff.bankagg.ui.common.signedSum
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRows
@@ -296,7 +298,12 @@ private fun Events(
 @Composable
 private fun RowItem(row: HistoryRow, opened: List<String>, toggle: (String) -> Unit, onTap: (HistoryEvent) -> Unit) {
     when (row) {
-        is HistoryRow.Single -> EventRow(row.event, onTap)
+        is HistoryRow.Single -> {
+            val e = row.event
+            val expanded = e.parts.isNotEmpty() && row.id in opened
+            EventRow(e, onTap, expanded = expanded, onToggle = { toggle(row.id) })
+            if (expanded) e.parts.forEach { EventRow(it, onTap, nested = true) }
+        }
         is HistoryRow.Group -> {
             val expanded = row.id in opened
             val kind = row.rowKind
@@ -310,10 +317,20 @@ private fun RowItem(row: HistoryRow, opened: List<String>, toggle: (String) -> U
 }
 
 @Composable
-private fun EventRow(e: HistoryEvent, onTap: (HistoryEvent) -> Unit, nested: Boolean = false) {
+private fun EventRow(e: HistoryEvent, onTap: (HistoryEvent) -> Unit, nested: Boolean = false, expanded: Boolean = false, onToggle: () -> Unit = {}) {
+    val kind = HistoryRows.kindOf(e)
+    val target = e.target
     HistoryLine(
-        e.title, e.subtitle, e.amountMinor, HistoryRows.kindOf(e), nested = nested,
-        subtitleLines = if (e.reason != null) 2 else 1, lead = { Dot(e.part.color()) }, onClick = { onTap(e) }
+        e.title, e.subtitle, e.amountMinor, kind, nested = nested, expanded = expanded,
+        subtitleLines = if (e.reason != null) 2 else 1,
+        lead = {
+            when {
+                e.bank != null -> BankIcon(e.bank, 28.dp)
+                target is HistoryTarget.Currency && nested -> CurrencyBadge(target.code, 28.dp)
+                else -> Dot(e.part.color())
+            }
+        },
+        onClick = { if (kind == RowKind.OPEN) onToggle() else onTap(e) }
     )
 }
 
