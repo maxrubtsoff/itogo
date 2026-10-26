@@ -6,6 +6,7 @@ import org.junit.Assert.assertTrue
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.DepositParser
 import org.junit.Test
+import ru.maxrubtsoff.bankagg.domain.model.DepositField
 import java.time.LocalDate
 
 class DepositParserTest {
@@ -104,5 +105,168 @@ class DepositParserTest {
     fun an_annual_rate_is_enough_to_read_a_deposit() {
         val r = DepositParser.parse("Баланс\n18% годовых\n1 300 000 \u20bd")
         assertEquals(1800, r.draft.rateBp)
+    }
+
+    // ---- B-80: five layouts of one deposit card (Альфа-Банк, 650 000 → 770 191,47, 18,49 %) ----
+
+    private val TITLE = "Вклад №1: Альфа-Банк"
+    private val D1 = LocalDate.of(2024, 8, 7)
+    private val D2 = LocalDate.of(2025, 8, 7)
+
+    private fun assertCard(text: String, guessedPrincipal: Boolean = false) {
+        val r = DepositParser.parse(text, today = LocalDate.of(2026, 10, 26))
+        val d = r.draft
+        assertEquals(BankBrand.ALFA, r.brand)
+        assertEquals(TITLE, d.title)
+        assertEquals(65_000_000L, d.principal?.minor)
+        assertEquals(77_019_147L, d.exitAmount?.minor)
+        assertEquals(1849, d.rateBp)
+        assertEquals(D1, d.startDate)
+        assertEquals(D2, d.endDate)
+        assertEquals(guessedPrincipal, DepositField.PRINCIPAL in d.guessed)
+    }
+
+    @Test
+    fun layout1_row_wise_three_columns() = assertCard(
+        """
+        Вклад №1: Альфа-Банк ЗАВЕРШЕН
+        СУММА НА ВХОДЕ СУММА НА ВЫХОДЕ СТАВКА
+        650 000 ₽ 770 191,47 ₽ 18,49%
+        ДАТЫ ПЕРИОДА
+        07.08.2024 — 07.08.2025
+        """.trimIndent()
+    )
+
+    @Test
+    fun layout1_block_wise() = assertCard(
+        """
+        Вклад №1: Альфа-Банк
+        ЗАВЕРШЕН
+        СУММА НА ВХОДЕ
+        650 000 ₽
+        СУММА НА ВЫХОДЕ
+        770 191,47 ₽
+        СТАВКА
+        18,49%
+        ДАТЫ ПЕРИОДА
+        07.08.2024 — 07.08.2025
+        """.trimIndent()
+    )
+
+    @Test
+    fun layout2_row_wise_wrapped_caption() = assertCard(
+        """
+        Вклад №1: Альфа-Банк ЗАВЕРШЕН
+        СУММА ПРИ ОТКРЫТИИ СУММА В КОНЦЕ СРОКА СТАВКА ДАТЫ ПЕРИОДА
+        ВКЛАДА 770 191,47 ₽ 18,49% 07.08.2024 — 07.08.2025
+        650 000 ₽
+        """.trimIndent()
+    )
+
+    @Test
+    fun layout2_block_wise_wrapped_caption() = assertCard(
+        """
+        Вклад №1: Альфа-Банк
+        ЗАВЕРШЕН
+        СУММА ПРИ ОТКРЫТИИ
+        ВКЛАДА
+        650 000 ₽
+        СУММА В КОНЦЕ СРОКА
+        770 191,47 ₽
+        СТАВКА
+        18,49%
+        ДАТЫ ПЕРИОДА
+        07.08.2024 — 07.08.2025
+        """.trimIndent()
+    )
+
+    @Test
+    fun layout3_glued_amounts() {
+        val base = """
+        Вклад №1: Альфа-Банк
+        ЗАВЕРШЕН
+        СУММА ПРИ ОТКРЫТИИ ВКЛАДА
+        650000%s
+        СУММА В КОНЦЕ СРОКА
+        770191,47%s
+        СТАВКА
+        18,49%%
+        ДАТЫ ПЕРИОДА
+        07.08.2024 — 07.08.2025
+        """.trimIndent()
+        for (cur in listOf("₽", "Р", "р", "P")) assertCard(base.format(cur, cur))
+    }
+
+    @Test
+    fun layout4_amount_without_caption() = assertCard(
+        """
+        Вклад №1: Альфа-Банк
+        ЗАВЕРШЕН
+        650000₽
+        СУММА В КОНЦЕ СРОКА
+        770191,47₽
+        СТАВКА
+        18,49%
+        ДАТЫ ПЕРИОДА
+        07.08.2024 — 07.08.2025
+        """.trimIndent(),
+        guessedPrincipal = true
+    )
+
+    @Test
+    fun layout5_bare_summa_caption() = assertCard(
+        """
+        Вклад №1: Альфа-Банк
+        ЗАВЕРШЕН
+        СУММА
+        650000₽
+        СУММА В КОНЦЕ СРОКА
+        770191,47₽
+        СТАВКА
+        18,49%
+        ДАТЫ ПЕРИОДА
+        07.08.2024 — 07.08.2025
+        """.trimIndent()
+    )
+
+    @Test
+    fun caption_is_never_a_title() {
+        val r = DepositParser.parse("СУММА ПРИ ОТКРЫТИИ ВКЛАДА\n650 000 ₽\nСУММА В КОНЦЕ СРОКА\n770 191,47 ₽")
+        assertNull(r.draft.title)
+    }
+
+    @Test
+    fun date_range_on_one_line_wins() {
+        val r = DepositParser.parse("Вклад\nСоздан 01.01.2021\nДАТЫ ПЕРИОДА\n07.08.2024 — 07.08.2025\n18,49% годовых")
+        assertEquals(D1, r.draft.startDate)
+        assertEquals(D2, r.draft.endDate)
+    }
+
+    @Test
+    fun loose_date_separators() {
+        val r = DepositParser.parse("Вклад\nДАТЫ ПЕРИОДА\n07.08. 2024 — 07,08.2025\n18,49% годовых")
+        assertEquals(D1, r.draft.startDate)
+        assertEquals(D2, r.draft.endDate)
+    }
+
+    @Test
+    fun two_unlabeled_candidates_stay_null() {
+        val r = DepositParser.parse("Вклад\n600 000 ₽\n610 000 ₽\nСУММА В КОНЦЕ СРОКА\n770 191,47 ₽")
+        assertNull(r.draft.principal)
+        assertEquals(77_019_147L, r.draft.exitAmount?.minor)
+    }
+
+    @Test
+    fun parsePasses_votes_per_field() {
+        fun pass(year: String) = "Вклад №1: Альфа-Банк\nСУММА ПРИ ОТКРЫТИИ ВКЛАДА\n650 000 ₽\n" +
+            "СУММА В КОНЦЕ СРОКА\n770 191,47 ₽\nСТАВКА\n18,49%\n07.08.$year — 07.08.2025"
+        val r = DepositParser.parsePasses(listOf(pass("2021"), pass("2024"), pass("2024") + "\n18,49% годовых"))
+        assertEquals(D1, r.draft.startDate)
+        assertEquals(D2, r.draft.endDate)
+        assertEquals(65_000_000L, r.draft.principal?.minor)
+        // A field read by one pass only is still filled.
+        val only = DepositParser.parsePasses(listOf("Вклад\nСТАВКА 18,49%", "Вклад\n650 000 ₽\nСУММА В КОНЦЕ СРОКА\n770 191,47 ₽"))
+        assertEquals(1849, only.draft.rateBp)
+        assertEquals(77_019_147L, only.draft.exitAmount?.minor)
     }
 }

@@ -43,20 +43,21 @@ class TesseractOcrEngine(
         lock.withLock { ensureModel() }
     }
 
-    override suspend fun recognize(imagePath: String): String? = read(imagePath, listOf(1f))
+    override suspend fun recognize(imagePath: String): String? = read(imagePath, listOf(1f)).firstOrNull()
 
     // Half size catches banner figures Tesseract skips when glyphs are huge;
     // double size catches the fine print of a document photographed whole.
-    override suspend fun recognizeThorough(imagePath: String): String? = read(imagePath, listOf(1f, 0.5f, 2f))
+    override suspend fun recognizePasses(imagePath: String): List<String> = read(imagePath, listOf(1f, 0.5f, 2f))
 
-    private suspend fun read(imagePath: String, scales: List<Float>): String? = withContext(Dispatchers.IO) {
+    /** One text per scale that gave any; empty when the engine isn't ready or failed. */
+    private suspend fun read(imagePath: String, scales: List<Float>): List<String> = withContext(Dispatchers.IO) {
         lock.withLock {
-            if (!ensureModel()) return@withLock null
-            val bitmap = decode(imagePath) ?: return@withLock null
+            if (!ensureModel()) return@withLock emptyList()
+            val bitmap = decode(imagePath) ?: return@withLock emptyList()
             try {
                 val engine = api ?: TessBaseAPI().takeIf { it.init(dataDir.absolutePath, language) }
                     ?.also { api = it }
-                    ?: return@withLock null
+                    ?: return@withLock emptyList()
                 scales.mapNotNull { s ->
                     val scaled = scaled(bitmap, s) ?: return@mapNotNull null
                     try {
@@ -66,12 +67,12 @@ class TesseractOcrEngine(
                         runCatching { engine.clear() }
                         if (scaled !== bitmap) runCatching { scaled.recycle() }
                     }
-                }.joinToString("\n\n").takeIf { it.isNotBlank() }
+                }
             } catch (t: Throwable) {
                 // A broken native state is not reused.
                 runCatching { api?.recycle() }
                 api = null
-                null
+                emptyList()
             } finally {
                 runCatching { bitmap.recycle() }
             }

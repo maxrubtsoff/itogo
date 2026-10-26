@@ -26,5 +26,9 @@ interface OcrEngine {
      * passes, one after another: OCR misses display-size figures ("1 300 000 ₽" on a
      * banner) at one scale and fine print at another. Slower; for dense screens.
      */
-    suspend fun recognizeThorough(imagePath: String): String? = recognize(imagePath)
+    suspend fun recognizeThorough(imagePath: String): String? =
+        recognizePasses(imagePath).joinToString("\n\n").takeIf { it.isNotBlank() }
+
+    /** The passes of [recognizeThorough] one by one, so a parser can compare them (B-80). */
+    suspend fun recognizePasses(imagePath: String): List<String> = listOfNotNull(recognize(imagePath))
 }

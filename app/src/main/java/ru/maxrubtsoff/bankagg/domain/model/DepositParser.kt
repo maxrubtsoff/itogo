@@ -24,9 +24,14 @@ object DepositParser {
     // OCR often drops the first group's space ("1185 142,31"), so it may be 4 digits.
     private val AMOUNT = Regex("""(?<![\d,.])(\d{1,4}(?:[   ]\d{3})+|\d{4,})(?:[.,](\d{1,2}))?""")
     // OCR reads the rouble sign as "Р" or "P".
-    private val CURRENCY_AFTER = Regex("""^\s{0,2}(₽|Р|P|руб)""")
+    private val CURRENCY_AFTER = Regex("""^\s{0,2}(₽|Р|P|р|p|руб)""")
     private val PERCENT = Regex("""(?<!\d)(\d{1,2}(?:[.,]\d{1,2})?)[\s  ]*%""")
     private val DATE = Regex("""(?<!\d)(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})(?!\d)""")
+    // OCR slips: a space after a separator ("07.08. 2024") or a comma for a dot ("07,08.2024");
+    // only with a 4-digit year, so a rate like "18,49%" never looks like a date.
+    private val DATE_LOOSE = Regex("""(?<!\d)(\d{1,2})\s?[.,\-/]\s?(\d{1,2})\s?[.,\-/]\s?(\d{4})(?!\d)""")
+    // What may stand between the two dates of a period: a dash as OCR sees it.
+    private val RANGE_GLUE = Regex("""^[\s—–\-_=~]*[—–\-_=~][\s—–\-_=~]*$""")
 
     // Textual Russian date: "2 октября 2026". The month is resolved via MONTHS.
     private val TEXT_DATE = Regex("""(?<![\d\p{L}])(\d{1,2})\s+([А-Яа-яЁё]+)\s+(\d{4})(?!\d)""")
@@ -142,6 +147,12 @@ object DepositParser {
         val income = pick(amounts, Kind.INCOME)
         val (start, end, dateGuesses) = dates(lines, today)
         val guessed = dateGuesses.toMutableSet()
+        // The deposit is the only unlabeled figure below the payout (B-80): a card whose
+        // opening sum has no caption. Two such figures — don't pick, leave it blank.
+        if (principal == null && exit != null) {
+            val rest = amounts.filter { it.kind == null && it.minor < exit!! }.map { it.minor }.distinct()
+            if (rest.size == 1) { principal = rest.first(); guessed += DepositField.PRINCIPAL }
+        }
         // No captions at all: with two or more amounts the smaller is the deposit,
         // the larger the payout; a single amount is the deposit. Only a guess —
         // on a deposit's main screen the lone big number is often today's balance.
@@ -167,7 +178,51 @@ object DepositParser {
         return Result(brand, draft)
     }
 
+    /**
+     * Reads several OCR passes of one screenshot (the same image at different scales) and
+     * takes each field from the value most passes agree on, a tie going to the earlier
+     * pass: one pass misreading a digit then no longer spoils a field the others read (B-80).
+     */
+    fun parsePasses(passes: List<String>, brandHint: BankBrand? = null, today: LocalDate = LocalDate.now()): Result {
+        val results = passes.map { parse(it, brandHint, today) }
+        if (results.isEmpty()) return Result(brandHint, DepositDraft())
+        fun <T : Any> vote(field: DepositField? = null, get: (Result) -> T?): Pair<T?, Boolean> {
+            val values = results.mapNotNull(get)
+            val best = values.groupingBy { it }.eachCount().maxByOrNull { it.value }?.value ?: return null to false
+            val winner = values.first { v -> values.count { it == v } == best }
+            val first = results.first { get(it) == winner }
+            return winner to (field != null && field in first.draft.guessed)
+        }
+        val (principal, pGuess) = vote(DepositField.PRINCIPAL) { it.draft.principal }
+        val (exitVoted, eGuess) = vote(DepositField.EXIT) { it.draft.exitAmount }
+        val (start, sGuess) = vote(DepositField.START) { it.draft.startDate }
+        val (end, endGuess) = vote(DepositField.END) { it.draft.endDate }
+        // A payout no bigger than the deposit is a misread.
+        val exit = exitVoted?.takeUnless { principal != null && it.minor <= principal.minor }
+        val guessed = buildSet {
+            if (pGuess) add(DepositField.PRINCIPAL)
+            if (eGuess && exit != null) add(DepositField.EXIT)
+            if (sGuess) add(DepositField.START)
+            if (endGuess) add(DepositField.END)
+        }
+        val draft = DepositDraft(
+            principal = principal,
+            exitAmount = exit,
+            rateBp = vote { it.draft.rateBp }.first,
+            startDate = start,
+            endDate = end,
+            income = vote { it.draft.income }.first,
+            title = vote { it.draft.title }.first,
+            method = vote { it.draft.method }.first,
+            guessed = guessed
+        ).withDerivedAmounts()
+        return Result(brandHint ?: vote { it.brand }.first, draft)
+    }
+
     // ---- amounts ----
+
+    // The second line of a caption that wrapped: "Сумма при открытии / вклада".
+    private val CAPTION_TAILS = setOf("вклада", "срока")
 
     private enum class Kind { INCOME, EXIT, IN }
 
@@ -177,16 +232,47 @@ object DepositParser {
     private fun amountHits(lines: List<String>): List<AmountHit> = buildList {
         var prev = ""
         var prev2 = ""
+        // Money columns whose caption was on a row above but whose figure wrapped to a later line.
+        val pending = ArrayDeque<Kind>()
+        var pendingAge = 0
         for (line in lines) {
             val own = CategoryMatcher.normalize(line)
             val lower = line.lowercase()
-            val m = AMOUNT.find(line)
+            val moneys = AMOUNT.findAll(line).filter { m -> amountMinor(m) != null && isMoney(line, m) }.toList()
+            if (pending.isNotEmpty() && ++pendingAge > 2) pending.clear()
+            // Several captions in one row ("Сумма на входе  Сумма на выходе  Ставка") and
+            // several figures under them: match them left to right (B-80).
+            val columns = captionColumns(CategoryMatcher.normalize(prev))
+            val columnRow = moneys.isNotEmpty() && pending.isEmpty() && columns.size >= 2 &&
+                IGNORE_WORDS.none { lower.contains(it) }
+            if (columnRow && moneys.size >= 2) {
+                val take = minOf(moneys.size, columns.size)
+                for (i in 0 until take) add(AmountHit(amountMinor(moneys[i])!!, columns[i], strong = true))
+                columns.drop(take).forEach { pending.addLast(it) }
+                pendingAge = 0
+                if (line.isNotBlank()) { prev2 = prev; prev = line }
+                continue
+            }
+            // The row of figures starts with the tail of a wrapped caption ("ВКЛАДА 770 191,47 ₽"):
+            // fewer figures than captions, so they belong to the right-hand ones.
+            if (columnRow && moneys.size < columns.size && line.trimStart().firstOrNull()?.isLetter() == true) {
+                val skip = columns.size - moneys.size
+                moneys.forEachIndexed { i, m -> add(AmountHit(amountMinor(m)!!, columns[skip + i], strong = true)) }
+                columns.take(skip).forEach { pending.addLast(it) }
+                pendingAge = 0
+                if (line.isNotBlank()) { prev2 = prev; prev = line }
+                continue
+            }
+            if (moneys.isNotEmpty() && pending.isNotEmpty() && kindOf(own) == null) {
+                add(AmountHit(amountMinor(moneys.first())!!, pending.removeFirst(), strong = true))
+                if (line.isNotBlank()) { prev2 = prev; prev = line }
+                continue
+            }
+            val m = moneys.firstOrNull() ?: AMOUNT.find(line)
             val minor = m?.let(::amountMinor)
             val p1 = CategoryMatcher.normalize(prev)
             val captioned = listOf(own, p1).any { s -> captionOf(s) != null } || INCOME_WORDS.any { CategoryMatcher.normalize(prev2).contains(it) }
-            // A long bare number ("::4493", an account) is money only with a rouble sign or kopecks.
-            val looksLikeMoney = m != null && (m.groupValues[1].any { !it.isDigit() } || m.groupValues[2].isNotEmpty() ||
-                CURRENCY_AFTER.containsMatchIn(line.substring(m.range.last + 1)) || captioned)
+            val looksLikeMoney = m != null && (isMoney(line, m) || captioned)
             if (minor != null && looksLikeMoney && IGNORE_WORDS.none { lower.contains(it) || own.contains(it) }) {
                 val gain = BALANCE_GAIN.find(line, m.range.last + 1)?.let { g -> amountOf(g.groupValues[1], g.groupValues[2]) }
                 when {
@@ -195,7 +281,9 @@ object DepositParser {
                     else -> {
                         val ownKind = kindOf(own)
                         val p2 = CategoryMatcher.normalize(prev2)
+                        // A caption wrapped onto two lines: "Сумма при открытии / вклада / 650 000 ₽".
                         val captionAbove = captionOf(p1)
+                            ?: if (p1 in CAPTION_TAILS) captionOf("$p2 $p1") else null
                         when {
                             ownKind != null -> add(AmountHit(minor, ownKind, strong = true))
                             IGNORE_WORDS.any { p1.contains(CategoryMatcher.normalize(it)) } -> Unit
@@ -213,8 +301,41 @@ object DepositParser {
         }
     }
 
-    /** Like [kindOf], but a bare "вклад"/"сумма" doesn't count: only a caption that names the amount. */
-    private fun captionOf(norm: String): Kind? = kindOf(norm)?.takeIf { it != Kind.IN || IN_CAPTIONS.any { w -> norm.contains(w) } }
+    /** A long bare number ("::4493", an account) is money only with a rouble sign or kopecks. */
+    private fun isMoney(line: String, m: MatchResult): Boolean = m.groupValues[1].any { !it.isDigit() } ||
+        m.groupValues[2].isNotEmpty() || CURRENCY_AFTER.containsMatchIn(line.substring(m.range.last + 1))
+
+    /**
+     * Like [kindOf], but a bare "вклад" doesn't count: only a caption that names the amount.
+     * A line that is just "Сумма" is the caption of a field, unlike the heading "Вклад" (B-80).
+     */
+    private fun captionOf(norm: String): Kind? =
+        if (norm == "сумма") Kind.IN
+        else kindOf(norm)?.takeIf { it != Kind.IN || IN_CAPTIONS.any { w -> norm.contains(w) } }
+
+    /**
+     * The money captions of one row, left to right: "Сумма на входе  Сумма на выходе  Ставка"
+     * → [IN, EXIT]. Phrases of one kind that overlap or touch are one caption.
+     */
+    private fun captionColumns(norm: String): List<Kind> {
+        val hits = buildList {
+            fun scan(words: List<String>, kind: Kind) = words.forEach { w ->
+                var i = norm.indexOf(w)
+                while (i >= 0) { add(Triple(i, i + w.length, kind)); i = norm.indexOf(w, i + 1) }
+            }
+            scan(INCOME_WORDS, Kind.INCOME)
+            scan(EXIT_WORDS, Kind.EXIT)
+            scan(IN_CAPTIONS - "баланс", Kind.IN)
+        }.sortedBy { it.first }
+        val merged = mutableListOf<Triple<Int, Int, Kind>>()
+        for (h in hits) {
+            val last = merged.lastOrNull()
+            if (last != null && h.first <= last.second + 10 && h.third == last.third) {
+                merged[merged.lastIndex] = Triple(last.first, maxOf(last.second, h.second), last.third)
+            } else if (last == null || h.first >= last.second) merged += h
+        }
+        return merged.map { it.third }
+    }
 
     private fun kindOf(norm: String): Kind? = when {
         INCOME_WORDS.any { norm.contains(it) } -> Kind.INCOME
@@ -265,6 +386,7 @@ object DepositParser {
     private data class DateHit(val date: LocalDate, val context: String)
 
     private fun dates(lines: List<String>, today: LocalDate): Triple<LocalDate?, LocalDate?, Set<DepositField>> {
+        var period: Pair<LocalDate, LocalDate>? = null
         val hits = buildList {
             var prev = ""
             for (line in lines) {
@@ -272,7 +394,12 @@ object DepositParser {
                 // "Решение о выпуске … от 26.11.2025", "Дата подписания" date a document, not the deposit.
                 if (!lower.contains("решени") && !lower.contains("подписан")) {
                     val ctx = "$prev $lower"
-                    DATE.findAll(line).mapNotNull(::numericDateOf).forEach { add(DateHit(it, ctx)) }
+                    val numeric = numericDates(line)
+                    numeric.forEach { add(DateHit(it.second, ctx)) }
+                    // "07.08.2024 — 07.08.2025": two dates on one line with a dash between are the period.
+                    if (period == null && numeric.size >= 2 && numeric[0].second < numeric[1].second &&
+                        RANGE_GLUE.matches(line.substring(numeric[0].first.last + 1, numeric[1].first.first))
+                    ) period = numeric[0].second to numeric[1].second
                     TEXT_DATE.findAll(line).mapNotNull(::textDateOf).forEach { add(DateHit(it, ctx)) }
                 }
                 if (line.isNotBlank()) prev = lower
@@ -282,7 +409,9 @@ object DepositParser {
         var start: LocalDate? = null
         var end: LocalDate? = null
         val guessed = mutableSetOf<DepositField>()
+        val range = period
         when {
+            range != null -> { start = range.first; end = range.second }
             distinct.size >= 2 -> { start = distinct.first(); end = distinct.last() }
             distinct.size == 1 -> {
                 val h = hits.first()
@@ -305,6 +434,17 @@ object DepositParser {
             else if (end == null && start != null) { end = start.plusMonths(months.toLong()); guessed += DepositField.END }
         }
         return Triple(start, end, guessed)
+    }
+
+    /** Numeric dates of a line in reading order, with where each sits. */
+    private fun numericDates(line: String): List<Pair<IntRange, LocalDate>> {
+        val found = (DATE.findAll(line) + DATE_LOOSE.findAll(line)).sortedBy { it.range.first }
+        val out = mutableListOf<Pair<IntRange, LocalDate>>()
+        for (m in found) {
+            if (out.isNotEmpty() && m.range.first <= out.last().first.last) continue
+            numericDateOf(m)?.let { out += m.range to it }
+        }
+        return out
     }
 
     private fun nextOccurrence(day: String, month: String, today: LocalDate): LocalDate? = runCatching {
@@ -333,21 +473,35 @@ object DepositParser {
 
     // ---- name and accrual ----
 
-    private val TITLE_WORD = Regex("""^[«"]?[А-ЯЁA-Z][\p{L}\-]*[»"]?$""")
+    private val TITLE_WORD = Regex("""^[«"]?(?:[А-ЯЁA-Z][\p{L}\-]*:?|№\d+:?)[»"]?$""")
+    // OCR writes "№" as "N°", "No", "Ne", sometimes with a space before the number.
+    private val NUMBER_SIGN = Regex("""(?<!\p{L})(?:№|N[°ºoe])\s?(\d+)""")
 
     /**
      * The deposit's own name: a short title-case line with "вклад" in it —
-     * «Альфа-Вклад Максимальный», «Вклад «Надёжный»» → «Надёжный». A bare
-     * "Вклад" heading or a caption ("Сумма при открытии вклада") is not a name.
+     * «Альфа-Вклад Максимальный», «Вклад №1: Альфа-Банк», «Вклад «Надёжный»» → «Надёжный».
+     * A bare "Вклад" heading, a caption ("Сумма при открытии вклада") or a line in
+     * capitals (a caption, a status) is not a name. A status chip glued on by OCR
+     * ("… Альфа-Банк ЗАВЕРШЕН") is cut off.
      */
     private fun titleOf(lines: List<String>): String? = lines.firstNotNullOfOrNull { raw ->
-        val line = raw.trim().trimEnd { !it.isLetter() && it != '»' && it != '"' }
-        val words = line.split(Regex("""\s+""")).filter { it.isNotEmpty() }
-        if (words.size !in 2..4 || !line.contains("вклад", ignoreCase = true)) return@firstNotNullOfOrNull null
+        val line = raw.trim().trimEnd { !it.isLetter() && !it.isDigit() && it != '»' && it != '"' }
+            .replace(NUMBER_SIGN, "№$1")
+        val norm = CategoryMatcher.normalize(line)
+        if (INCOME_WORDS.any { norm.contains(it) } || EXIT_WORDS.any { norm.contains(it) } ||
+            IN_CAPTIONS.any { norm.contains(it) }
+        ) return@firstNotNullOfOrNull null
+        var words = line.split(Regex("""\s+""")).filter { it.isNotEmpty() }
+        while (words.size > 2 && isCaps(words.last())) words = words.dropLast(1)
+        if (words.size !in 2..4 || !words.any { it.contains("вклад", ignoreCase = true) }) return@firstNotNullOfOrNull null
+        if (words.all { isCaps(it) || it.startsWith("№") }) return@firstNotNullOfOrNull null
         if (!words.all { TITLE_WORD.matches(it) }) return@firstNotNullOfOrNull null
-        val quoted = Regex("""«([^»]+)»""").find(line)?.groupValues?.get(1)
-        if (words.first().equals("вклад", ignoreCase = true)) quoted else line
+        val title = words.joinToString(" ")
+        val quoted = Regex("""«([^»]+)»""").find(title)?.groupValues?.get(1)
+        if (words.first().equals("вклад", ignoreCase = true) && title.contains('«')) quoted else title
     }
+
+    private fun isCaps(w: String) = w.count { it.isLetter() } >= 3 && w == w.uppercase()
 
     /** Capitalisation when the bank says so or its accrual schedule grows month to month. */
     private fun methodOf(lines: List<String>): AccrualMethod? {
