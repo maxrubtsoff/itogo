@@ -113,7 +113,7 @@ class BankBrand(
         val all: List<BankBrand> get() = known + BankDirectory.extra()
 
         fun fromPackage(pkg: String): BankBrand =
-            all.firstOrNull { pkg in it.packages } ?: UNKNOWN
+            (BankDirectory.extra() + known).firstOrNull { pkg in it.packages } ?: UNKNOWN
 
         // What the user changed about a bank comes first: a picture or letters
         // put on a known bank must not be overwritten by its built-in look (B-49).

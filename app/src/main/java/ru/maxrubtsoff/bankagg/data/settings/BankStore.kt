@@ -87,7 +87,8 @@ class BankStore(
         val changed = banks.filter { b ->
             val k = BankBrand.known.firstOrNull { it.key == b.key }
             k == null || b.logoFile != null || b.letters != k.letters ||
-                b.primaryColor != k.primaryColor || b.textColor != k.textColor || b.title != k.title
+                b.primaryColor != k.primaryColor || b.textColor != k.textColor || b.title != k.title ||
+                b.packages != k.packages
         }
         val defs = (readDefinitions().associateBy { it.key } + changed.associateBy { it.key }).values
         prefs.edit()

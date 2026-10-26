@@ -75,4 +75,13 @@ class BankBrandTest {
     @Test fun selectedBankCount_empty() {
         assertEquals(0, BankBrand.selectedBankCount(emptySet()))
     }
+
+    @Test fun fromPackage_findsUserAddedPackageOfKnownBank() {
+        BankDirectory.replace(listOf(BankBrand.VTB.copy(packages = BankBrand.VTB.packages + "x.y")))
+        try {
+            assertEquals(BankBrand.VTB.key, BankBrand.fromPackage("x.y").key)
+        } finally {
+            BankDirectory.replace(emptyList())
+        }
+    }
 }

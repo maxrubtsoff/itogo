@@ -39,12 +39,10 @@ class NewBankAnswers(
 
     /** «Это мой …»: the app joins that bank (a known bank is added as it is). */
     suspend fun link(c: BankCandidate, bank: BankBrand) {
-        if (bank.isKnown) {
-            banks.add(bank)
-        } else {
-            banks.add(bank)
-            banks.update(bank.copy(packages = bank.packages + c.packageName))
-        }
+        // The candidate's package always joins the bank, a known one included:
+        // otherwise its notifications keep landing in «unknown» (B-87).
+        val linked = bank.copy(packages = bank.packages + c.packageName)
+        if (banks.current().any { it.key == bank.key }) banks.update(linked) else banks.add(linked)
         collect(c)
     }
 
