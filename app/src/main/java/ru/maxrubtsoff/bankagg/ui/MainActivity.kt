@@ -457,6 +457,8 @@ class MainActivity : FragmentActivity() {
         val container = (application as App).container
         // The midnight timer may sleep in Doze; re-read the date on return.
         container.today.refresh()
+        // B-91: closed data shows the last-resort screen; none of the chores below may reach the database.
+        if (!container.isReady) return
         // A return is when the tab animates: the background chores run at most every few
         // minutes, not at each one (U-31).
         val now = android.os.SystemClock.elapsedRealtime()
