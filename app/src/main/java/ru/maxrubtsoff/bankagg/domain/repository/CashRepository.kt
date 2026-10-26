@@ -13,8 +13,8 @@ interface CashRepository {
     suspend fun set(balance: CashBalance)
 
     /** Takes a hand edit out of the log and moves the amount back by its delta (F-51). */
-    suspend fun removeChange(atMs: Long): CashChange? = throw UnsupportedOperationException()
+    suspend fun removeChange(atMs: Long): CashChange?
 
     /** Puts a hand edit into the log and moves the amount by its delta (F-51). */
-    suspend fun addChange(change: CashChange): Unit = throw UnsupportedOperationException()
+    suspend fun addChange(change: CashChange)
 }

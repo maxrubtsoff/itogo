@@ -53,6 +53,10 @@ class SampleLedgerRepository(accounts: List<Account>, transactions: List<Transac
 
     override suspend fun transaction(id: String): Transaction? = transactions.value.firstOrNull { it.id == id }
 
+    override suspend fun updateTransaction(tx: Transaction) = transactions.update { list ->
+        list.map { if (it.id == tx.id) tx else it }.sortedByDescending { t -> t.postedAt }
+    }
+
     override suspend fun deleteTransaction(id: String) = transactions.update { list -> list.filterNot { it.id == id } }
 
     override suspend fun setCountedBalance(accountId: String, balanceMinor: Long, estimated: Boolean) = change(accountId) {

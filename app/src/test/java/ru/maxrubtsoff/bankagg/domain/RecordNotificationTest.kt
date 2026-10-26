@@ -33,6 +33,7 @@ class RecordNotificationTest {
         override suspend fun trim(parsedBefore: Long, unparsedBefore: Long) = 0
         override suspend fun all(): List<CapturedEvent> = stored.toList()
         override suspend fun updateParse(id: Long, parsed: Boolean, dedupHash: String, contentHash: String) = Unit
+        override suspend fun byHash(hash: String): CapturedEvent? = stored.firstOrNull { it.dedupHash == hash }
     }
 
     private class FakeLedger : LedgerRepository {
@@ -54,6 +55,7 @@ class RecordNotificationTest {
         override suspend fun account(accountId: String): Account? = null
         override suspend fun transaction(id: String): Transaction? = txs.firstOrNull { it.id == id }
         override suspend fun deleteTransaction(id: String) { txs.removeAll { it.id == id } }
+        override suspend fun updateTransaction(tx: Transaction) { txs.replaceAll { if (it.id == tx.id) tx else it } }
         override suspend fun setCountedBalance(accountId: String, balanceMinor: Long, estimated: Boolean) {
             balances[accountId] = balanceMinor
         }

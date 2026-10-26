@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
+import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.CashChange
 import ru.maxrubtsoff.bankagg.domain.model.CashHistory
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
@@ -69,5 +70,26 @@ class SampleCashRepository(balance: CashBalance?) : CashRepository {
     override suspend fun set(balance: CashBalance) {
         CashHistory.change(state.value, balance)?.let { c -> changes.update { it + c } }
         state.value = balance
+    }
+
+    override suspend fun removeChange(atMs: Long): CashChange? {
+        val row = changes.value.firstOrNull { it.atMs == atMs } ?: return null
+        changes.update { l -> l.filterNot { it.atMs == atMs } }
+        val cash = state.value
+        val left = changes.value.maxOfOrNull { it.atMs } ?: 0L
+        state.value = CashBalance(
+            Money.ofMinor(((cash?.amount?.minor ?: 0L) - row.delta.minor).coerceAtLeast(0L)),
+            if (cash?.updatedAt == atMs) left else cash?.updatedAt ?: left
+        )
+        return row
+    }
+
+    override suspend fun addChange(change: CashChange) {
+        val cash = state.value
+        changes.update { it + change }
+        state.value = CashBalance(
+            Money.ofMinor(((cash?.amount?.minor ?: 0L) + change.delta.minor).coerceAtLeast(0L)),
+            maxOf(cash?.updatedAt ?: 0L, change.atMs)
+        )
     }
 }

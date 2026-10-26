@@ -18,7 +18,7 @@ interface EventRepository {
     suspend fun trim(parsedBefore: Long, unparsedBefore: Long): Int
 
     /** The notification an operation came from: an operation's id is its event's hash (F-51). */
-    suspend fun byHash(hash: String): CapturedEvent? = null
+    suspend fun byHash(hash: String): CapturedEvent?
 
     /** Every stored event — for running a better parser over the log (B-45, B-46). */
     suspend fun all(): List<CapturedEvent>
