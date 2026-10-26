@@ -199,7 +199,7 @@ class AppContainer(context: Context) {
     /** This process's lock session: unlocked yet, and when the app last went to the background. */
     val lockSession = LockSession()
     /** The lock-screen PIN: pauses after wrong tries, sealed with a phone-bound key (B-27, B-32). */
-    val checkPin by lazy { CheckPin(settings, PhoneKeys.pinSeal()) }
+    val checkPin by lazy { CheckPin(settings, PhoneKeys.pinSeal(), tick = android.os.SystemClock::elapsedRealtime) }
 }
 
 class LockSession {

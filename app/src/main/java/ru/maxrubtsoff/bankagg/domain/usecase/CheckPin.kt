@@ -13,7 +13,9 @@ import ru.maxrubtsoff.bankagg.domain.repository.PinStore
 class CheckPin(
     private val store: PinStore,
     private val seal: AppLock.Seal?,
-    private val now: () -> Long = System::currentTimeMillis
+    private val now: () -> Long = System::currentTimeMillis,
+    /** Monotonic clock (B-100); -1 when there is none. */
+    private val tick: () -> Long = { -1L }
 ) {
     /** The keypad rests [leftMs] more; the next mistake after it costs [nextMs]. */
     data class Rest(val leftMs: Long, val nextMs: Long)
@@ -36,7 +38,7 @@ class CheckPin(
             if (!stored.keyed && seal != null) store.setLockPin(withContext(Dispatchers.Default) { AppLock.hash(pin, seal = seal) })
             return Result.Ok
         }
-        val next = LockAttempts(attempts.failures + 1, now())
+        val next = LockAttempts(attempts.failures + 1, now(), tick())
         store.setLockAttempts(next)
         return Result.Wrong(rest(next))
     }
@@ -45,7 +47,7 @@ class CheckPin(
     suspend fun rest(): Rest? = rest(store.lockAttempts())
 
     private fun rest(a: LockAttempts): Rest? {
-        val left = AppLock.waitLeft(a, now())
+        val left = AppLock.waitLeft(a, now(), tick())
         return if (left > 0) Rest(left, AppLock.pauseMs(a.failures + 1)) else null
     }
 

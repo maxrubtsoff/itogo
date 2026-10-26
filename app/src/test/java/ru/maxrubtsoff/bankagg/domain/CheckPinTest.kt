@@ -42,6 +42,13 @@ class CheckPinTest {
         assertEquals(0L, AppLock.waitLeft(a, now = 2_000_000))
     }
 
+    @Test fun clockMovedForwardDoesNotSkipThePause() {
+        val a = LockAttempts(5, lastFailAt = 1_000_000, lastFailTick = 500)
+        // wall clock jumped an hour ahead, only 10 s really passed
+        assertEquals(20_000L, AppLock.waitLeft(a, now = 1_000_000 + 3_600_000, tick = 10_500))
+        assertEquals(0L, AppLock.waitLeft(a, now = 0, tick = 40_500))
+    }
+
     @Test fun keyedHashNeedsTheKey() {
         val stored = AppLock.hash("4821", iterations = 1000, seal = seal)
         assertTrue(stored.keyed)

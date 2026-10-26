@@ -12,8 +12,12 @@ import javax.crypto.spec.PBEKeySpec
  */
 data class StoredPin(val hash: String, val salt: String, val iterations: Int, val keyed: Boolean = false)
 
-/** Wrong PINs in a row and when the last one was typed (B-27). */
-data class LockAttempts(val failures: Int, val lastFailAt: Long) {
+/**
+ * Wrong PINs in a row and when the last one was typed (B-27). [lastFailTick] is
+ * the phone's monotonic clock then (-1: unknown): unlike the wall clock it can't
+ * be moved by hand, so a clock set forward doesn't skip the pause (B-100).
+ */
+data class LockAttempts(val failures: Int, val lastFailAt: Long, val lastFailTick: Long = -1L) {
     companion object {
         val NONE = LockAttempts(0, 0L)
     }
@@ -67,12 +71,16 @@ object AppLock {
 
     /**
      * Time left before the next try. A clock moved back can't stretch the pause
-     * past its length, nor a clock moved forward skip it entirely — at worst it
-     * ends early, the next mistake starts a longer one.
+     * past its length, nor a clock moved forward skip it: within one boot the
+     * monotonic [tick] decides; after a reboot (tick restarted) only the wall
+     * clock is left, and there a skip is possible.
      */
-    fun waitLeft(attempts: LockAttempts, now: Long): Long {
+    fun waitLeft(attempts: LockAttempts, now: Long, tick: Long = -1L): Long {
         val pause = pauseMs(attempts.failures)
         if (pause == 0L) return 0L
+        if (attempts.lastFailTick >= 0 && tick >= attempts.lastFailTick) {
+            return (pause - (tick - attempts.lastFailTick)).coerceIn(0L, pause)
+        }
         return (attempts.lastFailAt + pause - now).coerceIn(0L, pause)
     }
 

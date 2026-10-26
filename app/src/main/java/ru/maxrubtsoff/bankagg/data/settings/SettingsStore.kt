@@ -132,10 +132,11 @@ class SettingsStore(context: Context) : SettingsRepository {
     }
 
     override suspend fun lockAttempts(): LockAttempts =
-        LockAttempts(prefs.getInt(KEY_PIN_FAILURES, 0), prefs.getLong(KEY_PIN_FAILED_AT, 0L))
+        LockAttempts(prefs.getInt(KEY_PIN_FAILURES, 0), prefs.getLong(KEY_PIN_FAILED_AT, 0L), prefs.getLong(KEY_PIN_FAILED_TICK, -1L))
 
     override suspend fun setLockAttempts(attempts: LockAttempts) {
-        prefs.edit().putInt(KEY_PIN_FAILURES, attempts.failures).putLong(KEY_PIN_FAILED_AT, attempts.lastFailAt).apply()
+        prefs.edit().putInt(KEY_PIN_FAILURES, attempts.failures).putLong(KEY_PIN_FAILED_AT, attempts.lastFailAt)
+            .putLong(KEY_PIN_FAILED_TICK, attempts.lastFailTick).apply()
     }
 
     override suspend fun setLockPin(pin: StoredPin?) {
@@ -143,7 +144,7 @@ class SettingsStore(context: Context) : SettingsRepository {
             if (pin == null) remove(KEY_PIN_HASH).remove(KEY_PIN_SALT).remove(KEY_PIN_ITERATIONS).remove(KEY_PIN_KEYED)
             else putString(KEY_PIN_HASH, pin.hash).putString(KEY_PIN_SALT, pin.salt).putInt(KEY_PIN_ITERATIONS, pin.iterations)
                 .putBoolean(KEY_PIN_KEYED, pin.keyed)
-            remove(KEY_PIN_FAILURES).remove(KEY_PIN_FAILED_AT)
+            remove(KEY_PIN_FAILURES).remove(KEY_PIN_FAILED_AT).remove(KEY_PIN_FAILED_TICK)
         }.apply()
         if (pin == null) setBiometricEnabled(false)
     }
@@ -248,6 +249,7 @@ class SettingsStore(context: Context) : SettingsRepository {
         const val KEY_PIN_KEYED = "pin_keyed"
         const val KEY_PIN_FAILURES = "pin_failures"
         const val KEY_PIN_FAILED_AT = "pin_failed_at"
+        const val KEY_PIN_FAILED_TICK = "pin_failed_tick"
         const val KEY_BIOMETRIC = "biometric"
         const val KEY_HIDDEN = "amounts_hidden"
         const val KEY_HIDE_FLIP = "hide_on_flip"
