@@ -115,4 +115,23 @@ class DepositBatchTest {
         )
         assertEquals(1000, DepositBatch.impliedRateBp(d))
     }
+
+    // B-70: after a shot is carried over, the edit form still sees both ids and the joined draft.
+    @Test
+    fun mergeOfMovedShotKeepsBothIds() {
+        val g = DepositBatch.merge(listOf(alfa1, alfa2))
+        assertEquals(listOf("alfa1", "alfa2"), g.ids)
+        assertEquals(alfa2.draft.startDate, g.draft.startDate)
+        assertEquals(alfa1.draft.rateBp, g.draft.rateBp)
+        assertEquals(alfa1.draft.principal, g.draft.principal)
+    }
+
+    @Test
+    fun mergeSingleItemEqualsItsDraft() {
+        val g = DepositBatch.merge(listOf(alfa1))
+        assertEquals(listOf("alfa1"), g.ids)
+        assertEquals(alfa1.draft.principal, g.draft.principal)
+        assertEquals(alfa1.draft.rateBp, g.draft.rateBp)
+        assertEquals(alfa1.draft.endDate, g.draft.endDate)
+    }
 }

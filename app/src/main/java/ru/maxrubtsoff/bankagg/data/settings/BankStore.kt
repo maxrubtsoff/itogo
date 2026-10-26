@@ -83,7 +83,12 @@ class BankStore(
     private fun write(banks: List<BankBrand>) {
         // Everything the user may have changed is stored, a known bank included:
         // its picture and letters would otherwise be lost on the next read (B-49).
-        val changed = banks.filter { b -> b != BankBrand.known.firstOrNull { it.key == b.key } }
+        // BankBrand.equals is by key only, so compare the look itself.
+        val changed = banks.filter { b ->
+            val k = BankBrand.known.firstOrNull { it.key == b.key }
+            k == null || b.logoFile != null || b.letters != k.letters ||
+                b.primaryColor != k.primaryColor || b.textColor != k.textColor || b.title != k.title
+        }
         val defs = (readDefinitions().associateBy { it.key } + changed.associateBy { it.key }).values
         prefs.edit()
             .putString(KEY_MINE, JSONArray(banks.map { it.key }).toString())

@@ -1,7 +1,9 @@
 package ru.maxrubtsoff.bankagg.domain.usecase
 
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.DepositDraft
+import ru.maxrubtsoff.bankagg.domain.model.DepositMatch
 import ru.maxrubtsoff.bankagg.domain.model.DepositParser
 import ru.maxrubtsoff.bankagg.domain.model.DepositShot
 import ru.maxrubtsoff.bankagg.domain.model.ScreenshotFileName
@@ -22,10 +24,12 @@ class RecognizeDepositShot(
     data class Draft(
         val status: ShotStatus,
         val brand: BankBrand?,
-        val fields: DepositDraft
+        val fields: DepositDraft,
+        /** U-66: the saved deposit this screen shows again, if any. */
+        val duplicateOf: Deposit? = null
     )
 
-    suspend operator fun invoke(shot: DepositShot): Draft {
+    suspend operator fun invoke(shot: DepositShot, existing: List<Deposit> = emptyList()): Draft {
         val fileBank = ScreenshotFileName.guessBank(shot.fileName)
         if (!ocr.isReady()) return Draft(ShotStatus.NEEDS_INPUT, fileBank, DepositDraft())
 
@@ -44,6 +48,7 @@ class RecognizeDepositShot(
             parsed.brand == null || !d.isComplete -> ShotStatus.NEEDS_INPUT
             else -> ShotStatus.RECOGNIZED
         }
-        return Draft(status, parsed.brand, d)
+        val duplicate = if (status == ShotStatus.RECOGNIZED) DepositMatch.find(parsed.brand, d, existing) else null
+        return Draft(status, parsed.brand, d, duplicate)
     }
 }

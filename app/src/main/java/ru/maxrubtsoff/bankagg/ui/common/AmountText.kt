@@ -27,7 +27,10 @@ import ru.maxrubtsoff.bankagg.domain.model.MoneyMask
  * in one pass with a [rememberTextMeasurer] before drawing, so the figure
  * doesn't visibly "jump" over several frames.
  *
- * Heroes use 34 → 20sp, tiles 18 → 12sp.
+ * Heroes use 34 → 20sp, tiles 18 → 12sp. [compact] is the short form of the
+ * same sum ("1,77 млн ₽", [ru.maxrubtsoff.bankagg.domain.model.MoneyCompact.short]):
+ * when the full text does not fit at [maxSize], it is shown instead, and only
+ * then does the font shrink (F-40, B-72).
  */
 @Composable
 fun AmountText(
@@ -39,8 +42,9 @@ fun AmountText(
     maxSize: TextUnit = style.fontSize,
     minSize: TextUnit = 12.sp,
     textAlign: TextAlign? = null,
-    hideAll: Boolean = false
-) = AmountText(AnnotatedString(text), modifier, style, color, fontWeight, maxSize, minSize, textAlign, hideAll)
+    hideAll: Boolean = false,
+    compact: String? = null
+) = AmountText(AnnotatedString(text), modifier, style, color, fontWeight, maxSize, minSize, textAlign, hideAll, compact)
 
 /**
  * When amounts are hidden ([LocalAmountsHidden]) the money in [text] turns into
@@ -59,7 +63,8 @@ fun AmountText(
     maxSize: TextUnit = style.fontSize,
     minSize: TextUnit = 12.sp,
     textAlign: TextAlign? = null,
-    hideAll: Boolean = false
+    hideAll: Boolean = false,
+    compact: String? = null
 ) {
     val measurer = rememberTextMeasurer()
     val base = style.merge(TextStyle(fontWeight = fontWeight, textAlign = textAlign ?: TextAlign.Unspecified))
@@ -71,19 +76,19 @@ fun AmountText(
     }
     val ink = amountInk(color, base)
     val look = kopeckLook(if (maxSize.isSp) maxSize else base.fontSize)
-    val shown = remember(text, ink, look) { dimKopecks(text, ink, look) }
-    val ranges = remember(text, hideAll) { MoneyMask.ranges(text.text, all = hideAll) }
     val layout = remember { mutableStateOf<TextLayoutResult?>(null) }
     BoxWithConstraints(modifier, contentAlignment = align) {
         val maxW = constraints.maxWidth
+        val top = if (maxSize.isSp) maxSize else base.fontSize
+        fun widthOf(t: AnnotatedString, s: TextUnit) =
+            measurer.measure(t, base.copy(fontSize = s), maxLines = 1, softWrap = false, constraints = Constraints()).size.width
+        val chosen = remember(text, compact, maxW, base, top) {
+            if (compact != null && maxW != Constraints.Infinity && widthOf(dimKopecks(text, ink, look), top) > maxW) AnnotatedString(compact) else text
+        }
+        val shown = remember(chosen, ink, look) { dimKopecks(chosen, ink, look) }
+        val ranges = remember(chosen, hideAll) { MoneyMask.ranges(chosen.text, all = hideAll) }
         val size = remember(shown, maxW, base, maxSize, minSize) {
-            fitSize(shown, maxW, base, maxSize, minSize) { s ->
-                measurer.measure(
-                    shown, base.copy(fontSize = s),
-                    maxLines = 1, softWrap = false,
-                    constraints = Constraints()
-                ).size.width
-            }
+            fitSize(shown, maxW, base, maxSize, minSize) { s -> widthOf(shown, s) }
         }
         Text(
             shown,

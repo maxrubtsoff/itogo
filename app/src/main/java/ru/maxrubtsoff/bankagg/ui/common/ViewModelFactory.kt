@@ -35,7 +35,7 @@ class ViewModelFactory(
             ) as T
         modelClass.isAssignableFrom(CapitalHistoryViewModel::class.java) ->
             CapitalHistoryViewModel(
-                container.capitalHistory, container.ledgerRepository, container.fxRepository,
+                container.capitalHistory, container.ledgerRepository, container.fxRepository, container.ratesRepository,
                 container.depositRepository, container.cashRepository, container.settings, container.today
             ) as T
         modelClass.isAssignableFrom(LogViewModel::class.java) ->

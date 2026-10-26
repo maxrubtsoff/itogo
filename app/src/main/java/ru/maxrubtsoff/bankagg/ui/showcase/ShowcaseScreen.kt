@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -293,11 +294,17 @@ fun ShowcaseScreen(onBack: () -> Unit) {
 
             Caption("История капитала")
             DeltaLine(Money.ofMinor(4_830_000), "за месяц", listOf(10L, 12, 11, 15, 14, 18, 20), onClick = {})
+            DeltaLine(Money.ofMinor(177_000_000), "за месяц", listOf(10L, 12, 11, 15, 14, 18, 20), onClick = {}, modifier = Modifier.width(260.dp))
             DeltaLine(Money.ofMinor(-400_000), "за неделю", null, onClick = {})
             DeltaLine(Money.ZERO, "за месяц", null, onClick = {})
             var period by remember { mutableStateOf(HistoryPeriod.MONTH) }
             PeriodChips(period, onPick = { period = it })
-            CapitalChart(points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"), onScrub = {})
+            PeriodChips(period, onPick = { period = it }, compact = true)
+            var marked by remember { mutableStateOf<Int?>(null) }
+            CapitalChart(
+                points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"),
+                selected = marked, onScrub = { marked = it }, onRelease = {}
+            )
 
             Caption("Перенос скрина пальцем")
             ShotDragDemo()

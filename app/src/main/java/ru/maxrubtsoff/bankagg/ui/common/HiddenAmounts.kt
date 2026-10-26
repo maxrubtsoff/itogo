@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import ru.maxrubtsoff.bankagg.domain.model.KopeckLook
@@ -123,8 +124,14 @@ fun MoneyText(
     maxLines: Int = 1,
     textAlign: TextAlign? = null,
     softWrap: Boolean = maxLines > 1,
-    overflow: TextOverflow = TextOverflow.Ellipsis
+    overflow: TextOverflow = TextOverflow.Ellipsis,
+    /** The short form of the sum: shown instead of the full text when that does not fit (F-40). */
+    compact: String? = null
 ) {
+    if (compact != null) {
+        AmountText(text, modifier, style, color, fontWeight, minSize = 12.sp, textAlign = textAlign, compact = compact)
+        return
+    }
     // Plain labels have nothing to hide (F-18).
     if (!MoneyMask.hasMoney(text)) {
         Text(AnnotatedString(text), modifier = modifier, style = style, color = color, fontWeight = fontWeight, maxLines = maxLines,

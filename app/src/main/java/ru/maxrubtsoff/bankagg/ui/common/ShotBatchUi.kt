@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -76,7 +77,8 @@ fun ShotThumbs(
     paths: List<Pair<String, String>>,
     onOpen: (String) -> Unit,
     drag: ShotDragState? = null,
-    trailing: (@Composable () -> Unit)? = null
+    trailing: (@Composable () -> Unit)? = null,
+    onRemove: ((String) -> Unit)? = null
 ) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         paths.forEach { (id, path) ->
@@ -97,6 +99,18 @@ fun ShotThumbs(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxWidth().height(64.dp)
                     )
+                }
+                if (onRemove != null) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .size(20.dp)
+                            .background(Slitok.Inset.copy(alpha = 0.8f), RoundedCornerShape(bottomStart = 8.dp))
+                            .clickable(onClickLabel = "Убрать скрин") { onRemove(id) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Close, contentDescription = "Убрать скрин", tint = Slitok.Coral, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
         }

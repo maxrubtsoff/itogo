@@ -14,6 +14,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalPoint
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
 import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
+import ru.maxrubtsoff.bankagg.domain.model.FxRate
 import ru.maxrubtsoff.bankagg.domain.model.Transaction
 import ru.maxrubtsoff.bankagg.domain.model.CapitalEvents
 import ru.maxrubtsoff.bankagg.domain.model.CapitalHistory
@@ -27,11 +28,25 @@ import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.DepositRepository
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
+import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import ru.maxrubtsoff.bankagg.domain.repository.Today
 import java.time.LocalDate
 
-/** Everything the «История капитала» screen shows for the chosen period and part (F-36). */
+/** The screen: one page per section, the total first, then each kept part (F-45). */
+data class HistoryScreenUi(
+    val period: HistoryPeriod,
+    /** The section shown now; null is the total. */
+    val part: CapitalPart?,
+    val kept: List<CapitalPart>,
+    val today: LocalDate,
+    val pages: List<HistoryUi>,
+    val aliveDeposits: Set<String>
+) {
+    val sections: List<CapitalPart?> get() = CapitalHistory.sections(kept)
+}
+
+/** Everything one page of the «История капитала» screen shows for the chosen period and part (F-36). */
 data class HistoryUi(
     val period: HistoryPeriod,
     /** null — the total. */
@@ -52,6 +67,7 @@ class CapitalHistoryViewModel(
     history: CapitalHistoryRepository,
     ledger: LedgerRepository,
     fx: FxRepository,
+    rates: RatesRepository,
     deposits: DepositRepository,
     cash: CashRepository,
     settings: SettingsRepository,
@@ -60,43 +76,36 @@ class CapitalHistoryViewModel(
 
     private val _period = MutableStateFlow(HistoryPeriod.MONTH)
     private val _part = MutableStateFlow<CapitalPart?>(null)
-    private var lastPart: CapitalPart? = null
 
     fun setPeriod(period: HistoryPeriod) { _period.value = period }
 
     /** The route's part, once; null — the total. */
-    fun open(part: CapitalPart?) {
-        _part.value = part
-        lastPart = part ?: lastPart
-    }
+    fun open(part: CapitalPart?) { _part.value = part }
 
-    fun setPart(part: CapitalPart?) {
-        _part.value = part
-        if (part != null) lastPart = part
-    }
-
-    /** «Всего» / «По категориям»: the second returns to the part chosen last, or the first kept one. */
-    fun setByParts(on: Boolean, kept: List<CapitalPart>) {
-        _part.value = if (on) (lastPart?.takeIf { it in kept } ?: kept.firstOrNull()) else null
-    }
+    fun setPart(part: CapitalPart?) { _part.value = part }
 
     private val inputs: Flow<Inputs> = combine(
         history.observeDays(), ledger.observeTransactions(Int.MAX_VALUE), ledger.observeAccounts(), fx.observeAll(), deposits.observeAll()
-    ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null) }
+    ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null, emptyList()) }
         .combine(cash.observe()) { i, c -> i.copy(cash = c) }
+        .combine(rates.observeAll()) { i, r -> i.copy(rates = r) }
 
-    val state: StateFlow<HistoryUi?> = combine(inputs, settings.features, _period, _part, today.date) { i, features, period, part, day ->
+    val state: StateFlow<HistoryScreenUi?> = combine(inputs, settings.features, _period, _part, today.date) { i, features, period, part, day ->
         val kept = CapitalPart.entries.filter { it in features.capitalParts }
-        val full = CapitalHistory.series(i.days, period, day, part)
-        val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day)
-        val shown = CapitalEvents.within(all, CapitalHistory.startOf(period, i.days, day), part)
-        HistoryUi(
-            period = period, part = part, kept = kept, today = day,
-            series = CapitalHistory.thin(full), change = CapitalHistory.change(full),
-            events = shown,
-            months = if (period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL) CapitalEvents.byMonth(shown, i.days, part) else emptyList()
-        )
-    }.stateIn<HistoryUi?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day, rates = i.rates)
+        val long = period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL
+        val pages = CapitalHistory.sections(kept).map { p ->
+            val full = CapitalHistory.series(i.days, period, day, p)
+            val shown = CapitalEvents.within(all, CapitalHistory.startOf(period, i.days, day), p)
+            HistoryUi(
+                period = period, part = p, kept = kept, today = day,
+                series = CapitalHistory.thin(full), change = CapitalHistory.change(full),
+                events = shown,
+                months = if (long) CapitalEvents.byMonth(shown, i.days, p) else emptyList()
+            )
+        }
+        HistoryScreenUi(period, part, kept, day, pages, i.deps.map { it.id }.toSet())
+    }.stateIn<HistoryScreenUi?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private data class Inputs(
         val days: List<CapitalPoint>,
@@ -104,6 +113,7 @@ class CapitalHistoryViewModel(
         val accounts: List<Account>,
         val ops: List<FxOperation>,
         val deps: List<Deposit>,
-        val cash: CashBalance?
+        val cash: CashBalance?,
+        val rates: List<FxRate>
     )
 }

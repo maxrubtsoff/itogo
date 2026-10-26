@@ -231,15 +231,6 @@ class CashbackViewModel(
         viewModelScope.launch { shotRepo.get(id)?.let { shotRepo.update(it.copy(brand = brand)) } }
     }
 
-    fun collapseGroup(group: CashbackBatch.Group, onReady: (String) -> Unit) {
-        viewModelScope.launch {
-            val first = shotRepo.get(group.ids.first()) ?: return@launch
-            shotRepo.update(first.copy(brand = group.brand, lines = group.lines, monthKey = group.monthKey))
-            group.ids.drop(1).forEach { shotRepo.delete(it) }
-            onReady(first.id)
-        }
-    }
-
     /**
      * Restarts recognition of a shot left in PROCESSING by an earlier process
      * (the app was killed mid-OCR); no-op while it is already running here.

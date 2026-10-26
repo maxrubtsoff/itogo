@@ -21,13 +21,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.flow.map
+import ru.maxrubtsoff.bankagg.domain.model.DepositBatch
 import ru.maxrubtsoff.bankagg.domain.model.ShotHints
 import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.ScanReveal
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.ShotHeader
+import ru.maxrubtsoff.bankagg.ui.common.ShotThumbs
 import ru.maxrubtsoff.bankagg.ui.common.aboveKeyboard
 
 /**
@@ -39,37 +40,41 @@ import ru.maxrubtsoff.bankagg.ui.common.aboveKeyboard
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -> Unit) {
+fun DepositShotPreviewScreen(vm: DepositsViewModel, shotIds: List<String>, onBack: () -> Unit) {
+    val key = shotIds.joinToString()
 
-    val loaded by remember(shotId) { vm.observeShot(shotId).map { listOfNotNull(it) } }
+    val loaded by remember(key) { vm.observeShots(shotIds) }
         .collectAsStateWithLifecycle(initialValue = null)
     val shot = loaded?.firstOrNull()
     var left by remember { mutableStateOf(false) }
     fun leave() { if (!left) { left = true; onBack() } }
 
     var initialised by remember { mutableStateOf(false) }
-    val form = rememberDepositFormState(key = shotId)
+    val form = rememberDepositFormState(key = key)
 
     LaunchedEffect(loaded) {
-        val s = loaded?.let { it.firstOrNull() ?: run { leave(); return@LaunchedEffect } } ?: return@LaunchedEffect
-        vm.resumeIfStuck(s)
-        if (!initialised && s.status != ShotStatus.PROCESSING) {
-            form.brand = s.brand
-            s.draft.principal?.let { form.principal = moneyInput(it) }
-            s.draft.rateBp?.let { form.rate = rateInput(it) }
-            s.draft.startDate?.let { form.start = it }
-            s.draft.endDate?.let { form.end = it }
-            s.draft.title?.let { form.title = it }
-            s.draft.method?.let { form.method = it }
-            val exit = s.draft.exitAmount
+        val items = loaded?.let { it.ifEmpty { leave(); return@LaunchedEffect } } ?: return@LaunchedEffect
+        items.forEach { vm.resumeIfStuck(it) }
+        if (!initialised && items.none { it.status == ShotStatus.PROCESSING }) {
+            // B-70: the form shows what all the shots of the group add up to.
+            val g = DepositBatch.merge(items.map { DepositBatch.Item(it.id, it.brand, it.draft) })
+            val d = g.draft
+            form.brand = g.brand
+            d.principal?.let { form.principal = moneyInput(it) }
+            g.rateBp?.let { form.rate = rateInput(it) }
+            d.startDate?.let { form.start = it }
+            d.endDate?.let { form.end = it }
+            d.title?.let { form.title = it }
+            d.method?.let { form.method = it }
+            val exit = d.exitAmount
             if (exit != null) { form.exit = moneyInput(exit); form.autoExit = false }
-            else if (s.draft.rateBp != null) form.autoExit = true
+            else if (g.rateBp != null) form.autoExit = true
             initialised = true
         }
     }
 
     val imagePath = shot?.imagePath.orEmpty()
-    val status = shot?.status
+    val status = loaded?.let { l -> if (l.any { it.status == ShotStatus.PROCESSING }) ShotStatus.PROCESSING else shot?.status }
     // A reading is shown as it is; a result only once it is in the form.
     val revealStatus = if (status == ShotStatus.PROCESSING || initialised) status else null
     val hint = if (status == ShotStatus.NEEDS_INPUT) shot?.draft?.let(ShotHints::deposit) else null
@@ -90,6 +95,9 @@ fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -
         ) {
             Spacer(Modifier.height(4.dp))
             ShotHeader(imagePath, status, hint = hint)
+            if (shotIds.size > 1) {
+                ShotThumbs(loaded.orEmpty().map { it.id to it.imagePath }, onOpen = {})
+            }
             ScanReveal(revealStatus, skeletonHeight = 360.dp) { play ->
                 DepositFormFields(form, reveal = play)
             }
@@ -108,7 +116,7 @@ fun DepositShotPreviewScreen(vm: DepositsViewModel, shotId: String, onBack: () -
                         endDate = form.end ?: return@BrassButton,
                         exitAmount = form.exitMoney,
                         method = form.method,
-                        shotIdToDiscard = shotId,
+                        shotIds = shotIds,
                         onDone = { leave() }
                     )
                 },

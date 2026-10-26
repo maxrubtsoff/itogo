@@ -105,7 +105,9 @@ fun SlitokChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    leading: (@Composable () -> Unit)? = null
+    leading: (@Composable () -> Unit)? = null,
+    /** A low plate for a row under a chart (F-45). */
+    compact: Boolean = false
 ) {
     val shape = if (leading != null) RoundedCornerShape(22.dp) else RoundedCornerShape(12.dp)
     val bg by animateColorAsState(if (selected) Slitok.BrassPill else Slitok.Inset, label = "chipBg")
@@ -113,17 +115,17 @@ fun SlitokChip(
     Row(
         modifier
             .pressScale()
-            .height(if (leading != null) 44.dp else 36.dp)
+            .height(if (leading != null) 44.dp else if (compact) 30.dp else 36.dp)
             .clip(shape)
             .background(bg)
             .border(1.dp, if (selected) Slitok.BrassLine else Slitok.Line, shape)
             .clickable(onClick = onClick)
-            .padding(start = if (leading != null) 4.dp else 10.dp, end = if (leading != null) 16.dp else 10.dp),
+            .padding(start = if (leading != null) 4.dp else if (compact) 6.dp else 10.dp, end = if (leading != null) 16.dp else if (compact) 6.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
     ) {
         leading?.invoke()
-        Text(text, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
+        Text(text, style = if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
     }
 }
 

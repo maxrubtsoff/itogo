@@ -83,10 +83,12 @@ fun DepositBatchScreen(
     ids: List<String>,
     onBack: () -> Unit,
     onOpenShot: (String) -> Unit,
+    onEditGroup: (List<String>) -> Unit,
     onDone: () -> Unit
 ) {
     val shots by remember(ids) { vm.observeShots(ids) }.collectAsStateWithLifecycle(initialValue = null)
     val list = shots ?: emptyList()
+    val duplicates by vm.pendingDuplicates.collectAsStateWithLifecycle()
     val processing = list.count { it.status == ShotStatus.PROCESSING }
     val byId = list.associateBy { it.id }
 
@@ -96,7 +98,7 @@ fun DepositBatchScreen(
 
     var layoutText by rememberSaveable { mutableStateOf("") }
     // Laid out once recognition is over; afterwards only kept in sync with deletions.
-    LaunchedEffect(shots, processing) {
+    LaunchedEffect(shots, processing, duplicates) {
         val s = shots ?: return@LaunchedEffect
         if (processing > 0) return@LaunchedEffect
         val present = s.map { it.id }
@@ -104,7 +106,8 @@ fun DepositBatchScreen(
         layoutText = BatchLayout.encode(
             if (current.isEmpty()) DepositBatch.group(s.map(::itemOf)) else BatchLayout.reconcile(current, present)
         )
-        if (s.isEmpty()) onDone()
+        // U-66: with skipped duplicates the screen stays, so they can be brought back.
+        if (s.isEmpty() && duplicates == 0) onDone()
     }
     val layout = BatchLayout.decode(layoutText).map { g -> g.filter { it in byId } }.filter { it.isNotEmpty() }
     val chosen = remember { mutableStateMapOf<String, Map<DepositBatch.Part, Any>>() }
@@ -136,13 +139,18 @@ fun DepositBatchScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Spacer(Modifier.height(4.dp))
+            if (duplicates > 0) {
+                PlateButton(onClick = vm::restoreDuplicates, modifier = Modifier.fillMaxWidth()) {
+                    Text("${RuPlural.duplicatesSkipped(duplicates)} пропустили${RuText.DOT}Вернуть")
+                }
+            }
             // One place for the whole batch: the reading goes out as the cards come in (B-51, F-34).
             Crossfade(shots == null || processing > 0, animationSpec = Motion.tween(Motion.NORMAL), label = "batch") { waiting ->
                 if (waiting) {
                     BatchProgress(done = list.size - processing, total = maxOf(list.size, ids.size))
                 } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "${RuPlural.screens(list.size)} → ${RuPlural.deposits(groups.size)}",
+                        if (groups.isEmpty()) "Новых вкладов нет" else "${RuPlural.screens(list.size)} → ${RuPlural.deposits(groups.size)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Slitok.Muted
                     )
@@ -154,7 +162,8 @@ fun DepositBatchScreen(
                                 onPickBank = { vm.setShotsBrand(g.ids, it) },
                                 onChoose = { part, value -> chosen[g.ids.first()] = chosen[g.ids.first()].orEmpty() + (part to value) },
                                 onOpenShot = { moving = it },
-                                onFill = { vm.collapseGroup(g) { id -> onOpenShot(id) } },
+                                onRemoveShot = { vm.deleteShot(it) },
+                                onFill = { onEditGroup(g.ids) },
                                 drag = drag
                             )
                         }
@@ -206,6 +215,7 @@ private fun GroupCard(
     onPickBank: (BankBrand) -> Unit,
     onChoose: (DepositBatch.Part, Any) -> Unit,
     onOpenShot: (String) -> Unit,
+    onRemoveShot: (String) -> Unit,
     onFill: () -> Unit,
     drag: ShotDragState
 ) {
@@ -239,10 +249,8 @@ private fun GroupCard(
 
             group.options.forEach { (part, values) -> OptionRow(part, values) { onChoose(part, it) } }
 
-            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag)
-            if (!group.isSavable) {
-                PlateButton(onClick = onFill, modifier = Modifier.fillMaxWidth()) { Text("Дополнить") }
-            }
+            ShotThumbs(shots.map { it.id to it.imagePath }, onOpenShot, drag, onRemove = onRemoveShot)
+            PlateButton(onClick = onFill, modifier = Modifier.fillMaxWidth()) { Text("Изменить") }
         }
     }
 }

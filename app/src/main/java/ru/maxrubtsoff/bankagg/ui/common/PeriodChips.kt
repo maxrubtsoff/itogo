@@ -27,10 +27,10 @@ val HistoryPeriod.spanWord: String
     }
 
 @Composable
-fun PeriodChips(selected: HistoryPeriod, onPick: (HistoryPeriod) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+fun PeriodChips(selected: HistoryPeriod, onPick: (HistoryPeriod) -> Unit, modifier: Modifier = Modifier, compact: Boolean = false) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp)) {
         HistoryPeriod.entries.forEach { p ->
-            SlitokChip(p.label, selected = p == selected, onClick = { onPick(p) }, modifier = Modifier.weight(1f))
+            SlitokChip(p.label, selected = p == selected, onClick = { onPick(p) }, modifier = Modifier.weight(1f), compact = compact)
         }
     }
 }
