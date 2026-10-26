@@ -7,7 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.key
+import ru.maxrubtsoff.bankagg.ui.common.sectionSwipe
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -116,16 +119,23 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
         }
     }
 
+    // The pager lives here so the swipe can take the whole screen, empty space included (B-75).
+    val first = ui
+    val sections = first?.sections ?: listOf<CapitalPart?>(null)
+    val swipes = (first?.kept?.size ?: 0) > 1
+    val pager = key(first != null) {
+        rememberPagerState(initialPage = first?.let { CapitalHistory.pageOf(it.part, sections) } ?: 0) { if (swipes) sections.size else 1 }
+    }
     Scaffold(topBar = { ScreenHeader("История капитала", onBack) }) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().padding(padding).sectionSwipe(pager).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val u = ui
             if (u == null) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) { CircularProgressIndicator(color = Slitok.Brass) }
             } else {
-                HistorySections(u, vm, onTap)
+                HistorySections(u, vm, onTap, pager)
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -134,11 +144,10 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
 
 /** One row of sections, swiped sideways; the period is common to all of them (F-45, B-73). */
 @Composable
-private fun HistorySections(u: HistoryScreenUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
+private fun HistorySections(u: HistoryScreenUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit, pager: PagerState) {
     val sections = u.sections
     // One kept section needs no switch: the total already is that section.
     val swipes = u.kept.size > 1
-    val pager = rememberPagerState(initialPage = CapitalHistory.pageOf(u.part, sections)) { if (swipes) sections.size else 1 }
     val scope = rememberCoroutineScope()
     LaunchedEffect(pager) {
         snapshotFlow { pager.settledPage }.drop(1).collect { vm.setPart(CapitalHistory.partOf(it, sections)) }
@@ -150,7 +159,7 @@ private fun HistorySections(u: HistoryScreenUi, vm: CapitalHistoryViewModel, onT
     if (swipes) {
         PagerTabs(sections.map { it?.label ?: "Всё" }, pager) { scope.launch { pager.animateScrollToPage(it) } }
     }
-    SectionPager(pager) { page -> HistoryContent(u.pages[page], vm, onTap) }
+    SectionPager(pager, swipe = false) { page -> HistoryContent(u.pages[page], vm, onTap) }
 }
 
 @Composable

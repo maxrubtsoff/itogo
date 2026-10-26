@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
@@ -32,11 +33,25 @@ fun SectionPager(
     state: PagerState,
     modifier: Modifier = Modifier,
     gutter: Dp = 16.dp,
+    swipe: Boolean = true,
     content: @Composable (page: Int) -> Unit
 ) {
+    HorizontalPager(
+        state = state,
+        modifier = modifier.bleed(gutter).then(if (swipe) Modifier.sectionSwipe(state) else Modifier),
+        contentPadding = PaddingValues(0.dp),
+        pageSpacing = 0.dp,
+        userScrollEnabled = false,
+        verticalAlignment = Alignment.Top
+    ) { page -> Box(Modifier.padding(horizontal = gutter)) { content(page) } }
+}
+
+/** The sideways swipe of [SectionPager], for any area: the graph takes its own drag first, so it never turns the page. */
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.sectionSwipe(state: PagerState): Modifier = composed {
     val scope = rememberCoroutineScope()
     val flingPx = with(LocalDensity.current) { FLING_VELOCITY.toPx() }
-    val swipe = if (state.pageCount < 2) Modifier else Modifier.pointerInput(state) {
+    if (state.pageCount < 2) Modifier else Modifier.pointerInput(state) {
         val tracker = VelocityTracker()
         detectHorizontalDragGestures(
             onDragStart = { tracker.resetTracking() },
@@ -60,14 +75,6 @@ fun SectionPager(
             state.dispatchRawDelta(-dx)
         }
     }
-    HorizontalPager(
-        state = state,
-        modifier = modifier.bleed(gutter).then(swipe),
-        contentPadding = PaddingValues(0.dp),
-        pageSpacing = 0.dp,
-        userScrollEnabled = false,
-        verticalAlignment = Alignment.Top
-    ) { page -> Box(Modifier.padding(horizontal = gutter)) { content(page) } }
 }
 
 private val FLING_VELOCITY = 400.dp
