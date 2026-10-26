@@ -312,11 +312,14 @@ private fun Events(
         }
         else -> u.days.forEach { d ->
             val day = d.date
-            Caption(dayCaption(day, u.today), if (span != null && day in span) Slitok.Brass2 else Slitok.Muted, mark("d:$day"))
-            Panel(Modifier.fillMaxWidth()) {
-                d.rows.forEachIndexed { i, r ->
-                    if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
-                    RowItem(r, span, groupsOpen, toggle, onTap)
+            // The caption and its panel are one block, so «bring into view» shows the day's rows, not only its caption.
+            Column(mark("d:$day"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Caption(dayCaption(day, u.today), if (span != null && day in span) Slitok.Brass2 else Slitok.Muted)
+                Panel(Modifier.fillMaxWidth()) {
+                    d.rows.forEachIndexed { i, r ->
+                        if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
+                        RowItem(r, span, groupsOpen, toggle, onTap)
+                    }
                 }
             }
         }
@@ -384,7 +387,8 @@ private fun axisOf(u: HistoryUi): List<String> {
     val long = u.period == HistoryPeriod.YEAR || u.period == HistoryPeriod.ALL
     val n = minOf(u.series.size, if (u.period == HistoryPeriod.WEEK) 4 else 5)
     if (n < 2) return emptyList()
-    return (0 until n).map { i -> RuDays.axisLabel(u.series[i * (u.series.size - 1) / (n - 1)].date, long) }
+    // A short history gives the same month twice: say it once.
+    return (0 until n).map { i -> RuDays.axisLabel(u.series[i * (u.series.size - 1) / (n - 1)].date, long) }.distinct()
 }
 
 /** "+13 622 ₽ · +0,6 %" / "−4 000 ₽ · −0,2 %" with a real minus sign. */
