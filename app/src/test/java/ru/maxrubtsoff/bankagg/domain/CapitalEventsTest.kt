@@ -431,4 +431,47 @@ class CapitalEventsTest {
         assertEquals(1, legacy.size)
         assertNull(legacy.single().amountMinor)
     }
+
+    // B-86: operations of a foreign-currency account.
+    private val uzs = Account("u", BankBrand.SBER, "Сбер UZS", Money.ofMinor(0), "UZS", 0L)
+    private val uzsRate = 7_500L // 0,0075 ₽ for 1 UZS, micro-rubles
+
+    private fun uzsPay(minor: Long = -2_026_300_000L, day: LocalDate = d1) = Transaction(
+        "u1", BankBrand.SBER, "u", Money.ofMinor(minor), "UZS", TransactionKind.EXPENSE, null, null,
+        day.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+    )
+
+    private fun uzsEvents(points: List<CapitalPoint> = emptyList(), rates: List<FxRate> = listOf(FxRate("UZS", d0, uzsRate))) =
+        CapitalEvents.build(listOf(uzsPay()), listOf(uzs), emptyList(), emptyList(), null, points, today, ZoneOffset.UTC, rates)
+
+    @Test fun foreign_account_payment_is_in_rubles_at_cbr_rate() {
+        val e = uzsEvents().single()
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.FxMath.rubOf(-2_026_300_000L, uzsRate), e.amountMinor)
+    }
+
+    @Test fun foreign_account_payment_keeps_foreign_amount_and_shows_it_in_subtitle() {
+        val e = uzsEvents().single()
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.ForeignAmount("UZS", -2_026_300_000L), e.foreign)
+        assertTrue(e.subtitle!!.contains("UZS") || e.subtitle!!.contains(ru.maxrubtsoff.bankagg.domain.model.Currencies.symbolOf("UZS")))
+    }
+
+    @Test fun foreign_account_payment_without_rate_has_no_ruble_sum() {
+        assertNull(uzsEvents(rates = emptyList()).single().amountMinor)
+    }
+
+    @Test fun foreign_account_payment_is_not_listed_again_as_revaluation() {
+        val rub = ru.maxrubtsoff.bankagg.domain.model.FxMath.rubOf(-2_026_300_000L, uzsRate)
+        val e = uzsEvents(listOf(pointFx(d0, 50_000_000), pointFx(d1, 50_000_000 + rub)))
+        assertTrue(e.none { it.kind == HistoryKind.REVALUATION })
+    }
+
+    @Test fun foreign_and_ruble_spends_of_a_day_sum_in_rubles() {
+        val rub = op("r", "a", -100_000L, TransactionKind.EXPENSE)
+        val list = CapitalEvents.build(
+            listOf(rub, uzsPay()), listOf(accA, uzs), emptyList(), emptyList(), null, emptyList(), today,
+            ZoneOffset.UTC, listOf(FxRate("UZS", d0, uzsRate))
+        )
+        val expected = -100_000L + ru.maxrubtsoff.bankagg.domain.model.FxMath.rubOf(-2_026_300_000L, uzsRate)
+        assertEquals(expected, list.sumOf { it.amountMinor ?: 0L })
+    }
 }

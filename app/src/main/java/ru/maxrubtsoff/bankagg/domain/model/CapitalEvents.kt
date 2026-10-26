@@ -165,15 +165,21 @@ object CapitalEvents {
             val part = if (t.currency == Currencies.RUB) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY
             // A ruble operation leads nowhere: the whole of «Счета» says nothing about it (F-50).
             val target = if (t.currency == Currencies.RUB) null else HistoryTarget.Currency(t.currency)
+            val foreignOp = t.currency != Currencies.RUB
+            // B-86: an account in a currency is shown in rubles at the CBR rate of its day; the own sum goes to the subtitle.
+            val who = t.counterparty ?: titleOf[t.accountId]
             out += HistoryEvent(
-                dayOf(t.postedAt, zone), part, title, t.counterparty ?: titleOf[t.accountId], t.amount.minor,
+                dayOf(t.postedAt, zone), part, title,
+                if (foreignOp) listOfNotNull(who, Money.ofMinor(t.amount.minor).format(t.currency)).joinToString(" · ") else who,
+                if (foreignOp) rubOf(t, rates, zone) else t.amount.minor,
                 kind = when (t.kind) {
                     TransactionKind.INCOME -> HistoryKind.INCOME
                     TransactionKind.EXPENSE -> HistoryKind.SPEND
                     TransactionKind.TRANSFER -> HistoryKind.TRANSFER
                     TransactionKind.UNKNOWN -> HistoryKind.TRANSACTION
                 },
-                target = target
+                target = target,
+                foreign = if (foreignOp) ForeignAmount(t.currency, t.amount.minor) else null
             )
         }
         fxOps.forEach { o ->
@@ -206,7 +212,7 @@ object CapitalEvents {
         if (cash != null && cash.updatedAt > 0L && cashChanges.none { it.atMs == cash.updatedAt }) {
             out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", null, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH))
         }
-        out += moved(points, fxOps, deposits, rates)
+        out += moved(points, fxOps, deposits, rates, transactions, zone)
         return out.filter { !it.date.isAfter(today) }.sortedByDescending { it.date }
     }
 
@@ -233,7 +239,10 @@ object CapitalEvents {
     }
 
     /** «Проценты» and «Переоценка валюты»: what a part moved from one day to the next beyond the deals themselves. */
-    private fun moved(points: List<CapitalPoint>, fxOps: List<FxOperation>, deposits: List<Deposit>, rates: List<FxRate>): List<HistoryEvent> {
+    private fun moved(
+        points: List<CapitalPoint>, fxOps: List<FxOperation>, deposits: List<Deposit>, rates: List<FxRate>,
+        transactions: List<Transaction>, zone: ZoneId
+    ): List<HistoryEvent> {
         val sorted = points.sortedBy { it.date }
         val out = ArrayList<HistoryEvent>()
         for (i in 1 until sorted.size) {
@@ -266,7 +275,10 @@ object CapitalEvents {
                 }
             }
             val dealt = fxOps.filter { it.date == cur.date }.sumOf { if (it.kind == FxKind.BUY) it.rubMinor else -it.rubMinor }
-            val revalued = cur.valueOf(CapitalPart.CURRENCY) - prev.valueOf(CapitalPart.CURRENCY) - dealt
+            // Operations of foreign-currency accounts are listed in rubles on their own (B-86): not a revaluation.
+            val booked = transactions.filter { it.currency != Currencies.RUB && dayOf(it.postedAt, zone).inStep(prev.date, cur.date) }
+                .sumOf { rubOf(it, rates, zone) ?: 0L }
+            val revalued = cur.valueOf(CapitalPart.CURRENCY) - prev.valueOf(CapitalPart.CURRENCY) - dealt - booked
             if (revalued != 0L) {
                 val reason = reasonOf(prev.date, cur.date, revalued, fxOps, rates)
                 val parts = reason.legs.map { l ->
@@ -309,8 +321,7 @@ object CapitalEvents {
      * Like the history itself, a day before the first known rate takes that first rate.
      */
     private fun reasonOf(from: LocalDate, to: LocalDate, revalued: Long, fxOps: List<FxOperation>, rates: List<FxRate>): RevaluationReason {
-        fun rateOn(currency: String, day: LocalDate): Long? = FxRates.latestOnOrBefore(rates, currency, day)?.rubPerUnitMicro
-            ?: rates.filter { it.currency == currency }.minByOrNull { it.date }?.rubPerUnitMicro
+        fun rateOn(currency: String, day: LocalDate) = rateOn(rates, currency, day)
         val legs = fxOps.map { it.currency }.distinct().mapNotNull { cur ->
             val r1 = rateOn(cur, to) ?: return@mapNotNull null
             val qty0 = fxOps.filter { it.currency == cur && !it.date.isAfter(from) }
@@ -365,6 +376,18 @@ object CapitalEvents {
         events.groupBy { YearMonth.from(it.date) }
             .map { (m, list) -> MonthEvents(m, list, CapitalHistory.monthDelta(points, m, part)) }
             .sortedByDescending { it.month }
+
+    /** Whether the date falls into the step after [from] up to and including [to]: points are not on every day. */
+    private fun LocalDate.inStep(from: LocalDate, to: LocalDate) = isAfter(from) && !isAfter(to)
+
+    /** The CBR rate of [day]; a day before the first known rate takes that first one. */
+    private fun rateOn(rates: List<FxRate>, currency: String, day: LocalDate): Long? =
+        FxRates.latestOnOrBefore(rates, currency, day)?.rubPerUnitMicro
+            ?: rates.filter { it.currency == currency }.minByOrNull { it.date }?.rubPerUnitMicro
+
+    /** Kopecks of a foreign-currency operation at the rate of its day; null — no rate. */
+    private fun rubOf(t: Transaction, rates: List<FxRate>, zone: ZoneId): Long? =
+        rateOn(rates, t.currency, dayOf(t.postedAt, zone))?.let { FxMath.rubOf(t.amount.minor, it) }
 
     private fun dayOf(epochMs: Long, zone: ZoneId): LocalDate = Instant.ofEpochMilli(epochMs).atZone(zone).toLocalDate()
 }
