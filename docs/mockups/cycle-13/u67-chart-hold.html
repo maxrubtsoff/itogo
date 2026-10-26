@@ -1,0 +1,154 @@
+<title>Удержание на графике · U-67</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&family=Unbounded:wght@300..900&display=swap">
+<link rel="stylesheet" href="mock.css">
+<script src="mock.js"></script>
+<style>
+  .viewport { position: absolute; left: 0; right: 0; bottom: 0; overflow: hidden; }
+  .viewport .scr { padding-top: 0; }
+  .fade { position: absolute; left: 0; right: 0; height: 18px; z-index: 3; background: linear-gradient(var(--bg), transparent); }
+  .strip { position: absolute; left: 16px; right: 16px; z-index: 4; }
+  .peek { position: absolute; left: 16px; right: 16px; z-index: 6; border-color: var(--brass-line); }
+  .move { position: absolute; right: 6px; z-index: 9; font: 600 10px/14px var(--text); color: var(--brass2); letter-spacing: .06em; text-transform: uppercase; writing-mode: vertical-rl; transform: rotate(180deg); opacity: .8; }
+</style>
+
+<div class="page">
+  <header>
+    <h1>U-67 · Удержание на графике</h1>
+    <p>Палец ведёт по графику — список под ним сразу подтягивает строки выбранного дня вверх, к самому графику. График не двигается ни при касании, ни при отпускании. Пример — «История капитала», «Всё», месяц; палец идёт с 14 на 24 октября. Пунктир «край графика» и подписи «двигается» — пояснения макета, не элементы экрана.</p>
+  </header>
+  <nav class="vtabs" aria-label="Варианты">
+    <button data-v="b">B · График сжимается и прилипает <span class="rec">советую</span></button>
+    <button data-v="a">A · График закреплён всегда</button>
+    <button data-v="c">C · Подсказка под графиком</button>
+  </nav>
+  <section class="variant" id="b">
+    <h2>B · График сжимается и прилипает</h2>
+    <p class="about">Экран листается как сейчас, но герой с графиком <b>не уезжает</b>: при прокрутке вниз он сжимается в полосу (сумма + график 64 dp) и остаётся под шапкой. По полосе тоже можно вести пальцем. Пока палец на графике, двигается только список — строки дня встают прямо под график (полный или сжатый).</p>
+    <div class="frames" id="fb"></div>
+    <div class="pros">
+      <div><b>Плюсы</b><ul><li>Список получает весь экран, когда его читают; график при этом не теряется.</li><li>Выбрать день можно из любого места ленты, не листая наверх.</li></ul></div>
+      <div><b>Минусы</b><ul><li>Два вида героя (полный и полоса) — больше работы и проверки на устройстве.</li><li>В полосе нет плашек периода — период меняется вверху.</li></ul></div>
+    </div>
+  </section>
+  <section class="variant" id="a" hidden>
+    <h2>A · График закреплён всегда</h2>
+    <p class="about">Герой с графиком стоит на месте всегда, листается только список под ним — своё окно прокрутки.</p>
+    <div class="frames" id="fa"></div>
+    <div class="pros">
+      <div><b>Плюсы</b><ul><li>Проще всего: ничего не сжимается, поведение очевидно.</li><li>График всегда целиком и с плашками периода.</li></ul></div>
+      <div><b>Минусы</b><ul><li>Под список остаётся меньше половины экрана (4–5 строк); на маленьком телефоне и с крупным шрифтом — 2–3.</li></ul></div>
+    </div>
+  </section>
+  <section class="variant" id="c" hidden>
+    <h2>C · Подсказка под графиком</h2>
+    <p class="about">Пока палец на графике, список не двигается вообще: под графиком всплывает карточка со строками выбранного дня (до трёх). Отпустили — карточка гаснет, список один раз встаёт на этот день (график закреплён, как в A).</p>
+    <div class="frames" id="fc"></div>
+    <div class="pros">
+      <div><b>Плюсы</b><ul><li>Под пальцем ничего не ездит — спокойнее всего.</li></ul></div>
+      <div><b>Минусы</b><ul><li>Новый компонент-карточка, дубль строк списка.</li><li>Карточка закрывает список; больше трёх строк — «ещё 2».</li><li>Прокрутка всё равно после отпускания — то, на что жаловались.</li></ul></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const { ic, amt, banks, hdr, tabs, chips, hl, phone, frame, chart, xAt } = M;
+/* ряд «Всё» за месяц: 26 сентября … 26 октября (31 точка) */
+const pts = [1871,1872,1872,1874,1873,1875,1876,1876,1878,1879,1878,1880,1886,1886,1887,1888,1888,1889,1937,1937,1938,1936,1937,1938,1932,1933,1934,1934,1940,1938,1938.19].map(v => v * 1000);
+const D14 = 18, D24 = 28;
+const W = 320;
+
+const days = [
+  ['Сегодня', [['Пятёрочка', 'Т-Банк', '−1 284,90 ₽', banks.tb()]]],
+  ['Вчера', [['Проценты', 'Вклады · 3', '+812,40 ₽', '<span class="dot" style="background:var(--violet)"></span>']]],
+  ['24 октября', [['Перевод от Иван И.', 'Сбербанк', '+6 000 ₽', banks.sber()], ['Кофейня «Зерно»', 'Альфа-Банк', '−340 ₽', banks.alfa()]]],
+  ['20 октября', [['Покупка долларов', 'Валюта', '−5 800 ₽', '<span class="dot" style="background:var(--sky)"></span>']]],
+  ['18 октября', [['Наличные', 'изменили вручную', '+2 000 ₽', '<span class="dot" style="background:var(--sand)"></span>']]],
+  ['14 октября', [['Зарплата', 'Сбербанк', '+48 300 ₽', banks.sber()], ['Аренда', 'Т-Банк', '−32 000 ₽', banks.tb()]]],
+  ['10 октября', [['Пополнение', '«Накопительный» · ВТБ', '50 000 ₽', banks.vtb()]]],
+  ['6 октября', [['Пятёрочка', 'Т-Банк', '−2 110,40 ₽', banks.tb()]]],
+];
+function list(from = 0, lit = null, reset = false) {
+  return days.slice(from).map(([d, rows], i) => {
+    const on = d === lit;
+    return `<div class="daycap ${on ? 'on' : ''}"><span>${d}</span>${on && reset ? '<span class="chip sm" style="text-transform:none;letter-spacing:0;font-weight:500">Сбросить</span>' : ''}</div>
+      <div class="panel">${rows.map(r => hl(r[0], r[1], r[2], { lead: r[3], lit: on })).join('')}</div>`;
+  }).join('');
+}
+function heroFull(sel) {
+  const at = sel == null ? null : sel;
+  const info = sel == null
+    ? `<div style="display:flex;gap:8px;align-items:baseline;margin-top:2px">${amt('+67 190,99 ₽', 'inl inc')}<span style="color:var(--muted);font-size:12px">с 26 сентября</span></div>`
+    : `<div style="color:var(--brass2);font-size:12px;line-height:16px;margin-top:2px">${sel === D14 ? '14 октября, вторник' : '24 октября, пятница'}</div>
+       <div style="display:flex;gap:8px;align-items:baseline">${amt(sel === D14 ? '+48 300 ₽' : '+5 660 ₽', 'inl inc')}<span style="color:var(--muted);font-size:12px">за день</span></div>`;
+  return `<div class="panel glow"><div style="padding:16px 18px 12px">
+    ${amt(sel == null ? '1 938 190,99 ₽' : sel === D14 ? '1 937 040,10 ₽' : '1 940 210,35 ₽', 'hero')}${info}
+    <div style="height:12px"></div>${chart(pts, { w: W, sel: at })}<div style="height:10px"></div>
+    ${chips(['Неделя', 'Месяц', 'Год', 'Всё'], 1)}</div></div>`;
+}
+function heroStrip(sel) {
+  return `<div class="panel glow"><div style="padding:12px 16px 10px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+      ${amt(sel == null ? '1 938 190,99 ₽' : '1 940 210,35 ₽', 'large')}
+      <span style="font-size:12px;color:${sel == null ? 'var(--muted)' : 'var(--brass2)'}">${sel == null ? 'месяц' : '24 октября'}</span></div>
+    <div style="height:6px"></div>${chart(pts, { w: 324, h: 64, sel })}</div></div>`;
+}
+const scrTop = hdr('История капитала') + `<div class="scr">${tabs(['Всё', 'Счета', 'Вклады', 'Валюта', 'Нал.'], 0)}</div>`;
+// y-координаты: шапка + вкладки = 32+64+44 = 140; герой с 152
+const HERO_Y = 152, HERO_H = 318, STRIP_H = 122;
+const chartTop = HERO_Y + 16 + 38 + 36 + 12;
+const touchAt = (i, y) => `<span class="touch" style="left:${16 + 1 + 18 + xAt(i, 31, W)}px;top:${y}px"></span>`;
+const ptY = (i, h = 150, t = chartTop) => { const lo = Math.min(...pts), hi = Math.max(...pts); return t + 8 + (h - 16) * (1 - (pts[i] - lo) / (hi - lo)); };
+const edge = (y, t = 'край графика') => `<div class="ghostline" style="top:${y}px"><span>${t}</span></div>`;
+
+function screenFull(sel, from, lit, o = {}) {
+  const listTop = HERO_Y + HERO_H + 12;
+  return phone(scrTop + `<div style="position:absolute;left:16px;right:16px;top:${HERO_Y}px">${heroFull(sel)}</div>
+    <div class="viewport" style="top:${listTop}px"><div class="scr">${list(from, lit, o.reset)}</div></div>
+    ${o.edge ? edge(listTop - 6) : ''}
+    ${o.move ? `<span class="move" style="top:${listTop + 40}px">двигается ↕</span>` : ''}
+    ${sel != null && o.touch !== false ? touchAt(sel, ptY(sel)) : ''}`);
+}
+function screenStrip(sel, from, lit) {
+  const stripY = HERO_Y;
+  const listTop = stripY + STRIP_H + 12;
+  return phone(scrTop + `<div class="strip" style="top:${stripY}px">${heroStrip(sel)}</div>
+    <div class="viewport" style="top:${listTop}px"><div class="scr">${list(from, lit)}</div></div>
+    ${edge(listTop - 6)}
+    ${sel != null ? `<span class="touch" style="left:${16 + 1 + 16 + xAt(sel, 31, 324) * (322 / 324)}px;top:${stripY + 12 + 26 + 6 + 8 + 48 * (1 - (pts[sel] - Math.min(...pts)) / (Math.max(...pts) - Math.min(...pts)))}px"></span>` : ''}
+    <span class="move" style="top:${listTop + 40}px">двигается ↕</span>`);
+}
+
+document.getElementById('fb').innerHTML = [
+  frame('<i>1</i>Как сейчас открыт экран', screenFull(null, 0, null), ['Полный герой: сумма, график, плашки периода. Список ниже.'], [300]),
+  frame('<i>2</i>Ведём по графику: 14 октября', screenFull(D14, 5, '14 октября', { edge: true, move: true }),
+    ['Касание — точка и сумма дня в герое, герой не двигается.', 'Список сразу, не дожидаясь отпускания, встаёт так, что «14 октября» — первым под графиком. Строки дня с полосой Brass2.', 'Прокрутка — Motion.NORMAL, Standard; новая цель обрывает прошлую. Без анимаций — прыжком.'],
+    [180, 486, 560]),
+  frame('<i>3</i>Палец доехал до 24 октября', screenFull(D24, 2, '24 октября', { edge: true, move: true }),
+    ['Список едет вместе с пальцем: обновляется при смене дня, не каждого пикселя.'], [486]),
+  frame('<i>4</i>Отпустили', screenFull(D24, 2, '24 октября', { edge: true, reset: true, touch: false }),
+    ['Ничего не прыгает: экран остаётся как был в момент отпускания.', '«Сбросить» — у подписи выбранного дня.'], [300, 486]),
+  frame('<i>5</i>Читают ленту ниже', screenStrip(null, 4, null),
+    ['Листнули вниз — герой сжался в полосу и прилип под шапкой (сжатие идёт вместе с прокруткой, не анимацией).', 'Список — на всю остальную высоту.'], [190, 300]),
+  frame('<i>6</i>Ведём по полосе', screenStrip(D24, 2, '24 октября'),
+    ['По сжатому графику так же: точка, сумма в полосе, строки дня под полосой.', 'Касание по сумме полосы — экран наверх, к полному герою (как повторное касание вкладки).'], [210, 168]),
+].join('');
+
+document.getElementById('fa').innerHTML = [
+  frame('<i>1</i>Покой', screenFull(null, 0, null, { edge: true }), ['Герой закреплён; листается только окно списка ниже пунктира.'], [486]),
+  frame('<i>2</i>Ведём: 14 октября', screenFull(D14, 5, '14 октября', { edge: true, move: true }), ['Список встаёт на день сразу, как в B.'], [486]),
+  frame('<i>3</i>24 октября, отпустили', screenFull(D24, 2, '24 октября', { edge: true, reset: true, touch: false }), ['Экран не меняется при отпускании.'], [486]),
+].join('');
+
+const peek = (d, rows) => `<div class="peek panel" style="top:${chartTop + 158}px">
+  <div class="daycap on" style="padding:10px 16px 0"><span>${d}</span></div>${rows.map(r => hl(r[0], r[1], r[2], { lead: r[3] })).join('')}</div>`;
+document.getElementById('fc').innerHTML = [
+  frame('<i>1</i>Держим на 14 октября', screenFull(D14, 0, null).replace('<div class="gbar">', peek('14 октября', days[5][1]) + '<div class="gbar">'),
+    ['Карточка дня всплывает под графиком (Motion.FAST), закрывая плашки периода и верх списка. Список не двигается.'], [440]),
+  frame('<i>2</i>Отпустили', screenFull(D14, 5, '14 октября', { edge: true, reset: true, touch: false }),
+    ['Карточка гаснет, список один раз встаёт на день.'], [486]),
+].join('');
+M.tabsInit();
+</script>

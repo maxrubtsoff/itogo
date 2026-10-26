@@ -1,0 +1,136 @@
+<title>Сбой ключа данных · B-91</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&family=Unbounded:wght@300..900&display=swap">
+<link rel="stylesheet" href="mock.css">
+<script src="mock.js"></script>
+<style>
+  .err { position: absolute; left: 0; right: 0; top: 32px; bottom: 0; padding: 0 24px 40px; display: flex; flex-direction: column; }
+  .err .mid { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+  .err h2 { margin: 0; font: 600 22px/28px var(--display); letter-spacing: -.2px; }
+  .err p { margin: 0; color: var(--muted); font-size: 16px; line-height: 24px; }
+  .err .acts { display: flex; flex-direction: column; gap: 10px; }
+  .keyart { width: 96px; height: 84px; position: relative; }
+  .keyart .plate { position: absolute; inset: 10px 8px 0 0; border-radius: 22px; background: linear-gradient(160deg, rgba(215,167,74,.22), var(--panel-top) 70%); border: 1px solid var(--brass-line); box-shadow: var(--panel-shadow); display: grid; place-items: center; color: var(--brass2); }
+  .keyart .plate svg.i { width: 40px; height: 40px; stroke-width: 1.8; }
+  .keyart .crack { position: absolute; right: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--bg); border: 1px solid var(--line); display: grid; place-items: center; color: var(--muted); font: 700 16px/1 var(--display); }
+  .statusline { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 500 14px/18px var(--text); }
+  .statusline::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .banner { background: linear-gradient(180deg, var(--brass-tint), var(--panel-top)); border: 1px solid var(--brass-line); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .banner .row { display: flex; gap: 12px; align-items: flex-start; }
+  .banner .row svg.i { color: var(--brass2); margin-top: 1px; }
+  .banner b { display: block; font: 500 16px/22px var(--text); }
+  .banner span { color: var(--muted); font-size: 13px; line-height: 18px; }
+</style>
+
+<div class="page">
+  <header>
+    <h1>B-91 · Ключ данных не открылся</h1>
+    <p>Сейчас при сбое Android Keystore приложение молча удаляет зашифрованную базу и запускается пустым, а первая же операция перезаписывает сегодняшнюю автокопию пустыми данными. Нужно: ничего не удалять, сказать человеку, дать вернуться к данным. Важная деталь из кода: автокопии на телефоне запечатаны ключом из того же Keystore (<code>PhoneKeys.backupKey</code>) — если ключ потерян совсем, они тоже не откроются. Спасают «Попробовать снова» (сбой часто временный), копия для переноса с паролем и старые незашифрованные копии.</p>
+  </header>
+  <nav class="vtabs" aria-label="Варианты">
+    <button data-v="a">A · Экран ключа <span class="rec">советую</span></button>
+    <button data-v="b">B · Работать дальше, данные отложены</button>
+  </nav>
+
+  <section class="variant" id="a">
+    <h2>A · Экран ключа</h2>
+    <p class="about">После входа (пин/отпечаток) вместо приложения — один спокойный экран. Файл базы не трогается. Три пути по убыванию безопасности: <b>попробовать снова</b>, <b>восстановить из копии</b>, <b>начать заново</b> — и тогда старый файл откладывается, а не удаляется (дальше — как в B).</p>
+    <div class="frames" id="fa"></div>
+    <div class="pros">
+      <div><b>Плюсы</b><ul><li>Нельзя случайно продолжить на пустых данных и затереть копии.</li><li>Честно: видно, какие копии откроются, а какие нет — до ввода пароля.</li></ul></div>
+      <div><b>Минусы</b><ul><li>Пока экран открыт, приложение не работает (уведомления банков, пришедшие в это время, пропадут — см. B).</li></ul></div>
+    </div>
+  </section>
+
+  <section class="variant" id="b" hidden>
+    <h2>B · Работать дальше, данные отложены</h2>
+    <p class="about">Приложение открывается сразу на новых пустых данных и продолжает ловить уведомления. Старый файл отложен. Сверху Обзора — плашка, пока данные не вернули. После восстановления новые операции <b>доливаются</b> поверх копии, а не теряются.</p>
+    <div class="frames" id="fb"></div>
+    <div class="pros">
+      <div><b>Плюсы</b><ul><li>Ни одно уведомление не теряется, пока человек разбирается.</li><li>Не блокирует приложение из-за, возможно, временного сбоя.</li></ul></div>
+      <div><b>Минусы</b><ul><li>Пустой капитал пугает сильнее экрана ошибки.</li><li>Слияние копии с новыми операциями — новая логика (дедуп по журналу).</li></ul></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const { ic, amt, banks, hdr, phone, frame } = M;
+const art = `<div class="keyart"><div class="plate">${ic.key}</div><div class="crack">!</div></div>`;
+const errScreen = (o = {}) => phone(`<div class="err"><div class="mid">
+  ${art}
+  <h2>Не открывается ключ данных</h2>
+  <p>Данные на месте — мы ничего не удалили. Так бывает после обновления системы или смены блокировки экрана.</p>
+  ${o.failed ? '<span class="statusline">Снова не открылся · 12:26</span>' : ''}
+  </div><div class="acts">
+  <span class="btn brass full">${o.busy ? 'Пробуем…' : 'Попробовать снова'}</span>
+  <span class="btn plate full">Восстановить из копии</span>
+  <span class="btn ghost quiet">Начать заново</span></div></div>`);
+
+const scrim = '<div class="scrim"></div>';
+const restoreSheet = (shell) => phone(shell + scrim + `<div class="sheet"><div class="handle"></div>
+  <h4>Восстановить из копии</h4>
+  <div class="sl">
+    <div class="srow"><span class="tile32">${ic.lock}</span><div class="st"><b>20 октября, 21:14</b><small>копия для переноса · с паролем</small></div><span class="ar">${ic.chev}</span></div>
+    <div class="srow dis"><span class="tile32">${ic.copy}</span><div class="st"><b>26 октября</b><small>автокопия</small></div><span class="tag">не открывается</span></div>
+    <div class="srow dis"><span class="tile32">${ic.copy}</span><div class="st"><b>25 октября</b><small>автокопия</small></div><span class="tag">не открывается</span></div>
+    <div class="srow"><span class="tile32">${ic.copy}</span><div class="st"><b>3 октября</b><small>автокопия без шифра</small></div><span class="ar">${ic.chev}</span></div>
+  </div>
+  <div class="sl"><div class="srow"><span class="tile32">${ic.file}</span><div class="st"><b>Из файла…</b></div><span class="ar">${ic.chev}</span></div></div>
+</div>`);
+
+const pwSheet = (wrong) => phone(`<div class="err dim"><div class="mid">${art}<h2>Не открывается ключ данных</h2></div></div>` + scrim + `<div class="sheet"><div class="handle"></div>
+  <h4>Копия 20 октября</h4>
+  <div><span class="flabel">Пароль копии</span><div class="field ${wrong ? '' : 'focus'}" style="${wrong ? 'border-color:rgba(255,132,104,.6)' : ''}">••••••••${wrong ? '' : '<span class="caret"></span>'}</div>
+  ${wrong ? '<div style="color:var(--coral);font-size:12px;line-height:16px;margin-top:6px">Не тот пароль</div>' : ''}</div>
+  <span class="btn brass full">Восстановить</span>
+  <div style="height:${wrong ? 230 : 250}px"></div>
+</div>`);
+
+const overview = (o = {}) => M.hdr('Обзор', { tab: true, icons: `<span class="ib">${ic.eye}</span>` }) + `<div class="scr">
+  ${o.banner ? `<div class="banner"><div class="row">${ic.key}<div><b>Старые данные не открылись</b><span>Новые операции записываются</span></div></div><span class="btn brass full">Вернуть данные</span></div>` : ''}
+  <div class="panel glow"><div style="padding:18px;display:flex;flex-direction:column;gap:10px">
+    <span style="color:var(--muted);font-size:16px">Общий капитал</span>${amt(o.sum || '0 ₽', 'hero')}
+    ${o.sum ? `<div style="height:7px;border-radius:99px;background:linear-gradient(90deg,var(--brass) 0 10%,var(--violet) 10% 86%,var(--sky) 86% 93%,var(--sand) 93%)"></div>` : ''}
+  </div></div>
+  ${o.sum ? '' : `<div class="panel"><div style="padding:4px 0">${M.hl('Пятёрочка', 'Т-Банк · сегодня', '−1 284,90 ₽', { lead: banks.tb() })}${M.hl('Кофейня «Зерно»', 'Альфа-Банк · сегодня', '−340 ₽', { lead: banks.alfa() })}</div></div>`}
+</div>`;
+
+const dlgStart = `<div class="scrim"></div><div class="dialog panel">
+  <h4>Начать с пустыми данными?</h4>
+  <p>Старый файл останется на телефоне: если ключ вернётся, данные откроются. Автокопии не перезапишутся.</p>
+  <div class="acts"><span class="btn ghost quiet">Отмена</span><span class="btn ghost">Начать заново</span></div></div>`;
+
+document.getElementById('fa').innerHTML = [
+  frame('<i>1</i>Ключ не открылся', errScreen(),
+    ['Рисунок — ключ на латунной плашке (новый KeyArt, как рисунки разделов).', 'Первая фраза — главное: данные целы.', 'Попробовать снова — главное действие: сбой Keystore часто временный.', 'Начать заново — тихо, последним.'],
+    [250, 420, 650, 756]),
+  frame('<i>2</i>Снова не открылся', errScreen({ failed: true }),
+    ['Результат попытки — строкой состояния (Muted, не коралл: ошибка не человека). Экран чуть встряхивается (errorShake).'],
+    [500]),
+  frame('<i>3</i>Восстановить из копии', restoreSheet(`<div class="err dim"><div class="mid">${art}<h2>Не открывается ключ данных</h2></div></div>`),
+    ['Копии проверены заранее: что не откроется этим ключом — серым с меткой, не нажимается. Человек не тратит время на пароли к безнадёжным копиям.', 'Копия с паролем и копии без шифра — сверху и активны.', '«Из файла…» — копия с другого места (Telegram, диск).'],
+    [480, 400, 704]),
+  frame('<i>4</i>Пароль копии', pwSheet(false),
+    ['Шторка с полем (imeField): клавиатура сразу.'], [470]),
+  frame('<i>5</i>Не тот пароль', pwSheet(true),
+    ['Ошибка — только после попытки, под полем.'], [470]),
+  frame('<i>6</i>Восстановлено', phone(overview({ sum: '1 917 430,12 ₽' }) + `<div class="snack"><span>Данные из копии 20 октября</span><span class="btn ghost">Вернуть</span></div>`),
+    ['Сразу Обзор. Снекбар называет дату копии — понятно, что последние дни пропали.'], [748]),
+  frame('<i>7</i>«Начать заново»', errScreen().replace('<div class="gbar">', dlgStart + '<div class="gbar">'),
+    ['Подтверждение без слова «удалить»: старый файл откладывается (bankagg.db → отложенный), не стирается. Дальше приложение работает как в варианте B — с плашкой «Вернуть данные».'], [400]),
+].join('');
+
+document.getElementById('fb').innerHTML = [
+  frame('<i>1</i>Приложение открылось', phone(overview({ banner: true })),
+    ['Плашка вверху Обзора (по виду — как «Нет доступа к уведомлениям»), пока данные не вернули. Не закрывается.', 'Новые уведомления уже записываются — не теряются.'],
+    [190, 470]),
+  frame('<i>2</i>«Вернуть данные»', restoreSheet(overview({ banner: true })),
+    ['Та же шторка копий, что в A. Сверху ещё строка «Попробовать ключ снова».'], [430]),
+  frame('<i>3</i>Вернули', phone(overview({ sum: '1 918 145,22 ₽' }) + `<div class="snack"><span>Копия 20 октября + 2 новые операции</span><span class="btn ghost">Вернуть</span></div>`),
+    ['Операции, пойманные после сбоя, доливаются поверх копии.'], [748]),
+].join('');
+
+M.tabsInit();
+</script>

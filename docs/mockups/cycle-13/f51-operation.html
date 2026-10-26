@@ -1,0 +1,235 @@
+<title>Операция из истории · F-51</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&family=Unbounded:wght@300..900&display=swap">
+<link rel="stylesheet" href="mock.css">
+<script src="mock.js"></script>
+
+<div class="page">
+  <header>
+    <h1>F-51 · Операция из истории</h1>
+    <p>Касание по строке истории открывает саму операцию: посмотреть, поправить, удалить и увидеть уведомление банка, из которого она взялась. Пример — ложная операция +20,26 млн ₽ на «Счетах» (номер заявки в пуше прочитан как сумма, B-82). Переход «к объекту» (F-44) переезжает внутрь операции строкой «Вклад …›».</p>
+  </header>
+
+  <nav class="vtabs" aria-label="Варианты">
+    <button data-v="a">A · Шторка операции <span class="rec">советую</span></button>
+    <button data-v="b">B · Экран операции</button>
+    <button data-v="c">C · Шторка «Как прочитали»</button>
+    <button data-v="kinds">По видам операций (для A)</button>
+  </nav>
+
+  <section class="variant" id="a">
+    <h2>A · Шторка операции</h2>
+    <p class="about">Тихий просмотр в шторке: сумма, когда, остаток и сразу текст уведомления банка; стрелка справа ведёт в журнал. <b>Изменить</b> — та же шторка переходит в форму, без нового экрана. <b>Удалить</b> — подтверждение с цифрами «было → станет» вместо общего «всё пересчитается», после — снекбар «Вернуть».</p>
+    <div class="frames" id="fa"></div>
+    <div class="pros">
+      <div><b>Плюсы</b><ul><li>Список и график видны под шторкой — понятно, где ты.</li><li>Просмотр спокойный: формы нет, пока её не попросили.</li><li>Уведомление всегда на виду — причина ошибки читается без лишних касаний.</li><li>Одна шторка на все виды операций (см. «По видам»).</li></ul></div>
+      <div><b>Минусы</b><ul><li>Правка — одно лишнее касание («Изменить»).</li><li>Длинный текст уведомления растягивает шторку (прокрутка внутри шторки; в большинстве пушей две-три строки).</li></ul></div>
+    </div>
+  </section>
+
+  <section class="variant" id="b" hidden>
+    <h2>B · Экран операции</h2>
+    <p class="about">Касание — пролёт вправо на экран «Операция». Уведомление банка видно сразу, целиком. Правка — карандаш в шапке, удаление — в «⋮».</p>
+    <div class="frames" id="fb"></div>
+    <div class="pros">
+      <div><b>Плюсы</b><ul><li>Место под длинный текст уведомления.</li><li>Привычная схема «карточка объекта» как у вклада.</li></ul></div>
+      <div><b>Минусы</b><ul><li>Лишний экран и «Назад» ради одной строки.</li><li>Удаление спрятано в «⋮» — а это главное, ради чего пришли к мусорной операции.</li><li>Пропадает контекст графика.</li></ul></div>
+    </div>
+  </section>
+
+  <section class="variant" id="c" hidden>
+    <h2>C · Шторка «Как прочитали»</h2>
+    <p class="about">Сначала уведомление банка, в нём подсвечено то, что прочитано как сумма. Ниже поля сразу можно править — режима «Изменить» нет. «Сохранить» появляется, только когда что-то поменяли. Удаление названо по смыслу: «Это не операция».</p>
+    <div class="frames" id="fc"></div>
+    <div class="pros">
+      <div><b>Плюсы</b><ul><li>Ошибку распознавания видно сразу: текст банка рядом с тем, как его поняли.</li><li>Правка без лишнего касания.</li></ul></div>
+      <div><b>Минусы</b><ul><li>Обычный просмотр («что за 1 284 ₽?») выглядит как форма — шумно.</li><li>У ручных операций (наличные, вклады) уведомления нет — шторка у них другая.</li></ul></div>
+    </div>
+  </section>
+
+  <section class="variant" id="kinds" hidden>
+    <h2>По видам операций (в варианте A)</h2>
+    <p class="about">Шторка одна, меняется содержимое. <b>Правится и удаляется</b> то, что человек или банк записали: операция счёта, изменение наличных, пополнение, сделка с валютой. <b>Только смотрится</b> то, что приложение посчитало само: проценты, переоценка, открытие вклада (вклад правится и закрывается в своей карточке). Переход к объекту — строкой со стрелкой внутри шторки.</p>
+    <div class="frames" id="fk"></div>
+  </section>
+</div>
+
+<script>
+const { ic, amt, banks, hdr, tabs, chips, hl, phone, frame, chart } = M;
+
+/* ряд «Счета»: ровно ~184 тыс, с 24 октября всплеск +20,26 млн */
+const base = [181.2,181.9,182.4,180.8,181.5,183.0,182.2,182.9,183.6,182.1,183.3,184.0,183.1,182.5,183.8,184.6,183.9,184.2,185.0,184.4,183.6,184.9,185.3,184.8,185.6,184.1,184.7,184.3,184.0,184.5,184.32].map(v => v * 1000);
+const spike = base.map((v, i) => i >= 27 ? v + 20261024 : v);
+
+function hero(sum, delta, pts, o = {}) {
+  return `<div class="panel glow"><div style="padding:16px 18px 12px">
+    ${amt(sum, 'hero')}
+    <div style="display:flex;gap:8px;align-items:baseline;margin-top:2px">${delta}</div>
+    <div style="height:12px"></div>${chart(pts, o)}<div style="height:10px"></div>
+    ${chips(['Неделя', 'Месяц', 'Год', 'Всё'], 1)}</div></div>`;
+}
+const deltaSpike = `${amt('+20,26 млн ₽', 'inl inc')}<span style="color:var(--muted);font-size:12px">с 26 сентября</span>`;
+const deltaFlat = `${amt('+3 120,50 ₽', 'inl inc')}<span style="color:var(--muted);font-size:12px">с 26 сентября</span>`;
+const rows24 = (o = {}) => `<div class="daycap">24 октября</div><div class="panel">
+    ${o.noSpike ? '' : hl('Перевод от Иван И.', 'Сбербанк', '+20 261 024 ₽', { lead: banks.sber(), pressed: o.pressed })}
+    ${hl('Пятёрочка', 'Т-Банк', '−1 284,90 ₽', { lead: banks.tb() })}
+    ${hl('Кофейня «Зерно»', 'Альфа-Банк', '−340 ₽', { lead: banks.alfa() })}</div>`;
+function history(o = {}) {
+  return hdr('История капитала') + `<div class="scr">${tabs(['Всё', 'Счета', 'Вклады', 'Валюта', 'Нал.'], 1)}
+    ${o.noSpike ? hero('184 320,50 ₽', deltaFlat, base) : hero('20 445 344,50 ₽', deltaSpike, spike, { marks: [27] })}
+    ${rows24(o)}</div>`;
+}
+
+const sheetView = () => `<div class="scrim"></div><div class="sheet"><div class="handle"></div>
+  <div class="shead">${banks.sber()}<div class="tx"><h4>Перевод от Иван И.</h4><span>Сбербанк · Счёт ··4417</span></div></div>
+  <div class="opsum">${amt('+20 261 024 ₽', 'large inc')}<span class="when">24 октября, 14:32</span></div>
+  <div class="sl">
+    <div class="det"><span class="l">Остаток после</span><span class="v">${amt('184 320,50 ₽', 'small')}</span></div>
+    <div class="srow nrow"><div class="st"><small>Уведомление банка</small>
+      <p>Сбербанк: перевод от Иван И. по заявке <mark>20261024</mark>. Баланс 184 320,50 ₽</p></div><span class="ar">${ic.chev}</span></div>
+  </div>
+  <div class="btnrow"><span class="btn plate">Изменить</span><span class="btn danger">Удалить</span></div>
+</div>`;
+
+const sheetEdit = `<div class="scrim"></div><div class="sheet"><div class="handle"></div>
+  <h4>Изменить операцию</h4>
+  <div class="chips"><span class="chip">Расход</span><span class="chip on">Доход</span></div>
+  <div><span class="flabel">Сумма</span><div class="field amount focus">1 500<span class="caret"></span><span class="sfx">₽</span></div></div>
+  <div><span class="flabel">Когда</span><div class="selrow"><span class="t">24 октября, 14:32</span><span class="ar">${ic.chev}</span></div></div>
+  <div><span class="flabel">Счёт</span><div class="selrow">${banks.sber()}<span class="t">Сбербанк ··4417</span><span class="ar">${ic.chev}</span></div></div>
+  <div class="effect"><div class="det"><span class="l">Счета</span><span class="v">${amt('20 445 344,50', 'small strike')}<span class="arrow">→</span>${amt('185 820,50 ₽', 'small')}</span></div></div>
+  <div class="btnrow"><span class="btn plate">Отмена</span><span class="btn brass">Сохранить</span></div>
+</div>`;
+
+const dialogDelete = (title = 'Удалить операцию?', btn = 'Удалить') => `<div class="scrim"></div><div class="dialog panel">
+  <h4>${title}</h4>
+  <p>Перевод от Иван И. · ${amt('+20 261 024 ₽', 'inl inc')} · 24 октября</p>
+  <div class="effect">
+    <div class="det"><span class="l">Счета</span><span class="v">${amt('20 445 344,50', 'small strike')}<span class="arrow">→</span>${amt('184 320,50 ₽', 'small')}</span></div>
+    <div class="det"><span class="l">Капитал</span><span class="v">${amt('22 199 214,99', 'small strike')}<span class="arrow">→</span>${amt('1 938 190,99 ₽', 'small')}</span></div>
+  </div>
+  <p>График пересчитается с 24 октября.</p>
+  <div class="acts"><span class="btn ghost quiet">Отмена</span><span class="btn ghost" style="color:var(--coral)">${btn}</span></div>
+</div>`;
+
+const snack = (t) => `<div class="snack"><span>${t}</span><span class="btn ghost">Вернуть</span></div>`;
+
+const journal = hdr('Журнал перехвата') + `<div class="scr">
+  <div class="panel" style="padding:4px 0">
+    <div class="hl lit" style="align-items:flex-start">${banks.sber()}<div class="tx"><b style="font-size:15px">Сбербанк</b><span>24 октября, 14:32</span>
+      <p style="margin:6px 0 8px;font-size:14px;line-height:20px;color:var(--fg)">Сбербанк: перевод от Иван И. по заявке <mark style="background:var(--brass-tint);color:var(--brass2);border-radius:3px;padding:0 2px">20261024</mark>. Баланс 184 320,50 ₽</p>
+      <span style="display:flex;gap:8px;align-items:center"><span class="tag m">разобрано</span>${amt('+20 261 024 ₽', 'small inc')}</span></div></div>
+    <div class="hl" style="align-items:flex-start">${banks.tb()}<div class="tx"><b style="font-size:15px">Т-Банк</b><span>24 октября, 12:10</span>
+      <p style="margin:6px 0 8px;font-size:14px;line-height:20px;color:var(--fg)">Покупка 1 284,90 ₽. Пятёрочка. Доступно 42 018 ₽</p><span class="tag m">разобрано</span></div></div>
+    <div class="hl" style="align-items:flex-start">${banks.alfa()}<div class="tx"><b style="font-size:15px">Альфа-Банк</b><span>24 октября, 09:41</span>
+      <p style="margin:6px 0 8px;font-size:14px;line-height:20px;color:var(--fg)">Кешбэк до 30% в ресторанах до конца месяца</p><span class="tag">не разобрано</span></div></div>
+  </div></div>`;
+
+document.getElementById('fa').innerHTML = [
+  frame('<i>1</i>Касание по строке', phone(history({ pressed: true }) + sheetView()),
+    ['Шапка: банк, кто, счёт. Сумма — шкала Large, доход мятой, дата тихой строкой под ней.', 'Уведомление банка видно сразу, без раскрытия: то, что прочитано как сумма, подсвечено латунью — видно, откуда +20 млн.', 'Строка уведомления целиком ведёт в журнал — только стрелка «›», без надписи.', '«Изменить» — второе действие (PlateButton), «Удалить» — DangerButton. Главного латунного здесь нет: просмотр.'],
+    [470, 585, 640, 712]),
+  frame('<i>2</i>Журнал: откуда пришли', phone(journal),
+    ['Запись подсвечена полосой Brass2 (как строки графика). «Назад» — обратно в историю, шторка открыта снова.', 'Обратный путь: касание по разобранной записи журнала открывает ту же шторку операции.'],
+    [120, 200]),
+  frame('<i>3</i>Изменить', phone(history() + sheetEdit),
+    ['Та же шторка становится формой (смена содержимого на месте, Motion.NORMAL). Поле суммы в фокусе, клавиатура — как у шторок с полем (imeField).', 'Расход / Доход — плашками.', 'Что изменится — строкой «было → станет», без пояснений.', 'Отмена возвращает к просмотру, не закрывает шторку.'],
+    [372, 324, 640, 706]),
+  frame('<i>4</i>Удалить: подтверждение', phone(history() + dialogDelete()),
+    ['SlitokDialog: вместо «пересчитаются баланс, график и капитал» — конкретные цифры до и после.', 'Одна строка про график: с какого дня он изменится.'],
+    [420, 528]),
+  frame('<i>5</i>Удалено', phone(history({ noSpike: true }) + snack('Операция удалена')),
+    ['Шторка закрылась, строка ушла, график перерисован без всплеска (рост линии Motion.SLOW; без анимаций — сразу).', '«Вернуть» — как после удаления данных: возвращает операцию, баланс и график.'],
+    [290, 748]),
+].join('');
+
+/* ---------- B ---------- */
+const opScreen = (o = {}) => hdr(o.edit ? 'Изменить операцию' : 'Операция', { icons: o.edit ? '' : `<span class="ib">${ic.pen}</span><span class="ib">${ic.more}</span>` }) + `<div class="scr">
+  ${o.edit ? `<div class="chips"><span class="chip">Расход</span><span class="chip on">Доход</span></div>
+    <div><span class="flabel">Сумма</span><div class="field amount focus">1 500<span class="caret"></span><span class="sfx">₽</span></div></div>
+    <div><span class="flabel">Когда</span><div class="selrow"><span class="t">24 октября, 14:32</span><span class="ar">${ic.chev}</span></div></div>
+    <div><span class="flabel">Счёт</span><div class="selrow">${banks.sber()}<span class="t">Сбербанк ··4417</span><span class="ar">${ic.chev}</span></div></div>`
+  : `<div class="panel glow"><div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+      <div class="shead">${banks.sber()}<div class="tx"><h4 style="font:600 16px/20px var(--display)">Перевод от Иван И.</h4><span>Сбербанк · Счёт ··4417</span></div></div>
+      <div class="opsum">${amt('+20 261 024 ₽', 'large inc')}<span class="when">24 октября, 14:32</span></div></div></div>
+    <div class="sl"><div class="det"><span class="l">Остаток после</span><span class="v">${amt('184 320,50 ₽', 'small')}</span></div></div>`}
+  <div class="daycap">Уведомление банка</div>
+  <div class="panel"><div class="quote">
+    <p>Сбербанк: перевод от Иван И. по заявке <mark>20261024</mark>. Баланс 184 320,50 ₽</p></div></div>
+  ${o.edit ? `<div style="margin-top:8px"><span class="btn brass full">Сохранить</span></div>` : ''}
+</div>`;
+const menu = `<div class="scrim" style="background:rgba(5,8,7,.4)"></div><div class="menu panel" style="top:86px;right:12px">
+  <div>${ic.bell}Открыть в журнале</div><div class="danger">${ic.trash}Удалить</div></div>`;
+document.getElementById('fb').innerHTML = [
+  frame('<i>1</i>Экран операции', phone(opScreen()), ['Въезд справа. Карандаш — правка, «⋮» — журнал и удаление.', 'Уведомление банка целиком, всегда видно.'], [64, 420]),
+  frame('<i>2</i>Изменить', phone(opScreen({ edit: true })), ['Тот же экран формой; «Сохранить» внизу — главное действие.'], [600]),
+  frame('<i>3</i>«⋮»', phone(opScreen() + menu), ['Удаление — в меню, как у вклада.'], [150]),
+  frame('<i>4</i>Подтверждение', phone(opScreen() + dialogDelete()), ['Тот же диалог с цифрами, что в A. После — «Назад» в историю и снекбар «Вернуть».'], [420]),
+].join('');
+
+/* ---------- C ---------- */
+const sheetRead = (changed) => `<div class="scrim"></div><div class="sheet"><div class="handle"></div>
+  <div class="shead">${banks.sber()}<div class="tx"><h4>Сбербанк</h4><span>24 октября, 14:32 · Счёт ··4417</span></div></div>
+  <div class="sl"><div class="quote"><div class="qh">${ic.bell.replace('class="i"', 'class="i" style="width:14px;height:14px"')}Уведомление</div>
+    <p>Сбербанк: перевод от Иван И. по заявке <mark>${changed ? '20261024' : '20261024'}</mark>. Баланс 184 320,50 ₽</p></div></div>
+  <div class="chips"><span class="chip">Расход</span><span class="chip on">Доход</span></div>
+  <div><span class="flabel">Сумма</span><div class="field amount ${changed ? 'focus' : ''}">${changed ? '1 500<span class="caret"></span>' : '20 261 024'}<span class="sfx">₽</span></div></div>
+  <div><span class="flabel">Когда</span><div class="selrow"><span class="t">24 октября, 14:32</span><span class="ar">${ic.chev}</span></div></div>
+  ${changed ? `<div class="btnrow"><span class="btn danger">Не операция</span><span class="btn brass">Сохранить</span></div>`
+            : `<span class="btn danger full">Это не операция</span>`}
+</div>`;
+document.getElementById('fc').innerHTML = [
+  frame('<i>1</i>Открыто', phone(history() + sheetRead(false)),
+    ['Текст банка сверху, прочитанная сумма подсвечена.', 'Поля сразу правятся — без «Изменить».', '«Это не операция» — удаление по смыслу (реклама, номер заявки).'],
+    [372, 520, 706]),
+  frame('<i>2</i>Поправили сумму', phone(history() + sheetRead(true)),
+    ['«Сохранить» появляется, только когда что-то изменили.'], [706]),
+  frame('<i>3</i>«Это не операция»', phone(history() + dialogDelete('Это не операция?', 'Убрать')),
+    ['Тот же диалог с цифрами.'], [420]),
+].join('');
+
+/* ---------- По видам ---------- */
+const circ = (t, c) => `<span class="bk" style="background:${c};color:var(--on-brass)">${t}</span>`;
+const sh = (body) => phone(history() + `<div class="scrim"></div><div class="sheet"><div class="handle"></div>${body}</div>`);
+const goRow = (t, s) => `<div class="srow"><div class="st"><b>${t}</b>${s ? `<small>${s}</small>` : ''}</div><span class="ar">${ic.chev}</span></div>`;
+document.getElementById('fk').innerHTML = [
+  frame('Наличные: взял и вернул', sh(`
+    <div class="shead">${circ('₽', 'var(--sand)')}<div class="tx"><h4>Наличные</h4><span>изменили вручную</span></div></div>
+    ${amt('−1 000 ₽', 'large')}
+    <div class="sl"><div class="det"><span class="l">Когда</span><span class="v">24 октября, 18:05</span></div>
+      <div class="det"><span class="l">Было</span><span class="v">${amt('20 000', 'small')}<span class="arrow">→</span>${amt('19 000 ₽', 'small')}</span></div></div>
+    <div class="sl"><div class="srow"><div class="st"><b>${amt('+1 000 ₽', 'small inc')} · 18:07</b><small>Вернули столько же</small></div><span class="tag b">пара</span></div></div>
+    <div class="btnrow"><span class="btn plate">Изменить</span><span class="btn danger">Удалить оба</span></div>`),
+    ['Касание по строке наличных открывает само изменение, а не раздел.', 'Приложение само замечает «туда-обратно» (одна сумма, разный знак, в один день) и показывает пару.', 'Удалить оба — наличные не меняются (20 000 ₽), с графика уходят оба зубца. Одно изменение удаляется из своей шторки, если пары нет.'],
+    [440, 560, 700]),
+  frame('Пополнение вклада', sh(`
+    <div class="shead">${banks.vtb()}<div class="tx"><h4>Пополнение</h4><span>«Накопительный» · ВТБ</span></div></div>
+    ${amt('50 000 ₽', 'large')}
+    <div class="sl"><div class="det"><span class="l">Когда</span><span class="v">20 октября</span></div>${goRow('Вклад «Накопительный»', '312 450,12 ₽ · 18 %')}</div>
+    <div class="btnrow"><span class="btn plate">Изменить</span><span class="btn danger">Удалить</span></div>`),
+    ['Пополнение — не доход: цветом текста.', 'Переход к вкладу — строкой со стрелкой (пролёт вправо).', 'Правка: сумма и дата. Удалить — то же, что долгое нажатие «удалить пополнение» в карточке.'],
+    [520, 600, 700]),
+  frame('Новый вклад — только просмотр', sh(`
+    <div class="shead">${banks.vtb()}<div class="tx"><h4>Новый вклад</h4><span>«Надёжный» · ВТБ</span></div></div>
+    ${amt('300 000 ₽', 'large')}
+    <div class="sl"><div class="det"><span class="l">Открыт</span><span class="v">24 октября</span></div>
+      <div class="det"><span class="l">Ставка</span><span class="v">18 %</span></div>
+      <div class="det"><span class="l">До</span><span class="v">24 апреля 2027</span></div>${goRow('Открыть вклад', '')}</div>`),
+    ['Вклад правится и закрывается в своей карточке — здесь только переход к ней. Кнопок нет.'], [700]),
+  frame('Покупка валюты', sh(`
+    <div class="shead">${circ('$', 'var(--sky)')}<div class="tx"><h4>Покупка долларов</h4><span>по 96,40 ₽</span></div></div>
+    <div style="display:flex;gap:10px;align-items:baseline">${amt('1 000 $', 'large')}${amt('96 400 ₽', 'small')}</div>
+    <div class="sl"><div class="det"><span class="l">Когда</span><span class="v">22 октября</span></div>${goRow('Доллар США', '3 200 $ · 308 480 ₽')}</div>
+    <div class="btnrow"><span class="btn plate">Изменить</span><span class="btn danger">Удалить</span></div>`),
+    ['Сумма в валюте сделки, рядом рубли тише.', 'Изменить открывает уже существующую форму сделки (FxOperationSheet) в той же шторке.'], [470, 700]),
+  frame('Проценты — только просмотр', sh(`
+    <div class="shead">${banks.vtb()}<div class="tx"><h4>Проценты</h4><span>«Накопительный» · ВТБ</span></div></div>
+    ${amt('+312,40 ₽', 'large inc')}
+    <div class="sl"><div class="det"><span class="l">За</span><span class="v">24 октября</span></div>${goRow('Вклад «Накопительный»', '')}</div>`),
+    ['Посчитано приложением из ставки — не правится. Переоценка валюты — так же, со строкой «Доллар США ›».'], [470]),
+].join('');
+
+M.tabsInit();
+</script>
