@@ -58,15 +58,14 @@ class ChartMarksTest {
         assertNotNull(m[2].label)
     }
 
-    @Test fun totalPageSkipsOwnMoneyMovesToDeposits() {
+    @Test fun totalPageMarksDepositsAndFxWithoutLabels() {
         val events = listOf(
             ev(1, HistoryKind.DEPOSIT_OPEN, CapitalPart.DEPOSITS, 500_000L), ev(2, HistoryKind.DEPOSIT_TOPUP, CapitalPart.DEPOSITS, 100_000L),
-            ev(3, HistoryKind.FX_BUY, CapitalPart.CURRENCY, 100_000L)
+            ev(3, HistoryKind.DEPOSIT_CLOSE, CapitalPart.DEPOSITS, -300_000L), ev(4, HistoryKind.FX_BUY, CapitalPart.CURRENCY, 100_000L)
         )
         val m = of(events)
-        assertEquals(1, m.size)
-        assertEquals(MarkShape.SMALL, m[0].shape)
-        assertNull(m[0].label)
+        assertEquals(listOf(MarkShape.SMALL, MarkShape.SMALL, MarkShape.RING, MarkShape.SMALL), m.map { it.shape })
+        assertTrue(m.all { it.label == null })
     }
 
     @Test fun fxLabelInDealCurrency() {

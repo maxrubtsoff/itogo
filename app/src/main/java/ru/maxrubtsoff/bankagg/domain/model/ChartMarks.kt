@@ -44,10 +44,10 @@ object ChartMarks {
         val shape: MarkShape = when (e.kind) {
             HistoryKind.INCOME, HistoryKind.SPEND, HistoryKind.TRANSFER, HistoryKind.TRANSACTION ->
                 if (e.part == CapitalPart.ACCOUNTS && (page == null || page == CapitalPart.ACCOUNTS) && avg > 0 && abs(amount) > avg / ACCOUNTS_SHARE) MarkShape.BIG else return null
-            // Money moving from one's own account into a deposit is no change of the total: only the deposits page shows it.
-            HistoryKind.DEPOSIT_OPEN -> if (page == CapitalPart.DEPOSITS) MarkShape.BIG else return null
-            HistoryKind.DEPOSIT_TOPUP -> if (page == CapitalPart.DEPOSITS) MarkShape.SMALL else return null
-            HistoryKind.DEPOSIT_CLOSE -> if (page == CapitalPart.DEPOSITS) MarkShape.RING else return null
+            // On the total a deposit is a small dot or a ring, never a sum: only the deposits page labels them.
+            HistoryKind.DEPOSIT_OPEN -> if (page == CapitalPart.DEPOSITS) MarkShape.BIG else if (page == null) MarkShape.SMALL else return null
+            HistoryKind.DEPOSIT_TOPUP -> if (page == CapitalPart.DEPOSITS || page == null) MarkShape.SMALL else return null
+            HistoryKind.DEPOSIT_CLOSE -> if (page == CapitalPart.DEPOSITS || page == null) MarkShape.RING else return null
             HistoryKind.FX_BUY, HistoryKind.FX_SELL -> if (page == CapitalPart.CURRENCY) MarkShape.BIG else if (page == null) MarkShape.SMALL else return null
             HistoryKind.CASH -> when {
                 page == CapitalPart.CASH -> MarkShape.BIG
@@ -59,7 +59,7 @@ object ChartMarks {
         val index = CapitalHistory.pointOf(series, e.date) ?: return null
         val label = e.foreign?.let { (if (it.minor > 0L) "+" else "−") + Money.ofMinor(abs(it.minor)).format(it.currency) }
             ?: MoneyCompact.short(amount, signed = true)
-        return Candidate(index, e.part, shape, amount, shape == MarkShape.BIG || shape == MarkShape.RING, label)
+        return Candidate(index, e.part, shape, amount, shape == MarkShape.BIG || (shape == MarkShape.RING && page == CapitalPart.DEPOSITS), label)
     }
 
     /** The mark within [tolerance] points of [raw] (the earlier one on a tie), else [raw] itself: a touch near a dot picks it. */
