@@ -303,18 +303,33 @@ object CapitalEvents {
         return weights.map { it.first }.map { d -> d to shares.getValue(d.id) + if (d.id == largest.id) rest else 0L }.filter { it.second != 0L }
     }
 
-    /** Rates explain what they can: balance on [from] times the rate change; the rest is a manual change. */
+    /**
+     * Rates explain what they can: the balance held on [from] times the rate change, and what the day's own deals
+     * gained against their price (a 100 $ bought at 80, valued at the CBR 80,74); the rest is a manual change.
+     * Like the history itself, a day before the first known rate takes that first rate.
+     */
     private fun reasonOf(from: LocalDate, to: LocalDate, revalued: Long, fxOps: List<FxOperation>, rates: List<FxRate>): RevaluationReason {
-        fun rateOn(currency: String, day: LocalDate): Long? =
-            rates.filter { it.currency == currency && !it.date.isAfter(day) }.maxByOrNull { it.date }?.rubPerUnitMicro
+        fun rateOn(currency: String, day: LocalDate): Long? = FxRates.latestOnOrBefore(rates, currency, day)?.rubPerUnitMicro
+            ?: rates.filter { it.currency == currency }.minByOrNull { it.date }?.rubPerUnitMicro
         val legs = fxOps.map { it.currency }.distinct().mapNotNull { cur ->
-            val qty = fxOps.filter { it.currency == cur && !it.date.isAfter(from) }
+            val r1 = rateOn(cur, to) ?: return@mapNotNull null
+            val qty0 = fxOps.filter { it.currency == cur && !it.date.isAfter(from) }
                 .sumOf { if (it.kind == FxKind.BUY) it.amountMinor else -it.amountMinor }
-            val r0 = rateOn(cur, from)
-            val r1 = rateOn(cur, to)
-            if (qty == 0L || r0 == null || r1 == null || r0 == r1) return@mapNotNull null
-            val effect = FxMath.rubOf(qty, r1) - FxMath.rubOf(qty, r0)
-            if (effect == 0L) null else RevaluationLeg(cur, r0, r1, qty, effect)
+            val r0 = rateOn(cur, from) ?: r1
+            var effect = if (qty0 != 0L) FxMath.rubOf(qty0, r1) - FxMath.rubOf(qty0, r0) else 0L
+            var qty = qty0
+            var dealPrice: Long? = null
+            fxOps.filter { it.currency == cur && it.date == to && it.date.isAfter(from) }.forEach { o ->
+                val gain = FxMath.rubOf(o.amountMinor, r1) - o.rubMinor
+                effect += if (o.kind == FxKind.BUY) gain else -gain
+                qty += if (o.kind == FxKind.BUY) o.amountMinor else -o.amountMinor
+                if (dealPrice == null && o.amountMinor != 0L) {
+                    dealPrice = (java.math.BigInteger.valueOf(o.rubMinor) * java.math.BigInteger.valueOf(1_000_000L) / java.math.BigInteger.valueOf(o.amountMinor)).toLong()
+                }
+            }
+            val shownFrom = if (qty0 != 0L) r0 else dealPrice ?: r0
+            if (effect == 0L || shownFrom == r1) return@mapNotNull null
+            RevaluationLeg(cur, shownFrom, r1, qty, effect)
         }
         val rest = revalued - legs.sumOf { it.effectMinor }
         val manual = if (kotlin.math.abs(rest) < maxOf(100L, kotlin.math.abs(revalued) / 100)) 0L else rest

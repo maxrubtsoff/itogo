@@ -64,6 +64,19 @@ class CapitalEventsTest {
         assertTrue(e.parts.isEmpty())
     }
 
+    @Test fun revaluationOfTheDealDayShowsFigures() {
+        // 1000 $ bought at 80,00 and valued the same day at the CBR 80,74: figures, not the fallback text.
+        val e = reval(
+            events(
+                listOf(pointFx(d0, 0), pointFx(d1, 8_074_000)),
+                listOf(buy("USD", d1, 100_000, 8_000_000)),
+                listOf(FxRate("USD", d1, 80_740_000))
+            )
+        )
+        assertEquals(74_000L, e.reason!!.legs.single().effectMinor)
+        assertEquals("$ 80,00 → 80,74 ₽", e.subtitle)
+    }
+
     @Test fun revaluationWithManualRemainder() {
         val e = reval(
             events(
