@@ -155,7 +155,7 @@ private fun PercentField(
     }
     Row(
         Modifier
-            .width(76.dp)
+            .width(100.dp)
             .heightIn(min = 40.dp)
             .clip(shape)
             .background(Slitok.Inset)
