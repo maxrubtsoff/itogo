@@ -474,4 +474,47 @@ class CapitalEventsTest {
         val expected = -100_000L + ru.maxrubtsoff.bankagg.domain.model.FxMath.rubOf(-2_026_300_000L, uzsRate)
         assertEquals(expected, list.sumOf { it.amountMinor ?: 0L })
     }
+
+    // B-85: a deposit or a deal dated between two saved points is put in, not earned.
+    private fun pointDep(day: LocalDate, v: Long) = CapitalPoint(day, v, mapOf(CapitalPart.DEPOSITS to v))
+
+    @Test fun deposit_opened_between_points_is_not_interest() {
+        val a = today.minusDays(20)
+        val b = today.minusDays(10)
+        val d = dep("x", start = today.minusDays(15))
+        val grown = DepositMath.valueOn(d, b)
+        val list = build(deps = listOf(d), points = listOf(pointDep(a, 0L), pointDep(b, grown)))
+        val interest = list.single { it.kind == HistoryKind.INTEREST }
+        assertEquals(grown - d.principal.minor, interest.amountMinor)
+    }
+
+    @Test fun topup_between_points_is_not_interest() {
+        val a = today.minusDays(20)
+        val b = today.minusDays(10)
+        val base = Deposit("x", BankBrand.SBER, null, Money.ofMinor(100_000), 1600, today.minusDays(30), today.plusDays(100))
+        val d = base.copy(topUps = listOf(DepositTopUp("u", today.minusDays(15), Money.ofMinor(50_000))))
+        val list = build(deps = listOf(d), points = listOf(pointDep(a, DepositMath.valueOn(d, a)), pointDep(b, DepositMath.valueOn(d, b))))
+        val interest = list.single { it.kind == HistoryKind.INTEREST }.amountMinor!!
+        assertEquals(DepositMath.valueOn(d, b) - DepositMath.valueOn(d, a) - 50_000L, interest)
+    }
+
+    @Test fun fx_buy_between_points_is_not_revaluation() {
+        val a = today.minusDays(20)
+        val b = today.minusDays(10)
+        val rate = 90_000_000L
+        val rub = 9_000_000L
+        val list = events(listOf(pointFx(a, 0), pointFx(b, rub)), listOf(buy("USD", today.minusDays(15), 100_000, rub)),
+            listOf(FxRate("USD", a, rate), FxRate("USD", b, rate)))
+        assertTrue(list.none { it.kind == HistoryKind.REVALUATION })
+    }
+
+    @Test fun fx_buy_between_points_revaluation_counts_only_rate_move() {
+        val a = today.minusDays(20)
+        val b = today.minusDays(10)
+        val rub = 9_000_000L
+        // 1000 $ bought at 90,00; valued at 92,00 on the second point: only the move after the deal.
+        val list = events(listOf(pointFx(a, 0), pointFx(b, 9_200_000)), listOf(buy("USD", today.minusDays(15), 100_000, rub)),
+            listOf(FxRate("USD", a, 90_000_000), FxRate("USD", today.minusDays(15), 90_000_000), FxRate("USD", b, 92_000_000)))
+        assertEquals(200_000L, list.single { it.kind == HistoryKind.REVALUATION }.amountMinor)
+    }
 }

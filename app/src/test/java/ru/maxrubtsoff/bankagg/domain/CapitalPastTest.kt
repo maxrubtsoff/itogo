@@ -9,6 +9,9 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPast
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPoint
 import ru.maxrubtsoff.bankagg.domain.model.Deposit
+import ru.maxrubtsoff.bankagg.domain.model.FxKind
+import ru.maxrubtsoff.bankagg.domain.model.FxOperation
+import ru.maxrubtsoff.bankagg.domain.model.FxRate
 import ru.maxrubtsoff.bankagg.domain.model.DepositTopUp
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import java.time.LocalDate
@@ -90,5 +93,36 @@ class CapitalPastTest {
         val out = CapitalPast.withDeposits(pts, listOf(dep(start)), all - CapitalPart.DEPOSITS, today)
         assertEquals(1_000_000L, out.on(start)!!.parts[CapitalPart.DEPOSITS])
         assertEquals(600L, out.on(start)!!.totalMinor)
+    }
+
+    // B-85: currency deals dated in the past.
+    private val usd = listOf(FxRate("USD", LocalDate.of(2026, 5, 1), 90_000_000L))
+
+    private fun buy(day: LocalDate) = FxOperation("f", "USD", FxKind.BUY, day, 100_000L, 9_000_000L, 0L)
+
+    @Test fun backdated_fx_buy_shifts_currency_from_its_date() {
+        val day = today.minusDays(7)
+        val out = CapitalPast.withFxChange(daily(today.minusDays(14), today), emptyList(), listOf(buy(day)), usd, all, today)
+        assertNull(out.on(day.minusDays(1)))
+        assertEquals(70L + 9_000_000L, out.on(day)!!.parts[CapitalPart.CURRENCY])
+        assertEquals(70L + 9_000_000L, out.on(day.plusDays(1))!!.parts[CapitalPart.CURRENCY])
+        assertEquals(600L + 9_000_000L, out.on(day)!!.totalMinor)
+    }
+
+    @Test fun removed_fx_deal_is_taken_out_of_past() {
+        val day = today.minusDays(7)
+        val pts = daily(today.minusDays(14), today).map { if (!it.date.isBefore(day)) pt(it.date, cur = 9_000_070L) else it }
+        val out = CapitalPast.withFxChange(pts, listOf(buy(day)), emptyList(), usd, all, today)
+        assertEquals(70L, out.on(day)!!.parts[CapitalPart.CURRENCY])
+    }
+
+    @Test fun unchanged_fx_list_changes_nothing() {
+        val l = listOf(buy(today.minusDays(7)))
+        assertTrue(CapitalPast.withFxChange(daily(today.minusDays(14), today), l, l, usd, all, today).isEmpty())
+    }
+
+    @Test fun fx_shift_never_touches_today() {
+        val out = CapitalPast.withFxChange(daily(today.minusDays(14), today), emptyList(), listOf(buy(today.minusDays(7))), usd, all, today)
+        assertNull(out.on(today))
     }
 }

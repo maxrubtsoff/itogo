@@ -3,8 +3,8 @@ package ru.maxrubtsoff.bankagg.domain.model
 import java.time.LocalDate
 
 /**
- * The saved past of the capital follows later changes (B-79): a deposit
- * entered with an earlier date lands on its own day, not today.
+ * The saved past of the capital follows later changes (B-79, B-85): a deposit or
+ * a currency deal entered with an earlier date lands on its own day, not today.
  * Every function returns only the points that changed or are new, all dated
  * before [today] — today's point belongs to the daily record.
  */
@@ -33,6 +33,31 @@ object CapitalPast {
             else p.copy(
                 totalMinor = p.totalMinor + if (CapitalPart.DEPOSITS in included) now - old else 0L,
                 parts = p.parts + (CapitalPart.DEPOSITS to now)
+            )
+        }
+    }
+
+    /**
+     * Currency deals that were added, removed or changed shift «Валюта» from their
+     * dates on. A delta, not a rebuild: the part holds foreign accounts too, which
+     * cannot be restored exactly.
+     */
+    fun withFxChange(
+        points: List<CapitalPoint>, before: List<FxOperation>, after: List<FxOperation>, rates: List<FxRate>,
+        included: Set<CapitalPart>, today: LocalDate
+    ): List<CapitalPoint> {
+        if (points.isEmpty()) return emptyList()
+        val gone = before.filter { it !in after }
+        val came = after.filter { it !in before }
+        if (gone.isEmpty() && came.isEmpty()) return emptyList()
+        val sorted = points.sortedBy { it.date }
+        val added = newDays(sorted, came.map { it.date }, today)
+        return (sorted.filter { inWindow(it.date, today) } + added).mapNotNull { p ->
+            val delta = CapitalReconstruction.fxOn(came, rates, p.date) - CapitalReconstruction.fxOn(gone, rates, p.date)
+            if (delta == 0L && p !in added) null
+            else p.copy(
+                totalMinor = p.totalMinor + if (CapitalPart.CURRENCY in included) delta else 0L,
+                parts = p.parts + (CapitalPart.CURRENCY to (p.parts[CapitalPart.CURRENCY] ?: 0L) + delta)
             )
         }
     }

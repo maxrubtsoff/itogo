@@ -248,16 +248,18 @@ object CapitalEvents {
         for (i in 1 until sorted.size) {
             val prev = sorted[i - 1]
             val cur = sorted[i]
+            // A deposit put in between two points counts as put in, not as interest (B-85).
             val own = deposits.sumOf { d ->
-                (if (d.startDate == cur.date) d.principal.minor else 0L) +
-                    d.topUps.filter { it.date == cur.date }.sumOf { it.amount.minor }
+                (if (d.startDate.inStep(prev.date, cur.date)) d.principal.minor else 0L) +
+                    d.topUps.filter { it.date.inStep(prev.date, cur.date) }.sumOf { it.amount.minor }
             }
             val interest = cur.valueOf(CapitalPart.DEPOSITS) - prev.valueOf(CapitalPart.DEPOSITS) - own
             val liveDeps = deposits.filter { DepositMath.isActive(it, cur.date) && !cur.date.isBefore(it.startDate) }
             if (interest > 0L && liveDeps.isNotEmpty()) {
                 // A deposit's weight: what it grew by, without what was put into it that day.
                 val weights = liveDeps.map { d ->
-                    val put = (if (d.startDate == cur.date) d.principal.minor else 0L) + d.topUps.filter { it.date == cur.date }.sumOf { it.amount.minor }
+                    val put = (if (d.startDate.inStep(prev.date, cur.date)) d.principal.minor else 0L) +
+                        d.topUps.filter { it.date.inStep(prev.date, cur.date) }.sumOf { it.amount.minor }
                     d to maxOf(0L, DepositMath.valueOn(d, cur.date) - DepositMath.valueOn(d, prev.date) - put)
                 }
                 val shares = splitInterest(interest, weights, cur.date)
@@ -274,7 +276,7 @@ object CapitalEvents {
                         target = HistoryTarget.Deposit(d.id), bank = d.brand)
                 }
             }
-            val dealt = fxOps.filter { it.date == cur.date }.sumOf { if (it.kind == FxKind.BUY) it.rubMinor else -it.rubMinor }
+            val dealt = fxOps.filter { it.date.inStep(prev.date, cur.date) }.sumOf { if (it.kind == FxKind.BUY) it.rubMinor else -it.rubMinor }
             // Operations of foreign-currency accounts are listed in rubles on their own (B-86): not a revaluation.
             val booked = transactions.filter { it.currency != Currencies.RUB && dayOf(it.postedAt, zone).inStep(prev.date, cur.date) }
                 .sumOf { rubOf(it, rates, zone) ?: 0L }
@@ -330,7 +332,7 @@ object CapitalEvents {
             var effect = if (qty0 != 0L) FxMath.rubOf(qty0, r1) - FxMath.rubOf(qty0, r0) else 0L
             var qty = qty0
             var dealPrice: Long? = null
-            fxOps.filter { it.currency == cur && it.date == to && it.date.isAfter(from) }.forEach { o ->
+            fxOps.filter { it.currency == cur && it.date.inStep(from, to) }.forEach { o ->
                 val gain = FxMath.rubOf(o.amountMinor, r1) - o.rubMinor
                 effect += if (o.kind == FxKind.BUY) gain else -gain
                 qty += if (o.kind == FxKind.BUY) o.amountMinor else -o.amountMinor

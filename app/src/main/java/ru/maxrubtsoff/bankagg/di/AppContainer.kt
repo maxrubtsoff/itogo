@@ -186,7 +186,7 @@ class AppContainer(context: Context) {
         BuildCapitalHistory(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today)
     }
 
-    val syncCapitalPast by lazy { SyncCapitalPast(capitalHistory, depositRepository, settings, today) }
+    val syncCapitalPast by lazy { SyncCapitalPast(capitalHistory, depositRepository, fxRepository, ratesRepository, settings, today) }
 
     /** Rebuilds the past once when the history is empty, then keeps today's point up to date. */
     suspend fun trackCapitalHistory() {
