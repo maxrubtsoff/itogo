@@ -38,6 +38,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
@@ -76,7 +77,13 @@ fun CapitalChart(
     minSpanFraction: Float = 0.02f,
     range: IntRange? = null,
     marks: List<ChartMark> = emptyList(),
-    markColor: (CapitalPart) -> Color = { color }
+    markColor: (CapitalPart) -> Color = { color },
+    /** Height of the line; the hero's strip draws it lower (U-67). */
+    height: Dp = 150.dp,
+    /** The sums on the dots; off in the strip, where they would not fit. */
+    labels: Boolean = true,
+    /** How much of the axis row is shown (1 — all), for the shrinking hero (U-67). */
+    axisShown: () -> Float = { 1f }
 ) {
     // The band of days a point stands for (F-46) comes in on Motion.NORMAL and goes out the same way.
     val band by animateFloatAsState(if (range != null && range.first < range.last) 1f else 0f, Motion.tween(Motion.NORMAL), label = "band")
@@ -105,8 +112,8 @@ fun CapitalChart(
     val hidden = LocalAmountsHidden.current
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     // Where each sum goes is worked out once per data and size, not in every frame.
-    val spots = remember(points, marks, canvasSize, hidden, density, minSpanFraction) {
-        if (hidden || points.size < 2 || canvasSize.width <= 0) emptyList() else {
+    val spots = remember(points, marks, canvasSize, hidden, density, minSpanFraction, labels) {
+        if (hidden || !labels || points.size < 2 || canvasSize.width <= 0) emptyList() else {
             val layouts = marks.mapIndexedNotNull { i, m -> m.label?.let { i to measurer.measure(it, labelStyle, maxLines = 1, softWrap = false) } }.toMap()
             val plot = plotOf(points, canvasSize.width.toFloat(), canvasSize.height.toFloat(), density, minSpanFraction)
             placeLabels(plot, marks, layouts, canvasSize.width.toFloat(), canvasSize.height.toFloat(), density)
@@ -117,7 +124,7 @@ fun CapitalChart(
         Canvas(
             Modifier
                 .fillMaxWidth()
-                .height(150.dp)
+                .height(height)
                 .onSizeChanged { canvasSize = it }
                 .pointerInput(points, markAt) {
                     detectTapGestures(onPress = { p ->
@@ -187,7 +194,7 @@ fun CapitalChart(
             }
         }
         if (axis.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth().collapseHeight(axisShown).padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 axis.forEach {
                     Text(it, style = MaterialTheme.typography.labelSmall, color = Slitok.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }

@@ -74,6 +74,7 @@ import ru.maxrubtsoff.bankagg.ui.common.BankNote
 import ru.maxrubtsoff.bankagg.ui.common.LinkLine
 import ru.maxrubtsoff.bankagg.ui.common.WasBecomeLine
 import ru.maxrubtsoff.bankagg.ui.common.HistoryLine
+import ru.maxrubtsoff.bankagg.ui.common.collapseHeight
 import ru.maxrubtsoff.bankagg.domain.model.RowKind
 import ru.maxrubtsoff.bankagg.ui.common.EmptyState
 import ru.maxrubtsoff.bankagg.ui.common.GhostButton
@@ -319,6 +320,20 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                     ChartMark(7, CapitalPart.DEPOSITS, MarkShape.RING, -2_000_000L, "−20 000 ₽")
                 )
             )
+
+            Caption("Сжимающийся герой")
+            var strip by remember { mutableStateOf(false) }
+            val stripT by androidx.compose.animation.core.animateFloatAsState(if (strip) 1f else 0f, Motion.tween(Motion.NORMAL), label = "strip")
+            Panel(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    MoneyText("1 284 500 ₽", style = Amounts.Large, color = Slitok.Fg)
+                    Column(Modifier.collapseHeight { 1f - stripT }) {
+                        Text("+13 622 ₽ за месяц", style = MaterialTheme.typography.bodyMedium, color = Slitok.Mint)
+                        PeriodChips(HistoryPeriod.MONTH, onPick = {}, compact = true)
+                    }
+                    SlitokChip(if (strip) "Развернуть" else "Сжать", strip, { strip = !strip })
+                }
+            }
 
             Caption("Строка истории")
             HistoryLine("Новый вклад", "Сбер", 10_000_000, RowKind.GO)

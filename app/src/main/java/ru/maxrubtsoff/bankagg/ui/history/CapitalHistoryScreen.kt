@@ -37,8 +37,17 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.lerp
+import kotlin.math.roundToInt
+import ru.maxrubtsoff.bankagg.domain.model.DayValue
+import ru.maxrubtsoff.bankagg.ui.common.HeroCollapse
+import ru.maxrubtsoff.bankagg.ui.common.Motion
+import ru.maxrubtsoff.bankagg.ui.common.collapseHeight
+import ru.maxrubtsoff.bankagg.ui.common.rememberHeroCollapse
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
 import java.time.YearMonth
 import androidx.compose.runtime.rememberCoroutineScope
@@ -123,7 +132,7 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
     }
     Scaffold(modifier = Modifier.sectionSwipe(pager), topBar = { ScreenHeader("История капитала", onBack) }) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val u = ui
@@ -132,14 +141,13 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
             } else {
                 HistorySections(u, vm, onTap, pager)
             }
-            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
 /** One row of sections, swiped sideways; the period is common to all of them (F-45, B-73). */
 @Composable
-private fun HistorySections(u: HistoryScreenUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit, pager: PagerState) {
+private fun ColumnScope.HistorySections(u: HistoryScreenUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit, pager: PagerState) {
     val sections = u.sections
     // One kept section needs no switch: the total already is that section.
     val swipes = u.kept.size > 1
@@ -154,22 +162,21 @@ private fun HistorySections(u: HistoryScreenUi, vm: CapitalHistoryViewModel, onT
     if (swipes) {
         PagerTabs(sections.map { it?.label ?: "Всё" }, pager) { scope.launch { pager.animateScrollToPage(it) } }
     }
-    SectionPager(pager, swipe = false) { page -> HistoryContent(u.pages[page], vm, onTap) }
+    SectionPager(pager, Modifier.weight(1f), swipe = false) { page -> HistoryContent(u.pages[page], vm, onTap) }
 }
 
 @Composable
 private fun HistoryContent(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { HistoryPage(u, vm, onTap) }
+    Box(Modifier.fillMaxSize()) { HistoryPage(u, vm, onTap) }
 }
 
 @Composable
-private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
+private fun HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (HistoryEvent) -> Unit) {
     // The picked day stays after the finger is gone; a new period starts clean (F-41).
     var picked by rememberSaveable(u.period) { mutableStateOf<Long?>(null) }
-    var scrollTick by remember { mutableIntStateOf(0) }
     var open by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
-    // By key: «d:<day>» a day's caption, a row's id, «m:<month>» a month's header.
-    val requesters = remember { mutableMapOf<String, BringIntoViewRequester>() }
+    // By key: «d:<day>» a day's caption, a row's id, «m:<month>» a month's header; «root» is the list's content.
+    val anchors = remember { mutableMapOf<String, LayoutCoordinates>() }
     val color = u.part?.color() ?: Slitok.Brass2
 
     val change = u.change
@@ -184,74 +191,117 @@ private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, o
     val at = selected?.let { u.series.getOrNull(it) }
     // The days the picked point stands for: a day, or a week on a year and all-time (F-46).
     val span = selected?.let { CapitalHistory.spanAt(u.series, it) }
-    // Let go of the chart: the list moves to what touches the span, or to the nearest day with events
-    // (a folded month opens first).
-    LaunchedEffect(scrollTick) {
-        if (scrollTick == 0 || span == null) return@LaunchedEffect
+    val list = rememberScrollState()
+    val collapse = rememberHeroCollapse()
+    // The finger is still on the chart: the list moves to what touches the span at once (U-67), and the
+    // chart stays where it is. A folded month opens first. Each new day takes over from the one before.
+    LaunchedEffect(span) {
+        if (span == null) return@LaunchedEffect
         val day = CapitalEvents.focusDay(u.events, span) ?: return@LaunchedEffect
-        if (u.months.isEmpty()) {
-            requesters["d:$day"]?.bringIntoView()
-            return@LaunchedEffect
+        val key = if (u.months.isEmpty()) {
+            "d:$day"
+        } else {
+            val month = YearMonth.from(day)
+            if (month.toString() !in open) {
+                open = open + month.toString()
+                withFrameNanos { }
+                withFrameNanos { }
+            }
+            val rows = u.months.firstOrNull { it.month == month }?.rows.orEmpty()
+            val row = HistoryRows.firstTouching(rows, span) ?: rows.firstOrNull { r -> r.sources.any { it.date == day } }
+            if (row != null && row.id in anchors) row.id else "m:$month"
         }
-        val month = YearMonth.from(day)
-        if (month.toString() !in open) {
-            open = open + month.toString()
-            withFrameNanos { }
-            withFrameNanos { }
-        }
-        val rows = u.months.firstOrNull { it.month == month }?.rows.orEmpty()
-        val row = HistoryRows.firstTouching(rows, span) ?: rows.firstOrNull { r -> r.sources.any { it.date == day } }
-        (row?.let { requesters[it.id] } ?: requesters["m:$month"])?.bringIntoView()
+        val root = anchors["root"]?.takeIf { it.isAttached } ?: return@LaunchedEffect
+        val target = anchors[key]?.takeIf { it.isAttached } ?: return@LaunchedEffect
+        val y = (target.positionInRoot().y - root.positionInRoot().y).roundToInt().coerceAtLeast(0)
+        list.animateScrollTo(y, Motion.tween(Motion.FAST))
     }
+    Column(Modifier.fillMaxSize().nestedScroll(collapse.connection)) {
+        Hero(u, change, at, span, selected, collapse, color, onScrub = { picked = u.series[it].date.toEpochDay() }, onPeriod = { picked = null; vm.setPeriod(it) })
+        Spacer(Modifier.height(12.dp))
+        Column(Modifier.weight(1f).verticalScroll(list)) {
+            Column(
+                Modifier.onPlaced { anchors["root"] = it },
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Events(u, span, open, { open = it }, anchors, onReset = { picked = null }, onTap = onTap)
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+/**
+ * The hero with the chart. It shrinks to a strip as the list is scrolled (U-67): the sum and a lower line stay,
+ * the rest folds away by [collapse]; the chart is touched the same way in both.
+ */
+@Composable
+private fun Hero(
+    u: HistoryUi, change: CapitalChange, at: DayValue?, span: DaySpan?, selected: Int?, collapse: HeroCollapse, color: Color,
+    onScrub: (Int) -> Unit, onPeriod: (HistoryPeriod) -> Unit
+) {
+    val t = collapse.fraction
     Panel(Modifier.fillMaxWidth(), radius = 22.dp) {
         Box(Modifier.fillMaxWidth().heroGlow(color)) {
-            Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 12.dp)) {
-                AmountText(Money.ofMinor(at?.minor ?: change.to.minor).format(), style = Amounts.Hero, color = Slitok.Fg, minSize = 20.sp)
-                Spacer(Modifier.height(2.dp))
+            Column(Modifier.padding(start = 18.dp, end = 18.dp, top = lerp(16.dp, 10.dp, t), bottom = lerp(12.dp, 8.dp, t))) {
+                val hero = Amounts.Hero
+                AmountText(
+                    Money.ofMinor(at?.minor ?: change.to.minor).format(),
+                    style = hero.copy(fontSize = lerp(hero.fontSize, 24.sp, t), lineHeight = lerp(hero.lineHeight, 28.sp, t)),
+                    color = Slitok.Fg, minSize = 20.sp
+                )
                 if (at != null && span != null) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         if (span.days == 1) RuDays.dayWeekday(at.date, u.today) else RuDays.span(span.from, span.to, u.today),
                         style = MaterialTheme.typography.labelMedium, color = Slitok.Brass2, maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
-                    val step = CapitalHistory.stepAt(u.series, selected ?: 0)
-                    val word = RuDays.spanWord(span.days)
-                    if (step != null && step != 0L) {
+                }
+                // What the point moved, and the period's change: folds away in the strip.
+                Column(Modifier.collapseHeight { 1f - collapse.fraction }) {
+                    if (at == null) Spacer(Modifier.height(2.dp))
+                    if (at != null && span != null) {
+                        val step = CapitalHistory.stepAt(u.series, selected ?: 0)
+                        val word = RuDays.spanWord(span.days)
+                        if (step != null && step != 0L) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                                MoneyText(
+                                    signedSum(step), style = MaterialTheme.typography.bodyMedium,
+                                    color = if (step > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f, fill = false), compact = MoneyCompact.short(step, signed = true)
+                                )
+                                Text(word, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        } else {
+                            Text("без изменений $word", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+                        }
+                    } else if (change.deltaMinor == 0L) {
+                        Text("без изменений ${u.period.spanWord}", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+                    } else {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
                             MoneyText(
-                                signedSum(step), style = MaterialTheme.typography.bodyMedium,
-                                color = if (step > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f, fill = false), compact = MoneyCompact.short(step, signed = true)
+                                deltaText(change), style = MaterialTheme.typography.bodyMedium,
+                                color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f, fill = false), compact = deltaText(change, compact = true)
                             )
-                            Text(word, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            MoneyText("с ${RuDays.dayMonth(change.from.date, u.today)}", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 2)
                         }
-                    } else {
-                        Text("без изменений $word", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
-                    }
-                } else if (change.deltaMinor == 0L) {
-                    Text("без изменений ${u.period.spanWord}", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-                        MoneyText(
-                            deltaText(change), style = MaterialTheme.typography.bodyMedium,
-                            color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f, fill = false), compact = deltaText(change, compact = true)
-                        )
-                        MoneyText("с ${RuDays.dayMonth(change.from.date, u.today)}", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 2)
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(lerp(12.dp, 6.dp, t)))
                 CapitalChart(points = u.series.map { it.minor }, axis = axisOf(u), selected = selected,
-                    onScrub = { picked = u.series[it].date.toEpochDay() }, onRelease = { scrollTick++ }, color = color,
+                    onScrub = onScrub, onRelease = {}, color = color,
                     marks = u.marks, markColor = { it.color() },
-                    range = if (selected != null && span != null && span.days > 1) (selected - 1)..selected else null
+                    range = if (selected != null && span != null && span.days > 1) (selected - 1)..selected else null,
+                    height = lerp(150.dp, 64.dp, t), labels = t < 0.02f, axisShown = { 1f - collapse.fraction }
                 )
-                Spacer(Modifier.height(10.dp))
-                PeriodChips(u.period, onPick = { picked = null; vm.setPeriod(it) }, compact = true)
+                Column(Modifier.collapseHeight { 1f - collapse.fraction }) {
+                    Spacer(Modifier.height(10.dp))
+                    PeriodChips(u.period, onPick = onPeriod, compact = true)
+                }
             }
         }
     }
-
-    Events(u, span, open, { open = it }, requesters, onReset = { picked = null }, onTap = onTap)
 }
 
 @Composable
@@ -260,7 +310,7 @@ private fun Events(
     span: DaySpan?,
     open: List<String>,
     setOpen: (List<String>) -> Unit,
-    requesters: MutableMap<String, BringIntoViewRequester>,
+    anchors: MutableMap<String, LayoutCoordinates>,
     onReset: () -> Unit,
     onTap: (HistoryEvent) -> Unit
 ) {
@@ -273,7 +323,7 @@ private fun Events(
             SlitokChip("Сбросить", selected = false, onClick = onReset, compact = true)
         }
     }
-    fun mark(key: String) = Modifier.bringIntoViewRequester(requesters.getOrPut(key) { BringIntoViewRequester() })
+    fun mark(key: String) = Modifier.onPlaced { anchors[key] = it }
     val toggle: (String) -> Unit = { id -> groupsOpen = if (id in groupsOpen) groupsOpen - id else groupsOpen + id }
     when {
         events.isEmpty() -> Text(
