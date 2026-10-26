@@ -74,7 +74,7 @@ fun NotificationAccessBanner(
             Icon(Icons.Filled.NotificationsOff, contentDescription = null, tint = Slitok.Brass2, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))
             Text(
-                text,
+                text.replace(" — ", "00A0— "), // non-breaking: a line never starts with the dash (B-105)
                 style = MaterialTheme.typography.bodyMedium,
                 color = Slitok.Fg
             )
