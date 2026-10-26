@@ -23,10 +23,11 @@ class App : Application(), ImageLoaderFactory {
         super.onCreate()
         container = AppContainer(this)
         instance = this
+        // First: opening the database decides whether a missing Keystore key may be made anew (B-91).
+        val banks = container.banks   // fills the bank directory before anything reads a bank
         // Saved logos are on screen from the first frame; a stale set refreshes in the background.
         container.bankIcons.start()
         // Banks chosen before F-22 become the user's banks, once.
-        val banks = container.banks   // fills the bank directory before anything reads a bank
         MainScope().launch { banks.migrate() }
         // Candidates noticed by the old, looser check that aren't banks go away (B-25).
         MainScope().launch { container.newBankAnswers.sweep() }

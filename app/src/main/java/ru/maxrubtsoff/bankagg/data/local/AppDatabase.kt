@@ -136,12 +136,11 @@ abstract class AppDatabase : RoomDatabase() {
         fun get(context: Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: run {
-                    val passphrase = DatabaseCipher.prepare(context.applicationContext, NAME)
-                    if (passphrase == null) {
-                        // An encrypted file whose key is gone can't be opened by anyone: start
-                        // empty rather than crash on every launch; the backup brings data back.
-                        val file = context.getDatabasePath(NAME)
-                        if (file.exists() && !DatabaseCipher.isPlain(file)) context.deleteDatabase(NAME)
+                    val prepared = DatabaseCipher.prepare(context.applicationContext, NAME)
+                    val passphrase = (prepared as? DatabaseCipher.Prepared.Ready)?.passphrase
+                    if (prepared is DatabaseCipher.Prepared.Blocked) {
+                        // Until the next commit the old way: start empty (the file is replaced).
+                        context.deleteDatabase(NAME)
                     }
                     Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, NAME)
                         .apply { passphrase?.let { openHelperFactory(SupportOpenHelperFactory(it)) } }
