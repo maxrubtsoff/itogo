@@ -32,6 +32,14 @@ class SettingsStore(context: Context) : SettingsRepository {
         prefs.edit().putBoolean(KEY_INTRO_SHOWN, true).apply()
     }
 
+    // ---- the saved days filled once for a switched-off section (B-101) ----
+
+    override suspend fun partsBackfilled(): Boolean = prefs.getBoolean(KEY_PARTS_BACKFILLED, false)
+
+    override suspend fun markPartsBackfilled() {
+        prefs.edit().putBoolean(KEY_PARTS_BACKFILLED, true).apply()
+    }
+
     // ---- the parser the log was read with (B-45, B-46) ----
 
     override suspend fun repairedParserVersion(): Int = prefs.getInt(KEY_PARSER_VERSION, 0)
@@ -258,5 +266,6 @@ class SettingsStore(context: Context) : SettingsRepository {
         const val KEY_TOURS_DONE = "tours_done"
         const val KEY_PARSER_VERSION = "parser_version"
         const val KEY_INTRO_SHOWN = "intro_shown"
+        const val KEY_PARTS_BACKFILLED = "parts_backfilled"
     }
 }

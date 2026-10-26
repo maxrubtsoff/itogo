@@ -61,6 +61,11 @@ interface SettingsRepository : PinStore {
 
     suspend fun markIntroShown() {}
 
+    /** The days saved without a switched-off section were filled once (B-101). */
+    suspend fun partsBackfilled(): Boolean = true
+
+    suspend fun markPartsBackfilled() {}
+
     val toursDone: Flow<Set<String>> get() = kotlinx.coroutines.flow.flowOf(emptySet())
     suspend fun markTourDone(key: String) {}
 

@@ -80,6 +80,33 @@ object CapitalReconstruction {
         return out
     }
 
+    /**
+     * Fills the parts saved as nothing (B-101: a section switched off in «Функции» was
+     * kept as 0) with the rebuilt [rebuilt] value of that day. Only days before [today]
+     * and only where the saved part is 0 and the rebuilt one is not: a second pass
+     * finds nothing to change. Cash was never kept before, so it is filled only from
+     * [cashSince] on (null — never). Returns the changed points only.
+     */
+    fun fillEmptyParts(
+        saved: List<CapitalPoint>, rebuilt: List<CapitalPoint>, included: Set<CapitalPart>,
+        today: LocalDate, cashSince: LocalDate?
+    ): List<CapitalPoint> {
+        val byDay = rebuilt.associateBy { it.date }
+        return saved.mapNotNull { p ->
+            if (!p.date.isBefore(today)) return@mapNotNull null
+            val then = byDay[p.date] ?: return@mapNotNull null
+            val fill = CapitalPart.entries.filter { part ->
+                (p.parts[part] ?: 0L) == 0L && (then.parts[part] ?: 0L) != 0L &&
+                    (part != CapitalPart.CASH || (cashSince != null && !p.date.isBefore(cashSince)))
+            }
+            if (fill.isEmpty()) null
+            else p.copy(
+                totalMinor = p.totalMinor + fill.filter { it in included }.sumOf { then.parts[it] ?: 0L },
+                parts = p.parts + fill.associateWith { then.parts[it] ?: 0L }
+            )
+        }
+    }
+
     /** Rubles the currency deals are worth on [day]: what is held after them, at the rate of the day. */
     internal fun fxOn(fxOps: List<FxOperation>, rates: List<FxRate>, day: LocalDate): Long =
         fxOps.map { it.currency }.distinct().sumOf { code ->

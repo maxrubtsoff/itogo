@@ -36,6 +36,14 @@ object CapitalHistory {
     /** Most points the chart gets; longer series are thinned (keeps first and last). */
     const val MAX_POINTS = 120
 
+    /**
+     * The total of every day made from the saved parts of [included] (B-101): the stored
+     * total was summed with the parts counted on that day, so switching a part would show
+     * as a step. The parts themselves stay as they are.
+     */
+    fun totalled(points: List<CapitalPoint>, included: Set<CapitalPart>): List<CapitalPoint> =
+        points.map { p -> p.copy(totalMinor = included.sumOf { p.parts[it] ?: 0L }) }
+
     /** Pages of the history: the total (null) first, then each kept part (F-45). */
     fun sections(kept: List<CapitalPart>): List<CapitalPart?> = listOf<CapitalPart?>(null) + kept
 

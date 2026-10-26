@@ -43,20 +43,20 @@ class BuildCapitalHistory(
 
         val foreign = accounts.any { it.currency != Currencies.RUB }
         val first = CapitalReconstruction.firstDay(transactions, allDeposits, ops, balance, day)
-        if ((ops.isNotEmpty() || foreign) && first != null) fetchPastRates(first, day)
+        if ((ops.isNotEmpty() || foreign) && first != null) fetchPastRates(rates, source, first, day)
 
         val included = settings.capitalParts.first() intersect settings.features.first().capitalParts
         val points = CapitalReconstruction.build(accounts, transactions, allDeposits, ops, rates.all(), balance, included, day)
         history.upsertAll(points)
     }
+}
 
-    /** Weekly samples back to [from]; the first failure ends it quietly (the nearest known rate is used instead). */
-    private suspend fun fetchPastRates(from: java.time.LocalDate, to: java.time.LocalDate) {
-        val known = rates.all().map { it.date }.toSet()
-        for (d in CapitalReconstruction.rateDays(from, to).reversed()) {
-            if (d in known) continue
-            val got = runCatching { source.fetch(d) }.getOrNull() ?: return
-            rates.save(got)
-        }
+/** Weekly samples of the CBR rate back to [from]; the first failure ends it quietly (the nearest known rate is used instead). */
+internal suspend fun fetchPastRates(rates: RatesRepository, source: RatesSource, from: java.time.LocalDate, to: java.time.LocalDate) {
+    val known = rates.all().map { it.date }.toSet()
+    for (d in CapitalReconstruction.rateDays(from, to).reversed()) {
+        if (d in known) continue
+        val got = runCatching { source.fetch(d) }.getOrNull() ?: return
+        rates.save(got)
     }
 }

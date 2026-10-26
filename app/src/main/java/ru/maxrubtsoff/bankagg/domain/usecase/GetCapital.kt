@@ -22,7 +22,8 @@ class GetCapital(
     private val settings: SettingsRepository,
     private val today: Today
 ) {
-    operator fun invoke(): Flow<CapitalSnapshot> {
+    /** [allParts]: keep the values of sections switched off in «Функции» too — for the saved days (B-101). */
+    operator fun invoke(allParts: Boolean = false): Flow<CapitalSnapshot> {
         val money = combine(ledger.observeAccounts(), deposits.observeAll(), fx.observeAll(), rates.observeAll(), cash.observe()) {
             a, d, f, r, c -> Inputs(a, d, f, r, c)
         }
@@ -30,7 +31,7 @@ class GetCapital(
         return combine(money, settings.capitalParts, settings.features, today.date) { i, parts, features, day ->
             val kept = features.capitalParts
             val snap = CapitalCalculator.compute(i.accounts, i.deposits, i.fx, i.rates, i.cash, parts intersect kept, day)
-            snap.copy(parts = snap.parts.filter { it.part in kept })
+            if (allParts) snap else snap.copy(parts = snap.parts.filter { it.part in kept })
         }
     }
 

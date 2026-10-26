@@ -45,6 +45,8 @@ import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.usecase.GetCapital
+import ru.maxrubtsoff.bankagg.domain.usecase.BackfillCapitalParts
+import ru.maxrubtsoff.bankagg.domain.usecase.CapitalDaysScope
 import ru.maxrubtsoff.bankagg.domain.usecase.HistoryLock
 import ru.maxrubtsoff.bankagg.domain.usecase.HistoryOperations
 import ru.maxrubtsoff.bankagg.domain.usecase.BuildCapitalHistory
@@ -185,6 +187,8 @@ class AppContainer(context: Context) {
 
     /** The capital's daily points (F-36). */
     val capitalHistory: CapitalHistoryRepository by lazy { CapitalHistoryRepositoryImpl(db.capitalSnapshotDao()) }
+    /** The days as the screens read them: totals of the parts counted now (B-101). */
+    val capitalDays: CapitalHistoryRepository by lazy { CapitalDaysScope(capitalHistory, settings) }
     /** One lock for every writer of the saved days. */
     val historyLock by lazy { HistoryLock() }
     val historyOperations by lazy {
@@ -198,11 +202,16 @@ class AppContainer(context: Context) {
         BuildCapitalHistory(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today)
     }
 
+    val backfillCapitalParts by lazy {
+        BackfillCapitalParts(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today, historyLock)
+    }
+
     val syncCapitalPast by lazy { SyncCapitalPast(capitalHistory, depositRepository, fxRepository, ratesRepository, settings, today, historyLock) }
 
     /** Rebuilds the past once when the history is empty, then keeps today's point up to date. */
     suspend fun trackCapitalHistory() {
         runCatching { buildCapitalHistory() }
+        runCatching { backfillCapitalParts() }
         coroutineScope {
             launch { syncCapitalPast.track() }
             recordCapitalDay.track()
