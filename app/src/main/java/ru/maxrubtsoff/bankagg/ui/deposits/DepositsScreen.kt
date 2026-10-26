@@ -227,7 +227,9 @@ private fun HeroSummary(summary: DepositMath.Summary, extra: @Composable () -> U
                         withStyle(SpanStyle(color = Slitok.Mint, fontWeight = FontWeight.SemiBold)) {
                             append(signedMoney(summary.dailyAccrual))
                         }
-                        append(" сегодня")
+                        withStyle(SpanStyle(fontSize = MaterialTheme.typography.bodySmall.fontSize, color = Slitok.Muted)) {
+                            append(" сегодня")
+                        }
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = Slitok.Muted

@@ -204,7 +204,7 @@ private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, o
                             color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f, fill = false), compact = deltaText(change, compact = true)
                         )
-                        MoneyText("с ${RuDays.dayMonth(change.from.date, u.today)}", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 2)
+                        MoneyText("с ${RuDays.dayMonth(change.from.date, u.today)}", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 2)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
