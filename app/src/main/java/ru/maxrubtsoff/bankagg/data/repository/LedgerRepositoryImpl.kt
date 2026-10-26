@@ -62,6 +62,8 @@ class LedgerRepositoryImpl(
 
     override suspend fun transaction(id: String): Transaction? = dao.transaction(id)?.toDomain()
 
+    override suspend fun updateTransaction(tx: Transaction) = dao.replaceTransaction(tx.toEntity())
+
     override suspend fun deleteTransaction(id: String) = dao.deleteTransaction(id)
 
     override suspend fun setCountedBalance(accountId: String, balanceMinor: Long, estimated: Boolean) =

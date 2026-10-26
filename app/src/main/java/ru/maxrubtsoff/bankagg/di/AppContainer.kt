@@ -44,6 +44,7 @@ import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.usecase.GetCapital
+import ru.maxrubtsoff.bankagg.domain.usecase.HistoryOperations
 import ru.maxrubtsoff.bankagg.domain.usecase.BuildCapitalHistory
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordCapitalDay
 import ru.maxrubtsoff.bankagg.domain.usecase.SyncCapitalPast
@@ -181,6 +182,12 @@ class AppContainer(context: Context) {
 
     /** The capital's daily points (F-36). */
     val capitalHistory: CapitalHistoryRepository by lazy { CapitalHistoryRepositoryImpl(db.capitalSnapshotDao()) }
+    val historyOperations by lazy {
+        HistoryOperations(
+            ledgerRepository, eventRepository, cashRepository, fxRepository, depositRepository, capitalHistory,
+            ratesRepository, settings, getCapital, transactionRunner, today
+        )
+    }
     val recordCapitalDay by lazy { RecordCapitalDay(getCapital, capitalHistory) }
     val buildCapitalHistory by lazy {
         BuildCapitalHistory(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today)

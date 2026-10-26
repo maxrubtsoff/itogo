@@ -38,7 +38,8 @@ class ViewModelFactory(
         modelClass.isAssignableFrom(CapitalHistoryViewModel::class.java) ->
             CapitalHistoryViewModel(
                 container.capitalHistory, container.ledgerRepository, container.fxRepository, container.ratesRepository,
-                container.depositRepository, container.cashRepository, container.settings, container.today
+                container.depositRepository, container.cashRepository, container.settings, container.today,
+                container.historyOperations, container.undo
             ) as T
         modelClass.isAssignableFrom(StorageErrorViewModel::class.java) ->
             StorageErrorViewModel(

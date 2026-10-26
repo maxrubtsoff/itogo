@@ -8,6 +8,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import ru.maxrubtsoff.bankagg.domain.model.DeletePreview
+import ru.maxrubtsoff.bankagg.domain.model.HistoryRef
+import ru.maxrubtsoff.bankagg.domain.model.OperationForm
+import ru.maxrubtsoff.bankagg.domain.usecase.HistoryOperations
+import ru.maxrubtsoff.bankagg.domain.usecase.OperationDetail
+import ru.maxrubtsoff.bankagg.ui.common.UndoCenter
 import ru.maxrubtsoff.bankagg.domain.model.Account
 import ru.maxrubtsoff.bankagg.domain.model.CapitalChange
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPoint
@@ -46,7 +53,9 @@ data class HistoryScreenUi(
     val kept: List<CapitalPart>,
     val today: LocalDate,
     val pages: List<HistoryUi>,
-    val aliveDeposits: Set<String>
+    val aliveDeposits: Set<String>,
+    /** The journal is on: a notification can be opened from the sheet of an operation (F-51). */
+    val showLog: Boolean = false
 ) {
     val sections: List<CapitalPart?> get() = CapitalHistory.sections(kept)
 }
@@ -80,7 +89,9 @@ class CapitalHistoryViewModel(
     deposits: DepositRepository,
     cash: CashRepository,
     settings: SettingsRepository,
-    private val today: Today
+    private val today: Today,
+    private val operations: HistoryOperations,
+    private val undo: UndoCenter
 ) : ViewModel() {
 
     private val _period = MutableStateFlow(HistoryPeriod.MONTH)
@@ -118,8 +129,28 @@ class CapitalHistoryViewModel(
                 months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList()
             )
         }
-        HistoryScreenUi(period, part, kept, day, pages, i.deps.map { it.id }.toSet())
+        HistoryScreenUi(period, part, kept, day, pages, i.deps.map { it.id }.toSet(), features.showCaptureLog)
     }.stateIn<HistoryScreenUi?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The sheet of an operation (F-51): everything it shows besides the line. */
+    suspend fun detail(event: HistoryEvent): OperationDetail = operations.detail(event)
+
+    /** «Было → станет» of a deletion. */
+    suspend fun preview(refs: List<HistoryRef>): DeletePreview = operations.preview(refs)
+
+    /** Null when the deletion may go, else why not. */
+    suspend fun check(refs: List<HistoryRef>): String? = operations.check(refs)
+
+    /** Deletes at once and offers «Вернуть»; the balance, chart and capital follow by themselves. */
+    fun delete(refs: List<HistoryRef>) {
+        viewModelScope.launch {
+            val removed = operations.delete(refs)
+            undo.offer(if (refs.size > 1) "Операции удалены" else "Операция удалена", restore = { operations.restore(removed) })
+        }
+    }
+
+    /** Null when saved, else why not. */
+    suspend fun save(ref: HistoryRef, form: OperationForm): String? = operations.save(ref, form)
 
     private data class Inputs(
         val days: List<CapitalPoint>,

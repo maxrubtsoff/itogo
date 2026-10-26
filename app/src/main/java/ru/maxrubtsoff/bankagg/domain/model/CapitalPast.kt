@@ -62,6 +62,25 @@ object CapitalPast {
         }
     }
 
+    /**
+     * A deleted or corrected operation or cash edit (F-51): each [shifts] entry moves its part on every saved day
+     * from its date on, and its date gets a point when it has none. A delta, like [withFxChange].
+     */
+    fun withShifts(points: List<CapitalPoint>, shifts: List<CapitalShift>, included: Set<CapitalPart>, today: LocalDate): List<CapitalPoint> {
+        if (points.isEmpty() || shifts.isEmpty()) return emptyList()
+        val sorted = points.sortedBy { it.date }
+        val added = newDays(sorted, shifts.map { it.from }, today)
+        return (sorted.filter { inWindow(it.date, today) } + added).mapNotNull { p ->
+            val mine = shifts.filter { !it.from.isAfter(p.date) }
+            val byPart = mine.groupBy { it.part }.mapValues { (_, l) -> l.sumOf { it.deltaMinor } }
+            if (byPart.values.all { it == 0L }) return@mapNotNull if (p in added) p else null
+            p.copy(
+                totalMinor = p.totalMinor + byPart.filterKeys { it in included }.values.sum(),
+                parts = p.parts + byPart.map { (part, d) -> part to (p.parts[part] ?: 0L) + d }
+            )
+        }
+    }
+
     private fun inWindow(day: LocalDate, today: LocalDate) =
         day.isBefore(today) && !day.isBefore(today.minusDays(CapitalReconstruction.MAX_DAYS.toLong()))
 

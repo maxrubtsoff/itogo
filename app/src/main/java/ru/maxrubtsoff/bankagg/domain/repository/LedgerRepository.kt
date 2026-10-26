@@ -35,6 +35,9 @@ interface LedgerRepository {
     /** One operation by id — the log's re-parsing looks up what it recorded (B-45). */
     suspend fun transaction(id: String): Transaction?
 
+    /** Rewrites an operation corrected by hand, same id (F-51). */
+    suspend fun updateTransaction(tx: Transaction): Unit = throw UnsupportedOperationException()
+
     /** Drops one operation: its notification turned out not to be an operation (B-46). */
     suspend fun deleteTransaction(id: String)
 

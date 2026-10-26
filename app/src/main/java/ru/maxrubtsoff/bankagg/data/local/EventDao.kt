@@ -22,6 +22,9 @@ interface EventDao {
     @Query("SELECT * FROM events ORDER BY postedAt DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<EventEntity>>
 
+    @Query("SELECT * FROM events WHERE dedupHash = :hash LIMIT 1")
+    suspend fun byHash(hash: String): EventEntity?
+
     @Query("SELECT * FROM events ORDER BY postedAt DESC")
     suspend fun all(): List<EventEntity>
 

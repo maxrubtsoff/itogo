@@ -833,7 +833,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                                 is HistoryTarget.Section -> Routes.capital(t.part)
                             }
                         )
-                    }
+                    },
+                    onOpenLog = { nav.navigate(Routes.SETTINGS_LOG) }
                 )
             }
             composable(Routes.SETTINGS) {

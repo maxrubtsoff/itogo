@@ -47,6 +47,10 @@ interface LedgerDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun transaction(id: String): TransactionEntity?
 
+    /** F-51: an operation corrected by hand keeps its id, so the notification it came from stays linked. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun replaceTransaction(tx: TransactionEntity)
+
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun deleteTransaction(id: String)
 

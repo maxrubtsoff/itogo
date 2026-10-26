@@ -23,8 +23,18 @@ data class HistoryEvent(
     /** The bank of a part that is a deposit, for its icon (F-47). */
     val bank: BankBrand? = null,
     /** A currency deal's sum in its own currency (F-48). */
-    val foreign: ForeignAmount? = null
+    val foreign: ForeignAmount? = null,
+    /** The record behind the line, for the sheet of the operation (F-51); null — nothing of its own to open. */
+    val ref: HistoryRef? = null
 )
+
+/** The stored record an event stands for (F-51): what the sheet of an operation edits and deletes. */
+sealed interface HistoryRef {
+    data class Tx(val id: String) : HistoryRef
+    data class Cash(val atMs: Long) : HistoryRef
+    data class TopUp(val depositId: String, val topUpId: String) : HistoryRef
+    data class Fx(val id: String) : HistoryRef
+}
 
 /** What an event is, so the list can tell them apart and the screen can lead to the object. */
 enum class HistoryKind {
@@ -179,7 +189,8 @@ object CapitalEvents {
                     TransactionKind.UNKNOWN -> HistoryKind.TRANSACTION
                 },
                 target = target,
-                foreign = if (foreignOp) ForeignAmount(t.currency, t.amount.minor) else null
+                foreign = if (foreignOp) ForeignAmount(t.currency, t.amount.minor) else null,
+                ref = HistoryRef.Tx(t.id)
             )
         }
         fxOps.forEach { o ->
@@ -193,7 +204,8 @@ object CapitalEvents {
                 // The change of the «Валюта» part, in rubles (as in [moved]'s `dealt`).
                 if (o.kind == FxKind.BUY) o.rubMinor else -o.rubMinor,
                 kind = if (o.kind == FxKind.BUY) HistoryKind.FX_BUY else HistoryKind.FX_SELL, target = HistoryTarget.Currency(o.currency),
-                foreign = ForeignAmount(o.currency, if (o.kind == FxKind.BUY) o.amountMinor else -o.amountMinor)
+                foreign = ForeignAmount(o.currency, if (o.kind == FxKind.BUY) o.amountMinor else -o.amountMinor),
+                ref = HistoryRef.Fx(o.id)
             )
         }
         deposits.forEach { d ->
@@ -201,13 +213,13 @@ object CapitalEvents {
             val to = HistoryTarget.Deposit(d.id)
             out += HistoryEvent(d.startDate, CapitalPart.DEPOSITS, "Новый вклад", name, d.principal.minor, kind = HistoryKind.DEPOSIT_OPEN, target = to, bank = d.brand)
             d.topUps.forEach {
-                out += HistoryEvent(it.date, CapitalPart.DEPOSITS, "Пополнение вклада", name, it.amount.minor, kind = HistoryKind.DEPOSIT_TOPUP, target = to, bank = d.brand)
+                out += HistoryEvent(it.date, CapitalPart.DEPOSITS, "Пополнение вклада", name, it.amount.minor, kind = HistoryKind.DEPOSIT_TOPUP, target = to, bank = d.brand, ref = HistoryRef.TopUp(d.id, it.id))
             }
             if (d.endDate.isBefore(today)) out += HistoryEvent(d.endDate, CapitalPart.DEPOSITS, "Вклад закрыт", name, -DepositMath.valueOn(d, d.endDate), kind = HistoryKind.DEPOSIT_CLOSE, target = to, bank = d.brand)
         }
         // F-48: every hand edit is an event with its delta; the lone «updatedAt» one is for cash edited before the log.
         cashChanges.forEach { c ->
-            out += HistoryEvent(dayOf(c.atMs, zone), CapitalPart.CASH, "Наличные", "изменили вручную", c.delta.minor, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH))
+            out += HistoryEvent(dayOf(c.atMs, zone), CapitalPart.CASH, "Наличные", "изменили вручную", c.delta.minor, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = HistoryRef.Cash(c.atMs))
         }
         if (cash != null && cash.updatedAt > 0L && cashChanges.none { it.atMs == cash.updatedAt }) {
             out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", null, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH))

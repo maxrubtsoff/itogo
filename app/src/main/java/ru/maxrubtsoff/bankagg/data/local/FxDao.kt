@@ -69,6 +69,12 @@ interface FxDao {
     @Query("SELECT * FROM cash_changes ORDER BY atMs, id")
     suspend fun cashChanges(): List<CashChangeEntity>
 
+    @Query("SELECT * FROM cash_changes WHERE atMs = :atMs LIMIT 1")
+    suspend fun cashChangeAt(atMs: Long): CashChangeEntity?
+
+    @Query("DELETE FROM cash_changes WHERE atMs = :atMs")
+    suspend fun deleteCashChangeAt(atMs: Long)
+
     @Query("DELETE FROM cash_changes")
     suspend fun clearCashChanges()
 }

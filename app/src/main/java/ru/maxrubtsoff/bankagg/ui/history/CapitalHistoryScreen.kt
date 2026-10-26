@@ -101,29 +101,17 @@ import java.time.LocalDate
  * [partArg] is the part the person came from (a section's hero), null — the total.
  */
 @Composable
-fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: () -> Unit, onOpenTarget: (HistoryTarget) -> Unit) {
+fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: () -> Unit, onOpenTarget: (HistoryTarget) -> Unit, onOpenLog: () -> Unit) {
     LaunchedEffect(partArg) { vm.open(CapitalPart.fromKey(partArg)) }
     val ui by vm.state.collectAsStateWithLifecycle()
-    // A deposit that is gone has no screen: its event opens a sheet instead (F-44).
-    var gone by remember { mutableStateOf<HistoryEvent?>(null) }
-    val onTap: (HistoryEvent) -> Unit = { e ->
-        val t = e.target
-        val alive = ui?.aliveDeposits.orEmpty()
-        if (t != null) {
-            if (t is HistoryTarget.Deposit && t.id !in alive) gone = e else onOpenTarget(t)
-        }
-    }
-    gone?.let { e ->
-        SlitokSheet(onDismiss = { gone = null }) {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(e.title, style = MaterialTheme.typography.titleMedium, color = Slitok.Fg)
-                e.subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted) }
-                e.amountMinor?.let {
-                    MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg, compact = MoneyCompact.short(it, signed = true))
-                }
-                Text("Этого вклада больше нет", style = MaterialTheme.typography.bodySmall, color = Slitok.Faint)
-            }
-        }
+    // A tap on a line opens the sheet of the operation; the way to the object is inside it (F-51).
+    var sheet by remember { mutableStateOf<HistoryEvent?>(null) }
+    val onTap: (HistoryEvent) -> Unit = { e -> sheet = e }
+    sheet?.let { e ->
+        OperationSheet(
+            e, vm, ui?.today ?: LocalDate.now(), ui?.showLog == true, ui?.aliveDeposits.orEmpty(),
+            onDismiss = { sheet = null }, onOpenTarget = onOpenTarget, onOpenLog = onOpenLog
+        )
     }
 
     // The pager lives here so the swipe can take the whole screen, header and empty space included (B-75).

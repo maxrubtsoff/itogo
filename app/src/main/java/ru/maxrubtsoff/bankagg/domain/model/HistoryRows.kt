@@ -10,7 +10,8 @@ object HistoryRows {
 
     fun kindOf(e: HistoryEvent): RowKind = when {
         e.parts.isNotEmpty() -> RowKind.OPEN
-        e.target != null -> RowKind.GO
+        // A tap opens the sheet of the operation (F-51); the way to the object is inside it.
+        e.target != null || e.ref != null -> RowKind.GO
         else -> RowKind.SUM
     }
 
@@ -22,7 +23,7 @@ object HistoryRows {
 
     /** Ruble spendings and transfers are only a sum; a group with a currency child opens. */
     fun groupKind(eventKind: HistoryKind, children: List<HistoryEvent>): RowKind =
-        if (eventKind in SUMMED && children.all { it.target == null }) RowKind.SUM else RowKind.OPEN
+        if (eventKind in SUMMED && children.all { it.target == null && it.ref == null }) RowKind.SUM else RowKind.OPEN
 
     private val SUMMED = setOf(HistoryKind.SPEND, HistoryKind.TRANSFER, HistoryKind.TRANSACTION)
 

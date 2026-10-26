@@ -419,6 +419,14 @@ footer { color: var(--faint); font-size: 12px; line-height: 18px; border-top: 1p
 <section id="principles">
   <h2>Принципы</h2>
   <div class="grid">
+    <div class="card">
+      <h3>Шторка операции: уведомление банка <span class="st new">новое</span> <span class="tag n">F-51</span></h3>
+      <div class="stage"><div style="width:100%">
+<div style="background:var(--inset);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px"><div style="flex:1;font:400 14px/20px var(--text);color:var(--fg)">Перевод <span style="color:var(--brass2);background:rgba(215,167,74,.15);font-weight:600">20 260 000 ₽</span> от Ивана. Баланс 5 000 ₽</div><span style="color:var(--muted)">›</span></div>
+<div style="display:flex;gap:8px;padding:10px 0;font:400 14px/20px var(--text)"><span style="flex:1;color:var(--muted)">Счета</span><span style="color:var(--muted)">120 000 ₽</span><span style="color:var(--faint)">→</span><span style="color:var(--fg);font-weight:600">100 000 ₽</span></div>
+      </div></div>
+      <p class="note"><span class="code">BankNote</span> — текст банка целиком, сумма подсвечена, вся плашка ведёт в журнал стрелкой без надписи. <span class="code">WasBecomeLine</span> — «было → станет». <span class="code">LinkLine</span> — строка со стрелкой к объекту.</p>
+    </div>
     <div class="card"><h3>Одна главная цифра</h3><p class="note">На экране одна-две крупные суммы, остальные тише или за раскрытием. Копейки тусклее рублей, в крупных суммах ещё и мельче. Если цифру можно не показывать — не показываем.</p></div>
     <div class="card"><h3>Цвет — только со смыслом</h3><p class="note">Латунь — главное действие и выбранное. Мята — доход и начисления. Коралл — опасное. Остальные суммы — обычным цветом текста. Одна величина везде одного цвета.</p></div>
     <div class="card"><h3>Один путь к действию</h3><p class="note">Каждое действие доступно одним способом. Долгое нажатие — только для быстрого действия, которого нет на поверхности.</p></div>

@@ -13,6 +13,7 @@ import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.DepositMath
 import ru.maxrubtsoff.bankagg.domain.model.DepositTopUp
 import ru.maxrubtsoff.bankagg.domain.model.HistoryKind
+import ru.maxrubtsoff.bankagg.domain.model.HistoryRef
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRow
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRows
 import ru.maxrubtsoff.bankagg.domain.model.RowKind
@@ -332,7 +333,8 @@ class CapitalEventsTest {
         assertEquals(-400L, g.totalMinor)
         assertEquals("Списания", g.title)
         assertEquals("2 операции", g.subtitle)
-        assertEquals(RowKind.SUM, g.rowKind)
+        // F-51: its operations open the sheet, so the group opens into them.
+        assertEquals(RowKind.OPEN, g.rowKind)
     }
 
     @Test fun singleSpendStaysSingle() {
@@ -394,13 +396,15 @@ class CapitalEventsTest {
         val plain = ev(d1)
         assertEquals(RowKind.SUM, HistoryRows.kindOf(plain))
         assertEquals(RowKind.GO, HistoryRows.kindOf(plain.copy(target = HistoryTarget.Currency("USD"))))
+        // F-51: a line with a record of its own opens its sheet.
+        assertEquals(RowKind.GO, HistoryRows.kindOf(plain.copy(ref = HistoryRef.Tx("t"))))
         assertEquals(RowKind.OPEN, HistoryRows.kindOf(plain.copy(target = HistoryTarget.Currency("USD"), parts = listOf(plain))))
     }
 
     @Test fun transferGroupIsSum() {
         val g = dayRows(eventsOf(op("1", "a", -300, TransactionKind.TRANSFER, who = "Иван"), op("2", "a", -400, TransactionKind.TRANSFER, who = "Анна"))).single() as HistoryRow.Group
         assertEquals("Переводы", g.title)
-        assertEquals(RowKind.SUM, g.rowKind)
+        assertEquals(RowKind.OPEN, g.rowKind)
     }
 
     @Test fun currencySpendGroupOpens() {
