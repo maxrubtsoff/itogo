@@ -79,6 +79,11 @@ object NotificationParser {
         RegexOption.IGNORE_CASE
     )
 
+    /** A phone number ("+7 926 263-45-67", "89262634567") — neither a sign nor an amount (B-83). */
+    private val PHONE = Regex(
+        """(?<![\d+])(?:\+7|8)[  \-(]*\d{3}[  \-)]*\d{3}[  \-]*\d{2}[  \-]*\d{2}(?!\d)"""
+    )
+
     private val NAME_INITIAL = Regex("""\b([А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.)""")
     private val NAME_FULL = Regex("""\b([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\b""")
 
@@ -139,7 +144,7 @@ object NotificationParser {
     fun parse(title: String?, text: String, defaultCurrency: String? = Currencies.RUB): ParsedOp? {
         val blob = "${title ?: ""} $text".trim()
         if (blob.isEmpty()) return null
-        val clean = MASK.replace(blob) { " ".repeat(it.value.length) }
+        val clean = MASK.replace(PHONE.replace(blob) { " ".repeat(it.value.length) }) { " ".repeat(it.value.length) }
 
         val low = clean.lowercase()
         if (isPromo(low)) return null
@@ -148,10 +153,10 @@ object NotificationParser {
         val counterparty = counterparty(text)
         // No direction — no operation: a push without an operation sign is an
         // advertisement, a balance notice or something else (B-45, B-46).
-        val direction = detectDirection(low, clean, kind, counterparty) ?: return null
+        val hits = hits(clean)
+        val direction = detectDirection(low, clean, kind, counterparty, hits) ?: return null
 
         val balanceAt = BALANCE_MARKERS.mapNotNull { m -> low.indexOf(m).takeIf { it >= 0 } }.minOrNull()
-        val hits = hits(clean)
 
         // The operation amount is the first currency-marked number before the
         // balance clause; a number without a mark is not an amount.
@@ -200,14 +205,16 @@ object NotificationParser {
         low: String,
         clean: String,
         kind: TransactionKind,
-        counterparty: String?
+        counterparty: String?,
+        hits: List<Hit>
     ): OpDirection? {
         val out = OUT_MARKS.mapNotNull { m -> low.indexOf(m).takeIf { it >= 0 } }.minOrNull()
         val income = IN_MARKS.mapNotNull { m -> low.indexOf(m).takeIf { it >= 0 } }.minOrNull()
         if (out != null && (income == null || out <= income)) return OpDirection.OUT
         if (income != null) return OpDirection.IN
 
-        SIGNED_AMOUNT.find(clean)?.let {
+        // A sign counts only right before an amount with a currency mark (B-83).
+        SIGNED_AMOUNT.findAll(clean).firstOrNull { m -> hits.any { it.start == m.range.last + 1 } }?.let {
             return if (it.groupValues[1] == "+") OpDirection.IN else OpDirection.OUT
         }
         if (TRANSFER_IN.containsMatchIn(low)) return OpDirection.IN

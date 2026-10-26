@@ -164,4 +164,23 @@ class NotificationParserTest {
     @Test fun plain_number_without_currency_is_null() {
         assertNull(NotificationParser.parse(null, "Покупка 500 Магнит"))
     }
+
+    // B-83: a phone number sets neither the direction nor the amount.
+
+    @Test fun phone_plus_is_not_income_sign() {
+        assertNull(NotificationParser.parse(null, "Перевод по номеру +7 926 263-45-67 1 500 ₽"))
+    }
+
+    @Test fun phone_digits_are_not_amount() {
+        assertNull(NotificationParser.parse(null, "Перевод от +79262634567"))
+    }
+
+    @Test fun phone_with_explicit_word_keeps_amount() {
+        assertEquals(-150_000L, NotificationParser.parse(null, "Списание 1 500 ₽ перевод на +7 926 263-45-67")!!.amount.minor)
+    }
+
+    @Test fun explicit_sign_still_works() {
+        assertEquals(110_000L, NotificationParser.parse(null, "+1 100 ₽ Иван И.")!!.amount.minor)
+        assertEquals(-50_000L, NotificationParser.parse(null, "−500 ₽ Магнит")!!.amount.minor)
+    }
 }
