@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
 import androidx.compose.runtime.key
+import ru.maxrubtsoff.bankagg.ui.common.CLOSE_MS
 import ru.maxrubtsoff.bankagg.ui.common.reorderable
 import androidx.compose.ui.layout.LookaheadScope
 import ru.maxrubtsoff.bankagg.ui.common.cascade
@@ -273,13 +274,21 @@ private fun CategoryPanel(
     val rows = remember(items, order) { CashbackSummary.sort(CashbackSummary.byCategory(items), order) }
     var open by rememberSaveable { mutableStateOf(setOf<String>()) }
     var sorting by remember { mutableStateOf(false) }
+    // Rows glide to new places only after a sort change, not when a group opens.
+    var reordering by remember { mutableStateOf(false) }
+    LaunchedEffect(order) {
+        if (reordering) {
+            kotlinx.coroutines.delay(CLOSE_MS + 100L)
+            reordering = false
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             SortControl(
                 label = orderTitle(order.sort).lowercase(),
                 reversed = order.reversed,
                 directionLabel = orderDirection(order),
-                onFlip = onFlip,
+                onFlip = { reordering = true; onFlip() },
                 onOpen = { sorting = true }
             )
         }
@@ -290,7 +299,7 @@ private fun CategoryPanel(
                 val play = rememberCascade("cashback-categories")
                 rows.forEachIndexed { i, row ->
                     key(row.groupKey + "|" + row.category) {
-                    Column(Modifier.reorderable(this@LookaheadScope)) {
+                    Column(Modifier.reorderable(this@LookaheadScope) { reordering }) {
                     if (i > 0) {
                         androidx.compose.material3.HorizontalDivider(
                             color = Slitok.Line,
@@ -318,7 +327,7 @@ private fun CategoryPanel(
             order = order,
             title = ::orderTitle,
             direction = ::orderDirection,
-            onPick = { onPick(it); sorting = false },
+            onPick = { reordering = true; onPick(it); sorting = false },
             onDismiss = { sorting = false }
         )
     }

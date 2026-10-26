@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
  * instead of jumping there. Rows sit in a [LookaheadScope] and are keyed by id;
  * with animations off they just jump.
  */
-fun Modifier.reorderable(scope: LookaheadScope): Modifier = if (!Cascade.enabled) this else composed {
+fun Modifier.reorderable(scope: LookaheadScope, active: () -> Boolean = { true }): Modifier = if (!Cascade.enabled) this else composed {
     val coroutines = rememberCoroutineScope()
     var offset: Animatable<IntOffset, AnimationVector2D>? by remember { mutableStateOf(null) }
     approachLayout(
@@ -41,6 +41,12 @@ fun Modifier.reorderable(scope: LookaheadScope): Modifier = if (!Cascade.enabled
                     lookaheadScopeCoordinates.localPositionOf(coords, Offset.Zero).round()
             }
             val anim = offset ?: Animatable(target, IntOffset.VectorConverter).also { offset = it }
+            if (!active()) {
+                // Shifts not caused by a new order (a group opening) are driven by the layout itself.
+                if (anim.targetValue != target) coroutines.launch { anim.snapTo(target) }
+                placeable.place(0, 0)
+                return@layout
+            }
             if (anim.targetValue != target) {
                 coroutines.launch { anim.animateTo(target, Motion.tween(CLOSE_MS)) }
             }
