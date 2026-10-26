@@ -27,6 +27,8 @@ object DatabaseCipher {
 
     private const val PREFS = "db_secret"
     private const val KEY = "passphrase"
+    /** The plain file while it is being replaced by the encrypted one. */
+    private const val PLAIN_ASIDE = ".plain.bak"
     private val PLAIN_HEADER = "SQLite format 3\u0000".toByteArray(Charsets.US_ASCII)
 
     /** What [prepare] came to. */
@@ -47,6 +49,8 @@ object DatabaseCipher {
     fun prepare(context: Context, name: String): Prepared {
         System.loadLibrary("sqlcipher")
         val file = context.getDatabasePath(name)
+        // A swap cut short between its two renames: the plain file is still the data, put it back.
+        File(file.path + PLAIN_ASIDE).takeIf { it.isFile && !file.exists() }?.renameTo(file)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val lookup = PhoneKeys.lookup()
         val (check, opened) = checkSecret(prefs.getString(KEY, null), lookup)
@@ -71,7 +75,9 @@ object DatabaseCipher {
             StorageDecision.CREATE_NEW, StorageDecision.CONVERT_PLAIN -> {
                 val key = (lookup as? PhoneKeys.KeyLookup.Found)?.key ?: PhoneKeys.create() ?: return Prepared.Plain
                 val passphrase = (if (decision == StorageDecision.CONVERT_PLAIN) opened else null) ?: fresh()
-                // A new passphrase makes an older password seal stale: it is made again from the password.
+                // A new passphrase makes the old password seal useless, so it goes and is made again from the
+                // password. Compromise: a `.broken` file kept aside by «Начать заново» then can't be opened
+                // with the password from this app; it stays for a manual rescue only.
                 if (opened == null || decision == StorageDecision.CREATE_NEW) DbPasswordSeal.file(context).delete()
                 // commit, not apply: the passphrase must be on disk before the database is converted with it.
                 val stored = runCatching {
@@ -134,8 +140,24 @@ object DatabaseCipher {
             } finally {
                 plain.close()
             }
+            // The new file must open with the passphrase before it replaces anything.
+            val probe = SQLiteDatabase.openDatabase(tmp.path, passphrase, null, SQLiteDatabase.OPEN_READONLY, null, null)
+            try {
+                probe.rawQuery("SELECT count(*) FROM sqlite_master", null).use { it.moveToFirst() }
+            } finally {
+                probe.close()
+            }
+            // Swap without a moment of having no database: the plain file steps aside, the new one
+            // takes its place, and only then the old one goes. A failed swap puts it back.
+            val aside = File(file.path + PLAIN_ASIDE)
+            aside.delete()
+            check(file.renameTo(aside)) { "plain file not moved" }
+            if (!tmp.renameTo(file)) {
+                aside.renameTo(file)
+                error("swap failed")
+            }
+            aside.delete()
             listOf("-wal", "-shm", "-journal").forEach { File(file.path + it).delete() }
-            check(file.delete() && tmp.renameTo(file)) { "swap failed" }
         }.onFailure { android.util.Log.w("DatabaseCipher", "encrypt failed", it); tmp.delete() }.isSuccess
     }
 
@@ -175,8 +197,13 @@ object DatabaseCipher {
      */
     fun adopt(context: Context, passphrase: ByteArray): Boolean {
         val key = (PhoneKeys.lookup() as? PhoneKeys.KeyLookup.Found)?.key ?: run {
+            // Only for this one step; the policy takes it back right after.
             PhoneKeys.creationAllowed = true
-            PhoneKeys.backupKey()
+            try {
+                PhoneKeys.backupKey()
+            } finally {
+                PhoneKeys.creationAllowed = false
+            }
         } ?: return false
         return runCatching {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
