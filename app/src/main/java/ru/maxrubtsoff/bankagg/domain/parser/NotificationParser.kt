@@ -30,8 +30,9 @@ object NotificationParser {
      * then re-read once and stored operations are fixed ([RepairFromJournal]).
      * 2 — direction apart from the kind, advertisements are not operations
      * (B-45, B-46).
+     * 3 — amount only with a currency mark, card/phone masks (B-82…B-84).
      */
-    const val VERSION = 2
+    const val VERSION = 3
 
 
     /**
@@ -67,11 +68,14 @@ object NotificationParser {
 
     /**
      * Card and account masks — never an amount: a star/bullet mask ("*1234",
-     * "•• 1234", "карта *1234") or a word glued to four digits ("СЧЁТ1234",
-     * "MIR-1234"). "Оплата картой 5000 ₽" is not a mask.
+     * "•• 1234", "·· 2026"), a card brand glued to four digits ("ECMC2026",
+     * "MIR-1234") or an account/card number ("Счёт 4081 7810"). "Оплата картой
+     * 5000 ₽" and "на счёт 5000 ₽" are not masks: a currency mark follows.
      */
     private val MASK = Regex(
-        """(?:[*•]+[ \u00A0]?\d{2,}|(?:сч[её]т|карт[аы]|mir|visa|мир)-?\d{4}(?!\d))""",
+        """[*•·∙‧]+[  ]?\d{2,}""" +
+            """|(?<![a-zа-яё])(?:ecmc|mc|maes|maestro|mastercard|master|mir|visa|мир)[-*   ·•]?\d{4}(?!\d)""" +
+            """|(?:сч[её]т|карт[аы])[  ]?(?:№[  ]?)?-?\d{4,}(?:[  ]\d{4})*(?!\d)(?![   ]?(?:$MARK_ALT)(?![a-zа-яё]))""",
         RegexOption.IGNORE_CASE
     )
 
@@ -119,12 +123,6 @@ object NotificationParser {
         Regex("""получите[^.!?]{0,20}\d""", RegexOption.IGNORE_CASE)
     )
 
-    /** Units that make a number something other than money ("32,01 МБ", "15 мин"). */
-    private val UNIT_AFTER = Regex(
-        """^[  ]?(мб|гб|кб|тб|байт|mb|gb|kb|tb|%|шт|мин|сек|час|дн|дней|км|кг|мл|балл|бонус)""",
-        RegexOption.IGNORE_CASE
-    )
-
     private val CP_STOP = (TRANSFER + INCOME + EXPENSE + listOf(
         "банк", "сбербанк", "альфа", "тинькофф", "счет", "счёт", "карты", "карта",
         "доступно", "остаток", "баланс", "руб"
@@ -133,10 +131,10 @@ object NotificationParser {
     private data class Hit(val start: Int, val major: String, val currency: String)
 
     /**
-     * Parses one push. [defaultCurrency] is used when an amount carries no
-     * currency mark; pass null for banks where guessing would be wrong (BSB:
-     * Belarusian rubles must not be read as Russian) — then such a push is
-     * not recognised at all.
+     * Parses one push. The currency comes only from the mark next to the
+     * amount; a bare number is never an amount. [defaultCurrency] is kept for
+     * compatibility (null — a bank where "р"/"руб" must not be read as RUB)
+     * and does not change the result.
      */
     fun parse(title: String?, text: String, defaultCurrency: String? = Currencies.RUB): ParsedOp? {
         val blob = "${title ?: ""} $text".trim()
@@ -156,9 +154,8 @@ object NotificationParser {
         val hits = hits(clean)
 
         // The operation amount is the first currency-marked number before the
-        // balance clause; without marks fall back to the first plain number.
+        // balance clause; a number without a mark is not an amount.
         val op = hits.firstOrNull { balanceAt == null || it.start < balanceAt }
-            ?: plainAmount(clean, balanceAt, defaultCurrency)
             ?: return null
         val magnitude = toMinor(op.major) ?: return null
         if (magnitude == 0L) return null
@@ -188,18 +185,6 @@ object NotificationParser {
         }
         return (after + before).sortedBy { it.start }.toList()
     }
-
-    private fun plainAmount(text: String, balanceAt: Int?, defaultCurrency: String?): Hit? {
-        val ccy = defaultCurrency ?: return null
-        val m = Regex(NUM).findAll(text).firstOrNull { m ->
-            (balanceAt == null || m.range.first < balanceAt) && !hasUnit(text, m.range.last + 1)
-        } ?: return null
-        return Hit(m.range.first, m.groupValues[1], ccy)
-    }
-
-    /** True when the number is followed by a unit — then it is not money (B-46). */
-    private fun hasUnit(text: String, from: Int): Boolean =
-        from <= text.length && UNIT_AFTER.containsMatchIn(text.substring(from))
 
     private fun isPromo(low: String): Boolean =
         PROMO_MARKS.any { it in low } || PROMO_PATTERNS.any { it.containsMatchIn(low) }

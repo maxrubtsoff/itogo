@@ -131,4 +131,37 @@ class NotificationParserTest {
         val op = NotificationParser.parse(null, "21.10 10:15 Покупка 99 ₽")!!
         assertEquals(-9_900L, op.amount.minor)
     }
+
+    // B-82: a bare number is never an amount; card/account masks give no numbers.
+
+    @Test fun bare_account_number_is_not_an_amount() {
+        assertNull(NotificationParser.parse(null, "Перевод от Иван И. Счёт 40817810 Баланс 5 000 ₽"))
+    }
+
+    @Test fun bare_date_like_number_is_not_an_amount() {
+        assertNull(NotificationParser.parse(null, "Зачисление 20261026 Баланс 1 000 ₽"))
+    }
+
+    @Test fun middle_dot_card_mask_is_not_an_amount() {
+        assertEquals(-50_000L, NotificationParser.parse(null, "Карта ·· 2026 Покупка 500 ₽")!!.amount.minor)
+        assertNull(NotificationParser.parse(null, "Карта ·· 2026 Покупка"))
+    }
+
+    @Test fun card_brand_masks_are_not_amounts() {
+        for (t in listOf("ECMC2026 Покупка 300 ₽", "MC*1234 Оплата 300 ₽", "MAES 5678 Покупка 300 ₽")) {
+            assertEquals(t, -30_000L, NotificationParser.parse(null, t)!!.amount.minor)
+        }
+    }
+
+    @Test fun spaced_account_number_is_masked() {
+        assertEquals(150_000L, NotificationParser.parse(null, "Счёт 4081 7810 Зачисление 1 500 ₽")!!.amount.minor)
+    }
+
+    @Test fun amount_after_schet_with_currency_stays() {
+        assertEquals(500_000L, NotificationParser.parse(null, "Зачисление на счёт 5000 ₽")!!.amount.minor)
+    }
+
+    @Test fun plain_number_without_currency_is_null() {
+        assertNull(NotificationParser.parse(null, "Покупка 500 Магнит"))
+    }
 }
