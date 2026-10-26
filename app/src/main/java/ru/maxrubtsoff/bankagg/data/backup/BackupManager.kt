@@ -311,6 +311,7 @@ class BackupManager(
                     // v10: the subscription's own look (F-33), its picture travels like a bank's.
                     put("colorArgb", s.colorArgb ?: JSONObject.NULL); put("letters", s.letters ?: JSONObject.NULL)
                     put("textColorArgb", s.textColorArgb ?: JSONObject.NULL); put("logoFile", s.logoFile ?: JSONObject.NULL)
+                    put("anchorDay", s.anchorDay ?: JSONObject.NULL)
                     LogoBackup.encode(s.logoFile)?.let { put("logoPng", it) }
                 })
             }
@@ -594,7 +595,9 @@ class BackupManager(
                     colorArgb = if (o.isNull("colorArgb") || !o.has("colorArgb")) null else o.getLong("colorArgb"),
                     letters = o.optStringOrNull("letters"),
                     textColorArgb = if (o.isNull("textColorArgb") || !o.has("textColorArgb")) null else o.getLong("textColorArgb"),
-                    logoFile = o.optStringOrNull("logoFile")
+                    logoFile = o.optStringOrNull("logoFile"),
+                    // Copies before B-95 have no anchor: it comes from the date.
+                    anchorDay = if (o.isNull("anchorDay") || !o.has("anchorDay")) null else o.getInt("anchorDay")
                 )
             },
             accounts = root.objects("accounts").map { o ->

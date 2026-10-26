@@ -102,4 +102,42 @@ class SubscriptionsTest {
         val after = Subscriptions.syncFresh(fresh, listOf(Payment("Yandex*Plus", 39_900, LocalDate.of(2026, 10, 28), tbank)))!!
         assertEquals(fresh.copy(nextDate = after.nextDate, priceMinor = 39_900, previousPriceMinor = 29_900), after)
     }
+
+    // B-95: the payment day survives short months.
+    private fun sub(period: Period, next: LocalDate, anchor: Int? = null) =
+        Subscription("1", "S", 10_000, period, next, payee = "S", anchorDay = anchor)
+
+    @Test fun monthly_31st_upcoming_keeps_day_through_short_months() {
+        val s = sub(Period.MONTHLY, LocalDate.of(2026, 1, 31))
+        assertEquals(LocalDate.of(2026, 2, 28), Subscriptions.upcoming(s, LocalDate.of(2026, 2, 1)))
+        assertEquals(LocalDate.of(2026, 3, 31), Subscriptions.upcoming(s, LocalDate.of(2026, 3, 1)))
+        assertEquals(LocalDate.of(2026, 4, 30), Subscriptions.upcoming(s, LocalDate.of(2026, 4, 1)))
+        assertEquals(LocalDate.of(2026, 5, 31), Subscriptions.upcoming(s, LocalDate.of(2026, 5, 1)))
+        assertEquals(LocalDate.of(2028, 2, 29), Subscriptions.upcoming(s, LocalDate.of(2028, 2, 1)))
+    }
+
+    @Test fun monthly_30th_clamps_in_february_and_returns() {
+        val s = sub(Period.MONTHLY, LocalDate.of(2026, 1, 30))
+        assertEquals(LocalDate.of(2026, 2, 28), Subscriptions.upcoming(s, LocalDate.of(2026, 2, 1)))
+        assertEquals(LocalDate.of(2026, 3, 30), Subscriptions.upcoming(s, LocalDate.of(2026, 3, 1)))
+    }
+
+    @Test fun paid_in_short_month_returns_to_anchor_day() {
+        val s = sub(Period.MONTHLY, LocalDate.of(2026, 2, 28), anchor = 31)
+        val after = Subscriptions.paid(s, Payment("S", 10_000, LocalDate.of(2026, 2, 28), tbank))
+        assertEquals(LocalDate.of(2026, 3, 31), after.nextDate)
+    }
+
+    @Test fun yearly_leap_day_returns_to_29_feb() {
+        val s = sub(Period(PeriodUnit.YEAR), LocalDate.of(2028, 2, 29))
+        assertEquals(LocalDate.of(2029, 2, 28), Subscriptions.upcoming(s, LocalDate.of(2028, 3, 1)))
+        assertEquals(LocalDate.of(2032, 2, 29), Subscriptions.upcoming(s, LocalDate.of(2031, 3, 1)))
+    }
+
+    @Test fun reanchor_keeps_anchor_when_date_unchanged_and_resets_on_edit() {
+        val old = sub(Period.MONTHLY, LocalDate.of(2026, 2, 28), anchor = 31)
+        assertEquals(31, Subscriptions.reanchor(old, old.copy(title = "New")).anchorDay)
+        assertEquals(15, Subscriptions.reanchor(old, old.copy(nextDate = LocalDate.of(2026, 3, 15))).anchorDay)
+        assertEquals(10, Subscriptions.reanchor(null, sub(Period.MONTHLY, LocalDate.of(2026, 3, 10))).anchorDay)
+    }
 }

@@ -34,7 +34,9 @@ data class SubscriptionEntity(
     val colorArgb: Long? = null,
     val letters: String? = null,
     val textColorArgb: Long? = null,
-    val logoFile: String? = null
+    val logoFile: String? = null,
+    // B-95: the day of month the payment falls on; null — taken from the date.
+    val anchorDay: Int? = null
 )
 
 @Dao
@@ -73,12 +75,14 @@ fun SubscriptionEntity.toDomain(): Subscription = Subscription(
     decor = if (colorArgb == null && letters == null && textColorArgb == null && logoFile == null) null else {
         val byTitle = BrandDecor.defaultFor(title)
         BrandDecor(colorArgb ?: byTitle.colorArgb, letters ?: byTitle.letters, textColorArgb, logoFile)
-    }
+    },
+    anchorDay = anchorDay
 )
 
 fun Subscription.toEntity(): SubscriptionEntity = SubscriptionEntity(
     id = id, title = title, priceMinor = priceMinor, periodUnit = period.unit.name, periodDays = period.days,
     nextEpochDay = nextDate.toEpochDay(), brandKey = brand?.key, payee = payee, remind = remind,
     status = status.name, previousPriceMinor = previousPriceMinor, createdAt = createdAt,
-    colorArgb = decor?.colorArgb, letters = decor?.letters, textColorArgb = decor?.textColorArgb, logoFile = decor?.logoFile
+    colorArgb = decor?.colorArgb, letters = decor?.letters, textColorArgb = decor?.textColorArgb, logoFile = decor?.logoFile,
+    anchorDay = anchorDay
 )

@@ -108,7 +108,7 @@ class SubscriptionsViewModel(
     fun edit(s: Subscription) { _draft.value = s }
 
     fun save(s: Subscription, onDone: () -> Unit) = viewModelScope.launch {
-        writes.withLock { repo.save(s) }
+        writes.withLock { repo.save(Subscriptions.reanchor(repo.get(s.id), s)) }
         onDone()
     }
 
@@ -120,7 +120,7 @@ class SubscriptionsViewModel(
         val look = s.look
         val made = if (usePicture && picked != null) logos?.make(picked, s.id) else null
         val logo = LogoChoice.resolve(usePicture, made, picked != null, look.logoFile)
-        writes.withLock { repo.save(s.copy(decor = look.copy(logoFile = logo))) }
+        writes.withLock { repo.save(Subscriptions.reanchor(repo.get(s.id), s.copy(decor = look.copy(logoFile = logo)))) }
         onDone()
     }
 

@@ -10,6 +10,15 @@ enum class PeriodUnit { WEEK, MONTH, YEAR, DAYS }
 
 data class Period(val unit: PeriodUnit, val days: Int = 0) {
 
+    /** The step that keeps the payment day ([anchorDay]) after a short month: 31.01 → 28.02 → 31.03. */
+    fun nextAnchored(from: LocalDate, anchorDay: Int): LocalDate = when (unit) {
+        PeriodUnit.MONTH, PeriodUnit.YEAR -> {
+            val moved = next(from)
+            moved.withDayOfMonth(minOf(anchorDay.coerceAtLeast(1), moved.lengthOfMonth()))
+        }
+        else -> next(from)
+    }
+
     fun next(from: LocalDate): LocalDate = when (unit) {
         PeriodUnit.WEEK -> from.plusWeeks(1)
         PeriodUnit.MONTH -> from.plusMonths(1)
@@ -61,8 +70,12 @@ data class Subscription(
     val previousPriceMinor: Long? = null,
     val createdAt: Long = 0L,
     /** The user's own look (F-33); null — never touched, [look] gives the default. */
-    val decor: BrandDecor? = null
+    val decor: BrandDecor? = null,
+    /** The day of month the payment falls on, kept through short months; null — take it from [nextDate]. */
+    val anchorDay: Int? = null
 ) {
+    val anchor: Int get() = anchorDay ?: nextDate.dayOfMonth
+
     /** What to draw: the user's look, or the one the name gives (always valid). */
     val look: BrandDecor get() = decor ?: BrandDecor.defaultFor(title)
 
@@ -144,7 +157,7 @@ object Subscriptions {
      * price is remembered with the old one, for «подорожала на …».
      */
     fun paid(s: Subscription, p: Payment): Subscription {
-        val next = s.period.next(p.date).let { if (it.isAfter(s.nextDate) || p.date >= s.nextDate.minusDays(3)) it else s.nextDate }
+        val next = s.period.nextAnchored(p.date, s.anchor).let { if (it.isAfter(s.nextDate) || p.date >= s.nextDate.minusDays(3)) it else s.nextDate }
         return if (p.amountMinor != s.priceMinor) s.copy(priceMinor = p.amountMinor, previousPriceMinor = s.priceMinor, nextDate = next)
         else s.copy(nextDate = next)
     }
@@ -176,15 +189,20 @@ object Subscriptions {
     /** A new subscription from a finding, the fields filled in. */
     fun fromFinding(f: Finding, id: String, now: Long): Subscription =
         Subscription(id, f.title, f.priceMinor, f.period, f.nextDate, brand = f.payments.last().brand, payee = f.payee, createdAt = now,
-            decor = BrandDecor.defaultFor(f.title))
+            decor = BrandDecor.defaultFor(f.title), anchorDay = f.payments.last().date.dayOfMonth)
 
     /** The next payment day not before [today] (a missed push doesn't leave a date in the past). */
     fun upcoming(s: Subscription, today: LocalDate): LocalDate {
         var d = s.nextDate
         var guard = 0
-        while (d.isBefore(today) && guard++ < 1000) d = s.period.next(d)
+        while (d.isBefore(today) && guard++ < 1000) d = s.period.nextAnchored(d, s.anchor)
         return d
     }
+
+    /** [edited] after the user's save: a changed date sets a new anchor day, an untouched one keeps the old. */
+    fun reanchor(old: Subscription?, edited: Subscription): Subscription =
+        if (old == null || old.nextDate != edited.nextDate) edited.copy(anchorDay = edited.nextDate.dayOfMonth)
+        else edited.copy(anchorDay = old.anchorDay ?: edited.anchorDay)
 
     /** All active subscriptions per month. */
     fun perMonth(list: List<Subscription>): Long =
