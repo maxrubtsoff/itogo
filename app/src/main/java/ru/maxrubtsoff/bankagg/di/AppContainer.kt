@@ -17,6 +17,7 @@ import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.ui.common.UndoCenter
 import ru.maxrubtsoff.bankagg.ui.widget.CashbackWidget
@@ -45,6 +46,7 @@ import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.usecase.GetCapital
 import ru.maxrubtsoff.bankagg.domain.usecase.BuildCapitalHistory
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordCapitalDay
+import ru.maxrubtsoff.bankagg.domain.usecase.SyncCapitalPast
 import ru.maxrubtsoff.bankagg.data.repository.CapitalHistoryRepositoryImpl
 import ru.maxrubtsoff.bankagg.domain.repository.CapitalHistoryRepository
 import ru.maxrubtsoff.bankagg.domain.usecase.MyBanksScope
@@ -184,10 +186,15 @@ class AppContainer(context: Context) {
         BuildCapitalHistory(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today)
     }
 
+    val syncCapitalPast by lazy { SyncCapitalPast(capitalHistory, depositRepository, settings, today) }
+
     /** Rebuilds the past once when the history is empty, then keeps today's point up to date. */
     suspend fun trackCapitalHistory() {
         runCatching { buildCapitalHistory() }
-        recordCapitalDay.track()
+        coroutineScope {
+            launch { syncCapitalPast.track() }
+            recordCapitalDay.track()
+        }
     }
 
     /**

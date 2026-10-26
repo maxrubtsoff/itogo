@@ -68,14 +68,8 @@ object CapitalReconstruction {
                 if (a.currency == Currencies.RUB) accountsMinor += then
                 else rateAt(rates, a.currency, day)?.let { currencyMinor += FxMath.rubOf(then, it) }
             }
-            fxOps.map { it.currency }.distinct().forEach { code ->
-                val qty = fxOps.filter { it.currency == code && !it.date.isAfter(day) }
-                    .sumOf { if (it.kind == FxKind.BUY) it.amountMinor else -it.amountMinor }
-                if (qty != 0L) rateAt(rates, code, day)?.let { currencyMinor += FxMath.rubOf(qty, it) }
-            }
-            val depositsMinor = deposits
-                .filter { !day.isBefore(it.startDate) && DepositMath.isActive(it, day) }
-                .sumOf { DepositMath.project(it, day, seriesPoints = 2).currentValue.minor }
+            currencyMinor += fxOn(fxOps, rates, day)
+            val depositsMinor = CapitalPast.depositsOn(deposits, day)
             val parts = mapOf(
                 CapitalPart.ACCOUNTS to accountsMinor, CapitalPart.DEPOSITS to depositsMinor,
                 CapitalPart.CURRENCY to currencyMinor, CapitalPart.CASH to cashMinor
@@ -86,8 +80,16 @@ object CapitalReconstruction {
         return out
     }
 
+    /** Rubles the currency deals are worth on [day]: what is held after them, at the rate of the day. */
+    internal fun fxOn(fxOps: List<FxOperation>, rates: List<FxRate>, day: LocalDate): Long =
+        fxOps.map { it.currency }.distinct().sumOf { code ->
+            val qty = fxOps.filter { it.currency == code && !it.date.isAfter(day) }
+                .sumOf { if (it.kind == FxKind.BUY) it.amountMinor else -it.amountMinor }
+            if (qty == 0L) 0L else rateAt(rates, code, day)?.let { FxMath.rubOf(qty, it) } ?: 0L
+        }
+
     /** The rate of the day, or the nearest known one (offline the current rate stands for the whole past). */
-    private fun rateAt(rates: List<FxRate>, code: String, day: LocalDate): Long? =
+    internal fun rateAt(rates: List<FxRate>, code: String, day: LocalDate): Long? =
         FxRates.latestOnOrBefore(rates, code, day)?.rubPerUnitMicro
             ?: rates.filter { it.currency == code }.minByOrNull { it.date }?.rubPerUnitMicro
 
