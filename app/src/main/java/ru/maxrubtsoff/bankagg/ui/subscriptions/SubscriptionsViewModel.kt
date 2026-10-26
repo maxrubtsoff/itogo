@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ru.maxrubtsoff.bankagg.data.icons.LogoMaker
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.Finding
@@ -60,11 +62,6 @@ class SubscriptionsViewModel(
     )
 
     val state: StateFlow<State> = combine(all, payments, today.date) { subs, pays, day ->
-        // New payments of known subscriptions move their dates and prices (idempotent).
-        subs.filter { it.status == SubscriptionStatus.ACTIVE }.forEach { s ->
-            val synced = Subscriptions.sync(s, pays)
-            if (synced != s) viewModelScope.launch { repo.save(synced) }
-        }
         val active = subs.filter { it.status == SubscriptionStatus.ACTIVE }.sortedBy { Subscriptions.upcoming(it, day) }
         State(
             active = active,
@@ -74,6 +71,25 @@ class SubscriptionsViewModel(
             today = day
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
+
+    // Every write goes one at a time, and the sync works on the record as stored now,
+    // not on the snapshot the screen drew: a «remind» switched meanwhile stays (B-99).
+    private val writes = Mutex()
+
+    init {
+        viewModelScope.launch {
+            // New payments of known subscriptions move their dates and prices (idempotent).
+            combine(all, payments) { subs, pays -> subs.filter { it.status == SubscriptionStatus.ACTIVE }.map { it.id } to pays }
+                .collect { (ids, pays) ->
+                    writes.withLock {
+                        ids.forEach { id ->
+                            val fresh = repo.get(id)?.takeIf { it.status == SubscriptionStatus.ACTIVE } ?: return@forEach
+                            Subscriptions.syncFresh(fresh, pays)?.let { repo.save(it) }
+                        }
+                    }
+                }
+        }
+    }
 
     val myBanks: StateFlow<List<BankBrand>> = banks.myBanks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -92,7 +108,7 @@ class SubscriptionsViewModel(
     fun edit(s: Subscription) { _draft.value = s }
 
     fun save(s: Subscription, onDone: () -> Unit) = viewModelScope.launch {
-        repo.save(s)
+        writes.withLock { repo.save(s) }
         onDone()
     }
 
@@ -104,27 +120,33 @@ class SubscriptionsViewModel(
         val look = s.look
         val made = if (usePicture && picked != null) logos?.make(picked, s.id) else null
         val logo = LogoChoice.resolve(usePicture, made, picked != null, look.logoFile)
-        repo.save(s.copy(decor = look.copy(logoFile = logo)))
+        writes.withLock { repo.save(s.copy(decor = look.copy(logoFile = logo))) }
         onDone()
     }
 
     /** «Это …»: the run's payee joins [s]; its payments move it on. */
     fun link(f: Finding, s: Subscription) = viewModelScope.launch {
-        repo.save(Subscriptions.sync(s.copy(payee = f.payee), f.payments))
+        writes.withLock { repo.save(Subscriptions.sync(s.copy(payee = f.payee), f.payments)) }
     }
 
     /** «Не подписка»: the payee isn't offered again. */
     fun notSubscription(f: Finding) = viewModelScope.launch {
-        repo.save(
-            Subscription(UUID.randomUUID().toString(), f.title, f.priceMinor, f.period, f.nextDate, payee = f.payee,
-                status = SubscriptionStatus.IGNORED, createdAt = System.currentTimeMillis())
-        )
+        writes.withLock {
+            repo.save(
+                Subscription(UUID.randomUUID().toString(), f.title, f.priceMinor, f.period, f.nextDate, payee = f.payee,
+                    status = SubscriptionStatus.IGNORED, createdAt = System.currentTimeMillis())
+            )
+        }
     }
 
     /** «Больше не плачу»: off the list and the total; its payee stays known, so it isn't found again. */
-    fun stop(s: Subscription) = viewModelScope.launch { repo.save(s.copy(status = SubscriptionStatus.ARCHIVED)) }
+    fun stop(s: Subscription) = viewModelScope.launch {
+        writes.withLock { repo.save((repo.get(s.id) ?: s).copy(status = SubscriptionStatus.ARCHIVED)) }
+    }
 
-    fun setRemind(s: Subscription, on: Boolean) = viewModelScope.launch { repo.save(s.copy(remind = on)) }
+    fun setRemind(s: Subscription, on: Boolean) = viewModelScope.launch {
+        writes.withLock { repo.save((repo.get(s.id) ?: s).copy(remind = on)) }
+    }
 
     private companion object {
         /** A year of operations is enough to see a yearly subscription twice. */

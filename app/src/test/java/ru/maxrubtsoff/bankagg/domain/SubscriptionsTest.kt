@@ -82,4 +82,24 @@ class SubscriptionsTest {
         assertEquals(once, Subscriptions.sync(once, all))
         assertEquals(3, Subscriptions.history(once, all).size)
     }
+
+    // B-99: the sync works on the record as stored now.
+    @Test fun syncFresh_keeps_remind_flag_changed_after_snapshot() {
+        val fresh = Subscription("1", "Яндекс Плюс", 29_900, Period.MONTHLY, LocalDate.of(2026, 10, 28), payee = "YANDEX*PLUS", remind = true)
+        val p = Payment("Yandex*Plus", 29_900, LocalDate.of(2026, 10, 28), tbank)
+        val after = Subscriptions.syncFresh(fresh, listOf(p))!!
+        assertEquals(LocalDate.of(2026, 11, 28), after.nextDate)
+        assertTrue(after.remind)
+    }
+
+    @Test fun syncFresh_returns_null_when_nothing_to_do() {
+        val s = Subscription("1", "Яндекс Плюс", 29_900, Period.MONTHLY, LocalDate.of(2026, 10, 28), payee = "YANDEX*PLUS")
+        assertEquals(null, Subscriptions.syncFresh(s, emptyList()))
+    }
+
+    @Test fun syncFresh_does_not_touch_title_decor_status() {
+        val fresh = Subscription("1", "Моя подписка", 29_900, Period.MONTHLY, LocalDate.of(2026, 10, 28), payee = "YANDEX*PLUS")
+        val after = Subscriptions.syncFresh(fresh, listOf(Payment("Yandex*Plus", 39_900, LocalDate.of(2026, 10, 28), tbank)))!!
+        assertEquals(fresh.copy(nextDate = after.nextDate, priceMinor = 39_900, previousPriceMinor = 29_900), after)
+    }
 }

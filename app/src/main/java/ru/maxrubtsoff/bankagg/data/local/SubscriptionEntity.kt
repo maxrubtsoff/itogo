@@ -42,6 +42,9 @@ interface SubscriptionDao {
     @Query("SELECT * FROM subscriptions ORDER BY nextEpochDay")
     fun observeAll(): Flow<List<SubscriptionEntity>>
 
+    @Query("SELECT * FROM subscriptions WHERE id = :id")
+    suspend fun get(id: String): SubscriptionEntity?
+
     @Query("SELECT * FROM subscriptions")
     suspend fun all(): List<SubscriptionEntity>
 

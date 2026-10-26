@@ -18,6 +18,8 @@ class SampleSubscriptionRepository(subscriptions: List<Subscription>) : Subscrip
 
     override fun observeAll(): Flow<List<Subscription>> = items
 
+    override suspend fun get(id: String): Subscription? = items.value.firstOrNull { it.id == id }
+
     override suspend fun save(subscription: Subscription) = items.update { it.filterNot { s -> s.id == subscription.id } + subscription }
 
     override suspend fun delete(id: String) = items.update { list -> list.filterNot { it.id == id } }

@@ -159,6 +159,13 @@ object Subscriptions {
             if (p.date >= cur.nextDate.minusDays(3)) paid(cur, p) else cur
         }
 
+    /**
+     * [sync] of a record read just now: only the date and price move, everything else
+     * stays as stored (a flag changed after the snapshot isn't undone). Null: nothing to do (B-99).
+     */
+    fun syncFresh(fresh: Subscription, payments: List<Payment>): Subscription? =
+        sync(fresh, payments).takeIf { it != fresh }
+
     /** The payments of [s] seen in the pushes, newest first (its card's history). */
     fun history(s: Subscription, payments: List<Payment>): List<Payment> =
         s.payee?.let { payee -> payments.filter { key(it.payee) == key(payee) && it.amountMinor > 0 }.sortedByDescending { it.date } }.orEmpty()
