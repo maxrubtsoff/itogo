@@ -16,7 +16,7 @@ import androidx.room.RoomDatabase
         FxOperationEntity::class, FxRateEntity::class, CashEntity::class, CashChangeEntity::class, SubscriptionEntity::class,
         DepositTopUpEntity::class, CapitalSnapshotEntity::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +33,13 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
+
+        /** B-92: the notification key keeps two equal pushes without a balance apart; old rows have none. */
+        private val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE events ADD COLUMN notificationKey TEXT")
+            }
+        }
 
         /** F-48: the log of cash hand edits. Starts empty — the past deltas are unknown, none are invented. */
         private val MIGRATION_17_18 = object : Migration(17, 18) {
@@ -140,7 +147,7 @@ abstract class AppDatabase : RoomDatabase() {
                         .apply { passphrase?.let { openHelperFactory(SupportOpenHelperFactory(it)) } }
                         // Data is rebuilt from notifications and protected by backup,
                         // so a schema bump rebuilds rather than crashing on update.
-                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
                         .fallbackToDestructiveMigration()
                         .build()
                         .also { instance = it }

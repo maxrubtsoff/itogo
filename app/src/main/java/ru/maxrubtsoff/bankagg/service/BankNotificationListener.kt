@@ -65,7 +65,8 @@ class BankNotificationListener : NotificationListenerService() {
                 packageName = pkg,
                 title = title,
                 text = text,
-                postedAt = sbn.postTime
+                postedAt = sbn.postTime,
+                notificationKey = sbn.key
             )
         }
     }

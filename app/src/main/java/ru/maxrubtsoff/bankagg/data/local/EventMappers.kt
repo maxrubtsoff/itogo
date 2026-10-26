@@ -12,7 +12,8 @@ fun EventEntity.toDomain(): CapturedEvent = CapturedEvent(
     postedAt = postedAt,
     dedupHash = dedupHash,
     parsed = parsed,
-    contentHash = contentHash
+    contentHash = contentHash,
+    notificationKey = notificationKey
 )
 
 fun CapturedEvent.toEntity(): EventEntity = EventEntity(
@@ -24,5 +25,6 @@ fun CapturedEvent.toEntity(): EventEntity = EventEntity(
     postedAt = postedAt,
     dedupHash = dedupHash,
     parsed = parsed,
-    contentHash = contentHash
+    contentHash = contentHash,
+    notificationKey = notificationKey
 )

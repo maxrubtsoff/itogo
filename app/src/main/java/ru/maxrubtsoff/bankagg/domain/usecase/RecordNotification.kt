@@ -33,7 +33,8 @@ class RecordNotification(
         packageName: String,
         title: String?,
         text: String,
-        postedAt: Long
+        postedAt: Long,
+        notificationKey: String? = null
     ): Boolean = mutex.withLock {
         val normalized = text.replace(WHITESPACE, " ").trim()
         if (normalized.isEmpty()) return@withLock false
@@ -46,7 +47,7 @@ class RecordNotification(
         tx.run {
             // Banks re-post the same push (updates, group re-sorts): the same text,
             // amount and balance within a couple of minutes is one operation.
-            if (events.hasSimilar(content, postedAt - DEDUP_WINDOW_MS, postedAt + DEDUP_WINDOW_MS)) {
+            if (events.hasSimilar(content, postedAt - DEDUP_WINDOW_MS, postedAt + DEDUP_WINDOW_MS, dedupKey(op, notificationKey))) {
                 return@run false
             }
             val stored = events.record(
@@ -58,7 +59,8 @@ class RecordNotification(
                     postedAt = postedAt,
                     dedupHash = hash,
                     parsed = op != null,
-                    contentHash = content
+                    contentHash = content,
+                    notificationKey = notificationKey
                 )
             )
             if (!stored) return@run false
@@ -92,6 +94,13 @@ class RecordNotification(
     }
 
     companion object {
+        /**
+         * Key to compare in dedup: a push with a balance is told apart by its content,
+         * one without — only by the notification key. null — compare the content only.
+         */
+        fun dedupKey(op: ParsedOp?, notificationKey: String?): String? =
+            if (op?.balance != null) null else notificationKey
+
         /** Window in which an identical push counts as a repeat (±2 minutes). */
         const val DEDUP_WINDOW_MS = 2 * 60_000L
 

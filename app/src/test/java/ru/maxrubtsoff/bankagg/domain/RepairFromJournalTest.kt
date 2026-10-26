@@ -33,7 +33,7 @@ class RepairFromJournalTest {
     private class FakeEvents(events: List<CapturedEvent>) : EventRepository {
         val stored = events.toMutableList()
         override suspend fun record(event: CapturedEvent) = stored.add(event)
-        override suspend fun hasSimilar(contentHash: String, from: Long, to: Long) = false
+        override suspend fun hasSimilar(contentHash: String, from: Long, to: Long, notificationKey: String?) = false
         override fun observeRecent(limit: Int): Flow<List<CapturedEvent>> = emptyFlow()
         override suspend fun trim(parsedBefore: Long, unparsedBefore: Long) = 0
         override suspend fun all(): List<CapturedEvent> = stored.toList()

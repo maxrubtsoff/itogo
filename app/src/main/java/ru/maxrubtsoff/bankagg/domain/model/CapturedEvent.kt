@@ -15,5 +15,7 @@ data class CapturedEvent(
     val dedupHash: String,
     val parsed: Boolean = false,
     /** Hash of (package, text, amount, balance) without time: repeats within a short window are one event. */
-    val contentHash: String = dedupHash
+    val contentHash: String = dedupHash,
+    /** Android notification key — only for dedup of pushes without a balance (B-92). */
+    val notificationKey: String? = null
 )

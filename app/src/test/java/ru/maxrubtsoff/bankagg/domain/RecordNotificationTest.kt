@@ -24,8 +24,11 @@ class RecordNotificationTest {
             if (stored.any { it.dedupHash == event.dedupHash }) return false
             stored += event; return true
         }
-        override suspend fun hasSimilar(contentHash: String, from: Long, to: Long) =
-            stored.any { it.contentHash == contentHash && it.postedAt in from..to }
+        override suspend fun hasSimilar(contentHash: String, from: Long, to: Long, notificationKey: String?) =
+            stored.any {
+                it.contentHash == contentHash && it.postedAt in from..to &&
+                    (notificationKey == null || it.notificationKey == null || it.notificationKey == notificationKey)
+            }
         override fun observeRecent(limit: Int): Flow<List<CapturedEvent>> = emptyFlow()
         override suspend fun trim(parsedBefore: Long, unparsedBefore: Long) = 0
         override suspend fun all(): List<CapturedEvent> = stored.toList()
@@ -89,5 +92,39 @@ class RecordNotificationTest {
         val record = RecordNotification(events, ledger, direct)
         record("by.bank.bsb.mobile", "BSB", "Оплата 25,40 BYN. Остаток 100,00 BYN", 1L)
         assertEquals(10_000L, ledger.balances["bsb:BYN"])
+    }
+
+    // B-92: without a balance in the push only the notification key tells a repeat from a new operation.
+
+    private val coffee = "Покупка 300 ₽. Кофейня"
+
+    @Test fun equal_pushes_without_balance_and_different_keys_are_two_operations() = runTest {
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct)
+        assertTrue(record(tbank, null, coffee, 1_000_000L, "key-1"))
+        assertTrue(record(tbank, null, coffee, 1_000_000L + 60_000L, "key-2"))
+        assertEquals(2, ledger.txs.size)
+    }
+
+    @Test fun repeat_without_balance_with_same_key_is_one_operation() = runTest {
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct)
+        assertTrue(record(tbank, null, coffee, 1_000_000L, "key-1"))
+        assertFalse(record(tbank, null, coffee, 1_000_000L + 60_000L, "key-1"))
+        assertEquals(1, ledger.txs.size)
+    }
+
+    @Test fun unknown_key_keeps_old_behaviour() = runTest {
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct)
+        assertTrue(record(tbank, null, coffee, 1_000_000L))
+        assertFalse(record(tbank, null, coffee, 1_000_000L + 60_000L, "key-2"))
+    }
+
+    @Test fun push_with_balance_ignores_the_key() = runTest {
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct)
+        assertTrue(record(tbank, null, text, 1_000_000L, "key-1"))
+        assertFalse(record(tbank, null, text, 1_000_000L + 60_000L, "key-2"))
     }
 }

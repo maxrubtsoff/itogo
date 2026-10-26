@@ -18,5 +18,6 @@ data class EventEntity(
     val postedAt: Long,
     val dedupHash: String,
     val parsed: Boolean,
-    val contentHash: String = dedupHash
+    val contentHash: String = dedupHash,
+    val notificationKey: String? = null
 )

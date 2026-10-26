@@ -17,8 +17,8 @@ class EventRepositoryImpl(
     override suspend fun record(event: CapturedEvent): Boolean =
         dao.insert(event.toEntity()) != -1L
 
-    override suspend fun hasSimilar(contentHash: String, from: Long, to: Long): Boolean =
-        dao.countSimilar(contentHash, from, to) > 0
+    override suspend fun hasSimilar(contentHash: String, from: Long, to: Long, notificationKey: String?): Boolean =
+        dao.countSimilar(contentHash, from, to, notificationKey) > 0
 
     override fun observeRecent(limit: Int): Flow<List<CapturedEvent>> =
         dao.observeRecent(limit).map { list -> list.map { it.toDomain() } }

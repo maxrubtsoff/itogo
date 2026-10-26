@@ -13,8 +13,11 @@ interface EventDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(event: EventEntity): Long
 
-    @Query("SELECT COUNT(*) FROM events WHERE contentHash = :contentHash AND postedAt BETWEEN :from AND :to")
-    suspend fun countSimilar(contentHash: String, from: Long, to: Long): Int
+    @Query(
+        "SELECT COUNT(*) FROM events WHERE contentHash = :contentHash AND postedAt BETWEEN :from AND :to " +
+            "AND (:key IS NULL OR notificationKey IS NULL OR notificationKey = :key)"
+    )
+    suspend fun countSimilar(contentHash: String, from: Long, to: Long, key: String?): Int
 
     @Query("SELECT * FROM events ORDER BY postedAt DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<EventEntity>>
