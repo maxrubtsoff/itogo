@@ -121,6 +121,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
@@ -1127,6 +1128,8 @@ private fun SlitokBottomBar(tabs: List<TopDest>, current: NavDestination?, tourT
     }
 }
 
+private const val TAB_LABEL_MAX_FONT_SCALE = 1.1f
+
 @Composable
 private fun BarItem(dest: TopDest, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val tint by animateColorAsState(if (selected) Slitok.Brass2 else Slitok.Muted, label = "tint")
@@ -1141,7 +1144,11 @@ private fun BarItem(dest: TopDest, selected: Boolean, modifier: Modifier, onClic
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         Icon(dest.icon, contentDescription = dest.label, tint = tint, modifier = Modifier.size(22.dp))
-        Text(dest.label, color = tint, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // B-104: the label grows with the system font only up to a point — «Настройки» must fit whole.
+        val density = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides Density(density.density, density.fontScale.coerceAtMost(TAB_LABEL_MAX_FONT_SCALE))) {
+            Text(dest.label, color = tint, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false)
+        }
     }
 }
 
