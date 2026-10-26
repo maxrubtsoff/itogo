@@ -5,6 +5,7 @@ import org.junit.Assert.assertTrue
 import ru.maxrubtsoff.bankagg.domain.model.AccrualMethod
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.Deposit
+import ru.maxrubtsoff.bankagg.domain.model.DepositTopUp
 import ru.maxrubtsoff.bankagg.domain.model.DepositMath
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import org.junit.Test
@@ -185,5 +186,38 @@ class DepositMathTest {
         val p = DepositMath.project(d, LocalDate.of(2026, 6, 1))
         val next = DepositMath.project(d, LocalDate.of(2026, 6, 2))
         assertEquals(next.accruedIncome.minor - p.accruedIncome.minor, p.todayAccrual.minor)
+    }
+
+    // B-98: a top-up outside the term neither counts as put in nor earns.
+    private val start = LocalDate.of(2026, 1, 1)
+    private val end = LocalDate.of(2026, 7, 1)
+    private fun withTopUps(vararg days: LocalDate) = deposit(100_000.0, 1900, start, end).let { d ->
+        d.copy(topUps = days.mapIndexed { i, day -> DepositTopUp("t$i", day, Money.ofMajor(10_000.0)) })
+    }
+
+    @Test fun topup_on_end_date_does_not_make_income_negative() {
+        val d = withTopUps(end)
+        val s = DepositMath.summary(listOf(d), LocalDate.of(2026, 3, 1))
+        assertTrue(s.income.minor >= 0)
+        assertEquals(DepositMath.project(d, LocalDate.of(2026, 3, 1)).totalIncome.minor, s.income.minor)
+    }
+
+    @Test fun topup_after_end_is_not_invested() {
+        assertEquals(Money.ofMajor(100_000.0), withTopUps(end.plusDays(5)).investedTotal)
+    }
+
+    @Test fun topup_before_start_is_not_invested() {
+        assertEquals(Money.ofMajor(100_000.0), withTopUps(start.minusDays(5)).investedTotal)
+    }
+
+    @Test fun topup_inside_term_still_counts() {
+        assertEquals(Money.ofMajor(110_000.0), withTopUps(start.plusDays(30)).investedTotal)
+    }
+
+    @Test fun summary_income_equals_payout_minus_invested_for_mixed_topups() {
+        val d = withTopUps(start.minusDays(1), start.plusDays(30), end, end.plusDays(3))
+        val s = DepositMath.summary(listOf(d), LocalDate.of(2026, 3, 1))
+        assertEquals(s.payout.minor - d.investedTotal.minor, s.income.minor)
+        assertTrue(s.income.minor >= 0)
     }
 }

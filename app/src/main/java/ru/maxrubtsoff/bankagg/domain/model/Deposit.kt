@@ -37,10 +37,13 @@ data class Deposit(
 ) {
     /** Everything put in: the opening sum plus top-ups made by [asOf]. */
     fun investedAt(asOf: LocalDate): Money =
-        Money.ofMinor(principal.minor + topUps.filter { !it.date.isAfter(asOf) }.sumOf { it.amount.minor })
+        Money.ofMinor(principal.minor + countedTopUps.filter { !it.date.isAfter(asOf) }.sumOf { it.amount.minor })
+
+    /** Top-ups inside the term, the only ones that earn and count as put in (B-98). */
+    val countedTopUps: List<DepositTopUp> get() = topUps.filter { !it.date.isBefore(startDate) && it.date.isBefore(endDate) }
 
     /** Everything put in over the whole term, planned top-ups included. */
-    val investedTotal: Money get() = Money.ofMinor(principal.minor + topUps.sumOf { it.amount.minor })
+    val investedTotal: Money get() = Money.ofMinor(principal.minor + countedTopUps.sumOf { it.amount.minor })
 
     /** Annual rate as a percentage, e.g. 19.0. */
     val ratePercent: Double get() = rateBp / 100.0

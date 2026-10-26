@@ -47,9 +47,9 @@ object DepositMath {
      * from its day to the deposit's end — and the parts' figures are summed.
      */
     fun project(deposit: Deposit, asOf: LocalDate, seriesPoints: Int = 48): Projection {
-        if (deposit.topUps.isEmpty()) return projectOne(deposit, asOf, seriesPoints)
-        val parts = listOf(deposit.copy(topUps = emptyList())) + deposit.topUps
-            .filter { !it.date.isBefore(deposit.startDate) && it.date.isBefore(deposit.endDate) }
+        val counted = deposit.countedTopUps
+        if (counted.isEmpty()) return projectOne(deposit, asOf, seriesPoints)
+        val parts = listOf(deposit.copy(topUps = emptyList())) + counted
             .map { t -> deposit.copy(id = deposit.id + "#" + t.id, principal = t.amount, startDate = t.date, exitAmount = null, topUps = emptyList()) }
         val all = parts.map { part -> part to projectOne(part, asOf, 2) }
         // A top-up not made yet is neither on the deposit nor earning.
