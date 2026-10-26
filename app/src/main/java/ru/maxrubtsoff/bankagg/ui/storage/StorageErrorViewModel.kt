@@ -24,7 +24,8 @@ data class StorageErrorState(
     val busy: Boolean = false,
     val message: String? = null,
     val copy: PickedCopy? = null,
-    val confirmStartOver: Boolean = false
+    val confirmStartOver: Boolean = false,
+    val passwordWrong: Boolean = false
 )
 
 /**
@@ -61,6 +62,15 @@ class StorageErrorViewModel(
         if (gate.retry() !is StorageStatus.Ready) _state.update { it.copy(message = "Пока не открылось. Попробуйте ещё раз чуть позже.") }
     }
 
+    /** The backup password, typed on the screen: it opens the data without the phone's key. */
+    fun unlock(password: CharArray) = launchBusy {
+        when (gate.unlockWithPassword(password)) {
+            StorageGate.PasswordResult.OPENED -> Unit
+            StorageGate.PasswordResult.WRONG_PASSWORD -> _state.update { it.copy(passwordWrong = true) }
+            StorageGate.PasswordResult.FAILED -> _state.update { it.copy(message = "Не получилось открыть. Попробуйте ещё раз чуть позже.") }
+        }
+    }
+
     fun askStartOver(show: Boolean) = _state.update { it.copy(confirmStartOver = show) }
 
     fun startOver() {
@@ -93,7 +103,7 @@ class StorageErrorViewModel(
     private fun launchBusy(block: suspend () -> Unit) {
         if (_state.value.busy) return
         viewModelScope.launch {
-            _state.update { it.copy(busy = true, message = null) }
+            _state.update { it.copy(busy = true, message = null, passwordWrong = false) }
             withContext(Dispatchers.IO) { block() }
             _state.update { it.copy(busy = false) }
         }

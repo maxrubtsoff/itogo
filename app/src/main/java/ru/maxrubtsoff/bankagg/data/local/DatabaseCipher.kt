@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Base64
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import ru.maxrubtsoff.bankagg.data.backup.BackupCipher
+import ru.maxrubtsoff.bankagg.data.security.DbPasswordSeal
 import ru.maxrubtsoff.bankagg.data.security.PhoneKeys
 import ru.maxrubtsoff.bankagg.domain.model.DbFile
 import ru.maxrubtsoff.bankagg.domain.model.KeyStatus
@@ -70,6 +71,8 @@ object DatabaseCipher {
             StorageDecision.CREATE_NEW, StorageDecision.CONVERT_PLAIN -> {
                 val key = (lookup as? PhoneKeys.KeyLookup.Found)?.key ?: PhoneKeys.create() ?: return Prepared.Plain
                 val passphrase = (if (decision == StorageDecision.CONVERT_PLAIN) opened else null) ?: fresh()
+                // A new passphrase makes an older password seal stale: it is made again from the password.
+                if (opened == null || decision == StorageDecision.CREATE_NEW) DbPasswordSeal.file(context).delete()
                 // commit, not apply: the passphrase must be on disk before the database is converted with it.
                 val stored = runCatching {
                     prefs.edit().putString(KEY, Base64.encodeToString(BackupCipher.seal(passphrase, key), Base64.NO_WRAP)).commit()
@@ -158,7 +161,28 @@ object DatabaseCipher {
     }
 
     /** Whether the passphrase is also sealed with the backup password. */
-    private fun passwordSealStored(context: Context): Boolean = false
+    private fun passwordSealStored(context: Context): Boolean = DbPasswordSeal.exists(context)
+
+    /** The passphrase as the phone's key opens it now; null if it can't (no key, nothing stored). */
+    fun storedPassphrase(context: Context): ByteArray? {
+        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+        return checkSecret(stored, PhoneKeys.lookup()).second
+    }
+
+    /**
+     * The passphrase found through the backup password goes back under the phone's key
+     * (a new one if the old is gone: only after the password proved the data is ours).
+     */
+    fun adopt(context: Context, passphrase: ByteArray): Boolean {
+        val key = (PhoneKeys.lookup() as? PhoneKeys.KeyLookup.Found)?.key ?: run {
+            PhoneKeys.creationAllowed = true
+            PhoneKeys.backupKey()
+        } ?: return false
+        return runCatching {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY, Base64.encodeToString(BackupCipher.seal(passphrase, key), Base64.NO_WRAP)).commit()
+        }.getOrDefault(false)
+    }
 
     /**
      * 64 hex characters: plain ASCII, so the same bytes work for Room and for

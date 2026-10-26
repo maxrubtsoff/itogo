@@ -79,6 +79,18 @@ fun StorageErrorScreen(vm: StorageErrorViewModel, onClose: () -> Unit) {
                 }
             }
             Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (StorageAction.ENTER_PASSWORD in actions) {
+                    var password by remember { mutableStateOf("") }
+                    SlitokField(
+                        password, { password = it }, label = "Пароль копии", password = true,
+                        error = if (state.passwordWrong) "Пароль не подошёл" else null
+                    )
+                    Text(
+                        "Этот пароль вы задали для копий. Он открывает данные.".nbsp(),
+                        style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted
+                    )
+                    BrassButton({ vm.unlock(password.toCharArray()) }, Modifier.fillMaxWidth(), enabled = password.isNotEmpty() && !state.busy) { Text("Открыть") }
+                }
                 if (StorageAction.RETRY in actions) {
                     BrassButton(vm::retry, Modifier.fillMaxWidth(), enabled = !state.busy) { Text("Повторить") }
                 }
