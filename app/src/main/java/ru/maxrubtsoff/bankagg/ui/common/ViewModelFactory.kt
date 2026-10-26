@@ -46,7 +46,11 @@ class ViewModelFactory(
                 container.ledgerRepository, container.depositRepository, container.cashbackRepository, container.subscriptionRepository, container.today, container.undo
             ) as T
         modelClass.isAssignableFrom(SettingsViewModel::class.java) ->
-            SettingsViewModel(container.settings) { container.checkPin.setNew(it) } as T
+            SettingsViewModel(container.settings) {
+                container.checkPin.setNew(it)
+                // The PIN is turned on by a signed-in user: this session counts as unlocked (B-94).
+                container.lockSession.markUnlocked()
+            } as T
         modelClass.isAssignableFrom(CashbackViewModel::class.java) ->
             CashbackViewModel(
                 container.cashbackRepository,
