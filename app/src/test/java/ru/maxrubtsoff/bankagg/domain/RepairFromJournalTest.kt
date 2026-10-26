@@ -51,7 +51,18 @@ class RepairFromJournalTest {
             accountId: String, brand: BankBrand, currency: String,
             amountMinor: Long, balanceMinor: Long?, postedAt: Long
         ) = Unit
-        override suspend fun setBalance(accountId: String, balanceMinor: Long, at: Long) = Unit
+        override suspend fun setBalance(accountId: String, balanceMinor: Long, at: Long) {
+            accounts[accountId]?.let {
+                accounts[accountId] = it.copy(balance = Money.ofMinor(balanceMinor), checkedAt = at, estimated = false)
+            }
+        }
+        override suspend fun hasTransactions(accountId: String) = txs.any { it.accountId == accountId }
+        override suspend fun deleteAccount(accountId: String) { accounts.remove(accountId) }
+        override suspend fun resetBalanceBase(accountId: String) {
+            accounts[accountId]?.let {
+                accounts[accountId] = it.copy(balance = Money.ZERO, checkedAt = null, estimated = false)
+            }
+        }
         override suspend fun sumSince(accountId: String, from: Long) =
             txs.filter { it.accountId == accountId && it.postedAt > from }.sumOf { it.amount.minor }
         override suspend fun addTransaction(tx: Transaction): Boolean = txs.add(tx)
@@ -193,5 +204,56 @@ class RepairFromJournalTest {
         assertEquals(-300_000L, ledger.txs.single().amount.minor)
         assertEquals(0L, ledger.accounts[account]!!.balance.minor)
         assertNull(ledger.accounts[account]!!.checkedAt)
+    }
+
+    private val adText = "Всё просто. Ставьте бочонки на карточки. Закроете одну — и вы в розыгрыше 100 000 рублей"
+
+    private fun acc(balance: Long, checkedAt: Long?) = Account(
+        id = account, brand = brand, title = brand.title, balance = Money.ofMinor(balance),
+        currency = "RUB", updatedAt = 3_000L, checkedAt = checkedAt, estimated = false
+    )
+
+    @Test fun account_created_only_by_false_operation_is_deleted() = runTest {
+        val (event, tx) = stored(1, adText, 3_000L, 10_000_000L)
+        val ledger = FakeLedger(mutableMapOf(account to acc(0L, null)), mutableListOf(tx!!))
+
+        RepairFromJournal(FakeEvents(listOf(event)), ledger, direct)()
+
+        assertNull(ledger.accounts[account])
+    }
+
+    @Test fun poisoned_checked_balance_is_rebuilt_from_earlier_exact_balance() = runTest {
+        val (e1, t1) = stored(1, "Покупка 2 000,50 RUR в YANDEX.TAXI. Баланс: 9 999,50 RUR", 2_000L, -200_050L, 999_950L)
+        val (e2, t2) = stored(2, adText, 3_000L, 10_000_000L, 5_000_000L)
+        val ledger = FakeLedger(mutableMapOf(account to acc(5_000_000L, 3_000L)), mutableListOf(t1!!, t2!!))
+
+        RepairFromJournal(FakeEvents(listOf(e1, e2)), ledger, direct)()
+
+        assertEquals(999_950L, ledger.accounts[account]!!.balance.minor)
+        assertEquals(2_000L, ledger.accounts[account]!!.checkedAt)
+        assertFalse(ledger.accounts[account]!!.estimated)
+    }
+
+    @Test fun poisoned_without_earlier_balance_but_with_other_operations_resets_base_and_counts() = runTest {
+        val (e1, t1) = stored(1, "Перевод 3 000 ₽ Ивану Петрову", 1_000L, 300_000L)
+        val (e2, t2) = stored(2, adText, 3_000L, 10_000_000L, 5_000_000L)
+        val ledger = FakeLedger(mutableMapOf(account to acc(5_000_000L, 3_000L)), mutableListOf(t1!!, t2!!))
+
+        RepairFromJournal(FakeEvents(listOf(e1, e2)), ledger, direct)()
+
+        val a = ledger.accounts[account]!!
+        assertNull(a.checkedAt)
+        assertTrue(a.estimated)
+        assertEquals(-300_000L, a.balance.minor)
+    }
+
+    @Test fun manual_balance_is_kept() = runTest {
+        val (e1, t1) = stored(1, adText, 2_000L, 10_000_000L)
+        val ledger = FakeLedger(mutableMapOf(account to acc(10_700_000L, 1_000L)), mutableListOf(t1!!))
+
+        RepairFromJournal(FakeEvents(listOf(e1)), ledger, direct)()
+
+        assertEquals(1_000L, ledger.accounts[account]!!.checkedAt)
+        assertEquals(700_000L, ledger.accounts[account]!!.balance.minor)
     }
 }

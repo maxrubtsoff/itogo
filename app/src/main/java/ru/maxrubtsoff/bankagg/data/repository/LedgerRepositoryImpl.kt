@@ -67,6 +67,12 @@ class LedgerRepositoryImpl(
     override suspend fun setCountedBalance(accountId: String, balanceMinor: Long, estimated: Boolean) =
         dao.setCountedBalance(accountId, balanceMinor, estimated)
 
+    override suspend fun hasTransactions(accountId: String) = dao.countTransactions(accountId) > 0
+
+    override suspend fun deleteAccount(accountId: String) = dao.deleteAccount(accountId)
+
+    override suspend fun resetBalanceBase(accountId: String) = dao.resetBalanceBase(accountId)
+
     override fun observeAccounts(): Flow<List<Account>> =
         dao.observeAccounts().map { list -> list.map { it.toDomain() } }
 

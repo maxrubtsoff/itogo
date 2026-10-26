@@ -44,6 +44,15 @@ interface LedgerRepository {
      */
     suspend fun setCountedBalance(accountId: String, balanceMinor: Long, estimated: Boolean)
 
+    /** Whether any operation sits on the account (B-90). */
+    suspend fun hasTransactions(accountId: String): Boolean
+
+    /** Drops an account that only a false operation created (B-90). */
+    suspend fun deleteAccount(accountId: String)
+
+    /** Forgets the exact balance: no base, balance 0, not estimated (B-90). */
+    suspend fun resetBalanceBase(accountId: String)
+
     fun observeAccounts(): Flow<List<Account>>
 
     /** «Не учитывать в капитале» / «Учитывать» (U-18). */

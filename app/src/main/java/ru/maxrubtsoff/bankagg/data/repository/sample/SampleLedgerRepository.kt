@@ -59,6 +59,14 @@ class SampleLedgerRepository(accounts: List<Account>, transactions: List<Transac
         it.copy(balance = Money.ofMinor(balanceMinor), estimated = estimated)
     }
 
+    override suspend fun hasTransactions(accountId: String) = transactions.value.any { it.accountId == accountId }
+
+    override suspend fun deleteAccount(accountId: String) = accounts.update { list -> list.filterNot { it.id == accountId } }
+
+    override suspend fun resetBalanceBase(accountId: String) = change(accountId) {
+        it.copy(balance = Money.ZERO, checkedAt = null, estimated = false)
+    }
+
     override fun observeAccounts(): Flow<List<Account>> = accounts
 
     override suspend fun setExcluded(accountId: String, excluded: Boolean) = change(accountId) { it.copy(excluded = excluded) }

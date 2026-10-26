@@ -1,5 +1,7 @@
 package ru.maxrubtsoff.bankagg.domain.usecase
 
+import ru.maxrubtsoff.bankagg.domain.model.RepairBase
+import ru.maxrubtsoff.bankagg.domain.model.RepairEvent
 import ru.maxrubtsoff.bankagg.domain.model.Transaction
 import ru.maxrubtsoff.bankagg.domain.parser.NotificationParser
 import ru.maxrubtsoff.bankagg.domain.parser.ParsedOp
@@ -42,11 +44,20 @@ class RepairFromJournal(
         }
 
         // The balance the bank (or the user) gave exactly, before the operations
-        // counted on top of it — those are about to be re-counted.
+        // counted on top of it — those are about to be re-counted. A figure from
+        // a push that is no operation any more is no base (B-90).
+        val all = events.all()
+        val changedAt = changes.map { it.event.postedAt }.toSet()
         val bases = affected.mapNotNull { id ->
             val account = ledger.account(id) ?: return@mapNotNull null
-            val checkedAt = account.checkedAt ?: return@mapNotNull null
-            id to Base(checkedAt, account.balance.minor - ledger.sumSince(id, checkedAt))
+            val mine = all.mapNotNull { e ->
+                val op = NotificationParser.parse(e.title, e.text, e.brand.defaultCurrency)
+                    ?: return@mapNotNull null
+                if (accountId(e.brand.key, op.currency) != id) null
+                else RepairEvent(e.postedAt, op.balance?.minor)
+            }
+            val since = account.checkedAt?.let { ledger.sumSince(id, it) } ?: 0L
+            id to RepairBase.pick(account, mine, changedAt, since)
         }.toMap()
 
         for (change in changes) {
@@ -72,13 +83,38 @@ class RepairFromJournal(
         }
 
         for ((id, base) in bases) {
-            val counted = ledger.sumSince(id, base.checkedAt)
-            ledger.setCountedBalance(id, base.balanceMinor + counted, estimated = counted != 0L)
+            when (base) {
+                is RepairBase.Keep -> {
+                    val counted = ledger.sumSince(id, base.checkedAt)
+                    ledger.setCountedBalance(id, base.balanceMinor + counted, estimated = counted != 0L)
+                }
+                is RepairBase.FromJournal -> {
+                    ledger.setBalance(id, base.balanceMinor, base.checkedAt)
+                    val counted = ledger.sumSince(id, base.checkedAt)
+                    ledger.setCountedBalance(id, base.balanceMinor + counted, estimated = counted != 0L)
+                }
+                RepairBase.None -> {
+                    val account = ledger.account(id)
+                    when {
+                        // Created only by a false operation: nothing left to show.
+                        !ledger.hasTransactions(id) -> ledger.deleteAccount(id)
+                        // Never checked: the app has no base to rebuild, as before.
+                        account?.checkedAt == null -> Unit
+                        // The only exact figure was false: count from the operations.
+                        else -> {
+                            ledger.resetBalanceBase(id)
+                            ledger.setCountedBalance(id, ledger.sumSince(id, Long.MIN_VALUE), estimated = true)
+                        }
+                    }
+                }
+            }
         }
         changes.size
     }
 
-    private fun accountId(change: Change, op: ParsedOp) = "${change.event.brand.key}:${op.currency}"
+    private fun accountId(change: Change, op: ParsedOp) = accountId(change.event.brand.key, op.currency)
+
+    private fun accountId(brandKey: String, currency: String) = "$brandKey:$currency"
 
     private class Change(
         val eventId: Long,
@@ -89,5 +125,4 @@ class RepairFromJournal(
         val event: ru.maxrubtsoff.bankagg.domain.model.CapturedEvent
     )
 
-    private class Base(val checkedAt: Long, val balanceMinor: Long)
 }

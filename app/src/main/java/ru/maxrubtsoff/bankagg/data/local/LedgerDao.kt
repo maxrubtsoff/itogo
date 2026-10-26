@@ -53,6 +53,15 @@ interface LedgerDao {
     @Query("UPDATE accounts SET balanceMinor = :balanceMinor, estimated = :estimated WHERE id = :id")
     suspend fun setCountedBalance(id: String, balanceMinor: Long, estimated: Boolean)
 
+    @Query("SELECT COUNT(*) FROM transactions WHERE accountId = :id")
+    suspend fun countTransactions(id: String): Int
+
+    @Query("DELETE FROM accounts WHERE id = :id")
+    suspend fun deleteAccount(id: String)
+
+    @Query("UPDATE accounts SET balanceMinor = 0, checkedAt = NULL, estimated = 0 WHERE id = :id")
+    suspend fun resetBalanceBase(id: String)
+
     @Query("SELECT * FROM accounts ORDER BY brandKey, title")
     fun observeAccounts(): Flow<List<AccountEntity>>
 

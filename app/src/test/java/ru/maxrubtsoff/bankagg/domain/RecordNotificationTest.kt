@@ -48,6 +48,9 @@ class RecordNotificationTest {
         override suspend fun setExcluded(accountId: String, excluded: Boolean) = Unit
         override fun observeTransactions(limit: Int): Flow<List<Transaction>> = emptyFlow()
         override suspend fun clear() {}
+        override suspend fun hasTransactions(accountId: String) = false
+        override suspend fun deleteAccount(accountId: String) = Unit
+        override suspend fun resetBalanceBase(accountId: String) = Unit
         override suspend fun account(accountId: String): Account? = null
         override suspend fun transaction(id: String): Transaction? = txs.firstOrNull { it.id == id }
         override suspend fun deleteTransaction(id: String) { txs.removeAll { it.id == id } }
