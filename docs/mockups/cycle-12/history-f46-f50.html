@@ -466,8 +466,8 @@ document.getElementById('legend').innerHTML=[
   document.getElementById('f49-b').innerHTML=
    blk('Всё',{data:TOT,color:PC.all,glow:'brass',marks:ALLMARKS},'<li>Крупные события любой части; точка — цвет части. Подпись — у трёх крупнейших.</li><li>Перевод между своими счетами и вклад со своего счёта на «Всё» не отмечаются: капитал не изменился.</li>')+
    blk('Счета',{data:ACC,color:PC.acc,glow:'brass',marks:[{i:4,label:'+95 тыс',plus:1},{i:6,label:'−300 тыс',below:1},{i:18,label:'+180 тыс',plus:1},{i:22,kind:'dot'},{i:24,kind:'dot'}]},'<li>Поступления и списания больше 10% среднего остатка счетов за период, в т.ч. ушло на вклад.</li><li>Мелкие траты не отмечаются.</li>')+
-   blk('Валюта',{data:FX,color:PC.sky,glow:'sky',marks:[{i:12,label:'+1 000 $',plus:1},{i:25,label:'−500 €',below:1}]},'<li>Каждая покупка и продажа; подпись — в валюте сделки, не в рублях.</li>')+
-   blk('Наличные',{data:CASH,color:PC.sand,glow:'sand',marks:[{i:9,label:'+20 тыс',plus:1},{i:21,label:'−15 тыс',below:1}]},'<li>Каждое ручное изменение суммы.</li>');
+   blk('Валюта',{data:FX,color:PC.fx,glow:'sky',marks:[{i:12,label:'+1 000 $',plus:1},{i:25,label:'−500 €',below:1}]},'<li>Каждая покупка и продажа; подпись — в валюте сделки, не в рублях.</li>')+
+   blk('Наличные',{data:CASH,color:PC.cash,glow:'sand',marks:[{i:9,label:'+20 тыс',plus:1},{i:21,label:'−15 тыс',below:1}]},'<li>Каждое ручное изменение суммы.</li>');
 })();
 
 /* ---------- F-50 ---------- */
