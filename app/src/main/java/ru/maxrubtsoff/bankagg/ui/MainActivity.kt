@@ -117,6 +117,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import ru.maxrubtsoff.bankagg.data.local.StorageStatus
+import ru.maxrubtsoff.bankagg.ui.storage.StorageErrorScreen
+import ru.maxrubtsoff.bankagg.ui.storage.StorageErrorViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -344,9 +346,8 @@ class MainActivity : FragmentActivity() {
                             ) { shared.value = emptyList() }
                         } else {
                             // B-91: the data is closed; no navigation, no screen model touches the database.
-                            Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                                Text("Данные пока не открылись. Закройте приложение и откройте снова.")
-                            }
+                            val vm: StorageErrorViewModel = viewModel(factory = factory)
+                            StorageErrorScreen(vm, onClose = ::finish)
                         }
                     }
                     // U-61: the lock dissolves instead of vanishing; it appears at once (the app must not show first).

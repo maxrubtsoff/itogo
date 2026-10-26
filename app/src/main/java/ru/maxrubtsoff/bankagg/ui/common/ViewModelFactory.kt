@@ -12,6 +12,8 @@ import ru.maxrubtsoff.bankagg.ui.subscriptions.SubscriptionsViewModel
 import ru.maxrubtsoff.bankagg.ui.deposits.DepositsViewModel
 import ru.maxrubtsoff.bankagg.ui.log.LogViewModel
 import ru.maxrubtsoff.bankagg.ui.settings.SettingsViewModel
+import ru.maxrubtsoff.bankagg.data.backup.BackupFileCheck
+import ru.maxrubtsoff.bankagg.ui.storage.StorageErrorViewModel
 
 /** Builds screen ViewModels from the app's manual DI container. */
 class ViewModelFactory(
@@ -37,6 +39,13 @@ class ViewModelFactory(
             CapitalHistoryViewModel(
                 container.capitalHistory, container.ledgerRepository, container.fxRepository, container.ratesRepository,
                 container.depositRepository, container.cashRepository, container.settings, container.today
+            ) as T
+        modelClass.isAssignableFrom(StorageErrorViewModel::class.java) ->
+            StorageErrorViewModel(
+                container.storage,
+                BackupFileCheck(container.appContext)::check,
+                // After «Начать заново» the data is open again, so the backup manager can be made.
+                { uri, password -> container.backupManager.restoreFrom(uri, password) }
             ) as T
         modelClass.isAssignableFrom(LogViewModel::class.java) ->
             LogViewModel(container.eventRepository) as T

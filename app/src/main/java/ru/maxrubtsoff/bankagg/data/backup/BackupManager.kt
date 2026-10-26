@@ -190,6 +190,8 @@ class BackupManager(
     }
 
     private suspend fun saveBefore(): Copy? = runCatching {
+        // An empty database has nothing to keep, and its copy would only push older ones out (B-91).
+        if (statsOf(export()).isEmpty) return null
         val at = LocalDateTime.now()
         val name = BackupRotation.beforeName(at)
         val ref = writeSealed(name)

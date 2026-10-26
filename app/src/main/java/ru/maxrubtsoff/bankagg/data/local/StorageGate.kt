@@ -4,7 +4,9 @@ import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import ru.maxrubtsoff.bankagg.domain.model.StorageAction
 import ru.maxrubtsoff.bankagg.domain.model.StorageDecision
+import ru.maxrubtsoff.bankagg.domain.model.StorageGuard
 
 /** Whether the app's data is open (B-91). */
 sealed interface StorageStatus {
@@ -48,4 +50,18 @@ class StorageGate(context: Context) {
 
     /** Another try after a refusal. */
     fun retry(): StorageStatus = open()
+
+    /**
+     * «Начать заново»: the old file is moved aside to `.broken` (never erased) and an
+     * empty database is made in its place. Only from a closed state; false if the file
+     * could not be moved, and then nothing changes.
+     */
+    @Synchronized
+    fun startOver(): Boolean {
+        if (database != null) return false
+        val decision = (status.value as? StorageStatus.Blocked)?.decision ?: return false
+        if (StorageAction.START_OVER !in StorageGuard.actions(decision)) return false
+        if (!AppDatabase.quarantine(appContext)) return false
+        return open() == StorageStatus.Ready
+    }
 }

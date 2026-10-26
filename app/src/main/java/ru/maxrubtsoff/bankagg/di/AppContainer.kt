@@ -73,7 +73,7 @@ import ru.maxrubtsoff.bankagg.domain.usecase.RepairFromJournal
 /** Manual DI container. Data stays local; the only network call is CBR rates ([CbrRatesSource]). */
 class AppContainer(context: Context) {
 
-    private val appContext = context.applicationContext
+    val appContext: Context = context.applicationContext
 
     /** Opens the data; while it is closed (B-91) nothing below that needs the database may be touched. */
     val storage by lazy { StorageGate(appContext) }
