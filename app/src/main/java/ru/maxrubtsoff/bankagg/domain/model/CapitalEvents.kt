@@ -326,6 +326,10 @@ object CapitalEvents {
         events.map { it.date }.distinct()
             .minWithOrNull(compareBy<LocalDate>({ kotlin.math.abs(java.time.temporal.ChronoUnit.DAYS.between(it, date)) }, { it }))
 
+    /** The newest day with events inside [span]; none — the nearest day with events to its end (F-46). */
+    fun focusDay(events: List<HistoryEvent>, span: DaySpan): LocalDate? =
+        events.map { it.date }.filter { it in span }.maxOrNull() ?: nearestDay(events, span.to)
+
     /** False when [target] is a deposit that no longer exists. */
     fun isAlive(target: HistoryTarget, deposits: List<Deposit>): Boolean =
         target !is HistoryTarget.Deposit || deposits.any { it.id == target.id }

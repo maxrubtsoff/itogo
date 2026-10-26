@@ -14,6 +14,12 @@ object HistoryRows {
         else -> RowKind.SUM
     }
 
+    /** True when any event inside the row happened in the picked [span] of the chart (F-46). */
+    fun touches(row: HistoryRow, span: DaySpan?): Boolean = span != null && row.sources.any { it.date in span }
+
+    /** The first of [rows] the [span] touches; null when none does. */
+    fun firstTouching(rows: List<HistoryRow>, span: DaySpan?): HistoryRow? = rows.firstOrNull { touches(row = it, span = span) }
+
     /** Ruble spendings and transfers are only a sum; a group with a currency child opens. */
     fun groupKind(eventKind: HistoryKind, children: List<HistoryEvent>): RowKind =
         if (eventKind in SUMMED && children.all { it.target == null }) RowKind.SUM else RowKind.OPEN

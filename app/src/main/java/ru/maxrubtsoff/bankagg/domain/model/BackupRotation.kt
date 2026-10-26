@@ -93,6 +93,20 @@ object RuDays {
     /** "14 октября, вторник" — the date under the finger on the chart. */
     fun dayWeekday(day: LocalDate, today: LocalDate): String = dayMonth(day, today) + ", " + weekday(day)
 
+    /** "8 – 14 октября" / "28 сентября – 4 октября" — the days a chart point stands for (F-46). */
+    fun span(from: LocalDate, to: LocalDate, today: LocalDate): String = when {
+        from == to -> dayMonth(to, today)
+        from.year == to.year && from.month == to.month -> "${from.dayOfMonth} – ${dayMonth(to, today)}"
+        else -> "${dayMonth(from, today)} – ${dayMonth(to, today)}"
+    }
+
+    /** "за день" / "за неделю" / "за 3 дня" — what a step on the chart covers. */
+    fun spanWord(days: Int): String = when (days) {
+        1 -> "за день"
+        7 -> "за неделю"
+        else -> "за " + RuPlural.days(days)
+    }
+
     /** "Октябрь" / "Октябрь 2025" — a month in the folded list. */
     fun monthTitle(month: java.time.YearMonth, today: LocalDate): String {
         val name = MONTHS_NOM[month.monthValue - 1]

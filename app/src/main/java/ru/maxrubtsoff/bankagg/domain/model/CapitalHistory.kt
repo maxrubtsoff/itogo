@@ -21,7 +21,13 @@ enum class HistoryPeriod(val days: Int?, val key: String) {
 /** A value on a day; the series the chart draws is a list of these, one per day. */
 data class DayValue(val date: LocalDate, val minor: Long)
 
-/** What changed over a period: [percentBp] is hundredths of a percent (1,5 % → 150), null when it started from nothing. */
+/** The days one chart point stands for, both ends included (F-46). */
+data class DaySpan(val from: LocalDate, val to: LocalDate) {
+    val days: Int get() = (java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1).toInt()
+    operator fun contains(d: LocalDate): Boolean = !d.isBefore(from) && !d.isAfter(to)
+}
+
+/** What changed over a period:[percentBp] is hundredths of a percent (1,5 % → 150), null when it started from nothing. */
 data class CapitalChange(val from: DayValue, val to: DayValue, val deltaMinor: Long, val percentBp: Long?)
 
 /** Pure logic of the capital history: the series of a period, its change, thinning, month deltas. */
@@ -75,6 +81,32 @@ object CapitalHistory {
         val last = series.size - 1
         return (0 until max).map { i -> series[(i.toLong() * last / (max - 1)).toInt()] }
     }
+
+    /** The last point, then every 7 days back, then the first: a year and all-time are drawn by weeks (F-46). */
+    fun weekly(series: List<DayValue>): List<DayValue> {
+        if (series.size <= 2) return series
+        val out = ArrayList<DayValue>()
+        var i = series.size - 1
+        while (i > 0) { out += series[i]; i -= 7 }
+        out += series[0]
+        return out.reversed()
+    }
+
+    /** The days a point stands for: from the day after the point before it to its own day. */
+    fun spanAt(series: List<DayValue>, i: Int): DaySpan =
+        DaySpan(if (i <= 0) series[0].date else series[i - 1].date.plusDays(1), series[i].date)
+
+    /** What the point added to the one before it; null for the first. */
+    fun stepAt(series: List<DayValue>, i: Int): Long? = if (i <= 0) null else series[i].minor - series[i - 1].minor
+
+    /** The point whose span holds [date]; null before the first point and after the last. */
+    fun pointOf(series: List<DayValue>, date: LocalDate): Int? {
+        if (series.isEmpty() || date.isBefore(series[0].date)) return null
+        return series.indices.firstOrNull { !series[it].date.isBefore(date) }
+    }
+
+    /** The mean of the series, whole kopecks; 0 when empty. */
+    fun average(series: List<DayValue>): Long = if (series.isEmpty()) 0L else series.sumOf { it.minor } / series.size
 
     /** First to last of [series]; null when it is empty. */
     fun change(series: List<DayValue>): CapitalChange? {

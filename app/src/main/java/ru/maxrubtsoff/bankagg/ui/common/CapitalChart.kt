@@ -1,6 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.common
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -54,8 +55,13 @@ fun CapitalChart(
     onRelease: (Int) -> Unit,
     modifier: Modifier = Modifier,
     color: Color = Slitok.Brass2,
-    minSpanFraction: Float = 0.02f
+    minSpanFraction: Float = 0.02f,
+    range: IntRange? = null
 ) {
+    // The band of days a point stands for (F-46) comes in on Motion.NORMAL and goes out the same way.
+    val band by animateFloatAsState(if (range != null && range.first < range.last) 1f else 0f, Motion.tween(Motion.NORMAL), label = "band")
+    val lastRange = remember { arrayOfNulls<IntRange>(1) }
+    if (range != null && range.first < range.last) lastRange[0] = range
     val scrubbed by rememberUpdatedState(onScrub)
     val released by rememberUpdatedState(onRelease)
     var lastTouched by remember { mutableStateOf<Int?>(null) }
@@ -107,6 +113,11 @@ fun CapitalChart(
                 lineTo(x(points.size - 1), size.height)
                 lineTo(x(0), size.height)
                 close()
+            }
+            lastRange[0]?.takeIf { band > 0f }?.let { r ->
+                val a = x(r.first.coerceIn(0, points.size - 1))
+                val b = x(r.last.coerceIn(0, points.size - 1))
+                drawRect(Slitok.BrassTint.copy(alpha = Slitok.BrassTint.alpha * band), Offset(a, 0f), androidx.compose.ui.geometry.Size(b - a, size.height))
             }
             clipRect(right = size.width * grow.value) {
                 drawPath(fill, Brush.verticalGradient(listOf(color.copy(alpha = 0.18f), Color.Transparent)))

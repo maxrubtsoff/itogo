@@ -105,7 +105,8 @@ class CapitalHistoryViewModel(
             val shown = CapitalEvents.within(all, CapitalHistory.startOf(period, i.days, day), p)
             HistoryUi(
                 period = period, part = p, kept = kept, today = day,
-                series = CapitalHistory.thin(full), change = CapitalHistory.change(full),
+                // A year and all-time are drawn by weeks: a point stands for the week behind it (F-46).
+                series = CapitalHistory.thin(if (long) CapitalHistory.weekly(full) else full), change = CapitalHistory.change(full),
                 events = shown,
                 days = if (long) emptyList() else HistoryRows.days(shown, p),
                 months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList()

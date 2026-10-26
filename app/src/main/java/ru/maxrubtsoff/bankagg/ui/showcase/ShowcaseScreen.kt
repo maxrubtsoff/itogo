@@ -305,7 +305,8 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             var marked by remember { mutableStateOf<Int?>(null) }
             CapitalChart(
                 points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"),
-                selected = marked, onScrub = { marked = it }, onRelease = {}
+                selected = marked, onScrub = { marked = it }, onRelease = {},
+                range = marked?.takeIf { it > 0 }?.let { (it - 1)..it }
             )
 
             Caption("Строка истории")
