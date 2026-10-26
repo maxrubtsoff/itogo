@@ -163,8 +163,18 @@ class HistoryOperations(
         for (ref in refs) if (ref is HistoryRef.Fx) {
             (FxPortfolio.checkDelete(fx.all(), ref.id) as? FxPortfolio.Check.Blocked)?.let { return it.message }
         }
+        // Cash cannot go below nothing: taking an edit out would leave less than zero, and putting it back would not restore the amount.
+        val cashRefs = refs.filterIsInstance<HistoryRef.Cash>()
+        if (cashRefs.isNotEmpty()) {
+            val changes = cash.observeChanges().first()
+            val gone = cashRefs.sumOf { r -> changes.firstOrNull { it.atMs == r.atMs }?.delta?.minor ?: 0L }
+            val left = (cash.get()?.amount?.minor ?: 0L) - gone
+            if (left < 0L) return "Тогда в наличных было бы ${cashShort(left)}: так удалить нельзя"
+        }
         return null
     }
+
+    private fun cashShort(minor: Long) = (if (minor < 0L) "−" else "") + Money.ofMinor(kotlin.math.abs(minor)).format()
 
     suspend fun delete(refs: List<HistoryRef>): Removed = run.run {
         // The same rule as [check]: a purchase that a later sale rests on stays, whoever asks.
@@ -227,6 +237,8 @@ class HistoryOperations(
                 is HistoryRef.Cash -> {
                     val old = cash.observeChanges().first().firstOrNull { it.atMs == ref.atMs } ?: return@run null
                     val next = HistoryEdits.cashChange(old, form, zone)
+                    val left = (cash.get()?.amount?.minor ?: 0L) - old.delta.minor + next.delta.minor
+                    if (left < 0L) return@run "Тогда в наличных было бы ${cashShort(left)}"
                     cash.removeChange(old.atMs)
                     cash.addChange(next)
                     shift(

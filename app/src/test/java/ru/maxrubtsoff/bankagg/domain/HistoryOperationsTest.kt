@@ -205,6 +205,34 @@ class HistoryOperationsTest {
         assertEquals(10_000L, w.days().getValue(d19).parts[CapitalPart.CASH])
     }
 
+    @Test fun `one cash edit taken out and put back leaves the same amount`() = runTest {
+        val w = World(startCash = CashBalance(Money.ofMinor(7_000), 0L))
+        w.cash.addChange(take.copy(delta = Money.ofMinor(3_000)))
+        assertEquals(10_000L, w.cash.get()!!.amount.minor)
+        val ref = HistoryRef.Cash(take.atMs)
+        val removed = w.ops.delete(listOf(ref))
+        assertEquals(7_000L, w.cash.get()!!.amount.minor)
+        w.ops.restore(removed)
+        assertEquals(10_000L, w.cash.get()!!.amount.minor)
+        assertEquals(1, w.cash.observeChanges().first().size)
+    }
+
+    @Test fun `a cash edit that would take the amount below zero stays`() = runTest {
+        // The amount is 1 235 while the log holds an edit of +15 000: taking it out would leave -13 765.
+        val w = World(startCash = CashBalance(Money.ofMinor(0), 0L))
+        w.cash.addChange(CashChange(ms(d18, 10), Money.ofMinor(1_500_000), Money.ofMinor(1_500_000)))
+        w.cash.set(CashBalance(Money.ofMinor(123_500), ms(d18, 12)))
+        val ref = HistoryRef.Cash(ms(d18, 10))
+        assertNotNull(w.ops.check(listOf(ref)))
+        val removed = w.ops.delete(listOf(ref))
+        assertEquals(123_500L, w.cash.get()!!.amount.minor)
+        assertEquals(1, w.cash.observeChanges().first().count { it.atMs == ms(d18, 10) })
+        w.ops.restore(removed)
+        assertEquals(123_500L, w.cash.get()!!.amount.minor)
+        // Correcting it down to a sum the amount can bear is refused the same way.
+        assertNotNull(w.ops.save(ref, OperationForm(false, 1_500_000, d18)))
+    }
+
     @Test fun `the detail of an operation carries the banks text with the sum marked`() = runTest {
         val text = "Поступление 5 000 ₽ на счёт"
         val w = World(

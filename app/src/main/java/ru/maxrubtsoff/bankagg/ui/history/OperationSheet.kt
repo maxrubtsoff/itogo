@@ -219,7 +219,7 @@ private fun ConfirmBody(refs: List<HistoryRef>, today: LocalDate, vm: CapitalHis
     val preview by produceState<ru.maxrubtsoff.bankagg.domain.model.DeletePreview?>(null, refs) { value = vm.preview(refs) }
     val blocked by produceState<String?>(null, refs) { value = vm.check(refs) }
     Text(if (refs.size > 1) "Удалить обе операции?" else "Удалить операцию?", style = MaterialTheme.typography.titleLarge, color = Slitok.Fg)
-    preview?.let { p ->
+    preview?.takeIf { blocked == null }?.let { p ->
         if (p.changes) {
             WasBecomeLine(p.part.label, Money.ofMinor(p.partWas).format(), Money.ofMinor(p.partNow).format())
             WasBecomeLine("Капитал", Money.ofMinor(p.capitalWas).format(), Money.ofMinor(p.capitalNow).format())
