@@ -153,9 +153,15 @@ private fun PercentField(
         PercentState.Asked -> Slitok.BrassEdge
         PercentState.Normal -> Slitok.Line
     }
+    // The field is as wide as its widest value ("100,0") in the current font and font scale (B-74).
+    val style = Amounts.Row.copy(color = Slitok.Fg, textAlign = TextAlign.End)
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val textWidth = with(density) {
+        maxOf(measurer.measure("100,0", style).size.width, measurer.measure(value, style).size.width).toDp()
+    }
     Row(
         Modifier
-            .width(100.dp)
             .heightIn(min = 40.dp)
             .clip(shape)
             .background(Slitok.Inset)
@@ -168,11 +174,11 @@ private fun PercentField(
             value = value,
             onValueChange = { onChange(it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' }.take(5)) },
             singleLine = true,
-            textStyle = Amounts.Row.copy(color = Slitok.Fg, textAlign = TextAlign.End),
+            textStyle = style,
             cursorBrush = SolidColor(Slitok.Brass2),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onDone() }),
-            modifier = Modifier.weight(1f).let { if (focus != null) it.focusRequester(focus) else it }
+            modifier = Modifier.width(textWidth + 4.dp).let { if (focus != null) it.focusRequester(focus) else it }
         )
         Spacer(Modifier.width(3.dp))
         Text("%", style = Amounts.Row, color = Slitok.Muted)
