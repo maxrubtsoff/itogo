@@ -73,11 +73,13 @@ fun NotificationAccessBanner(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.NotificationsOff, contentDescription = null, tint = Slitok.Brass2, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))
-            Text(
-                text.replace(" — ", " — "), // non-breaking: a line never starts with the dash (B-105)
-                style = MaterialTheme.typography.bodyMedium,
-                color = Slitok.Fg
-            )
+            // Headline and reason apart: each wraps on its own, no dangling dash (B-105).
+            val head = text.substringBefore(" — ")
+            val tail = text.substringAfter(" — ", "").replaceFirstChar { it.uppercase() }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(head, style = MaterialTheme.typography.bodyMedium, color = Slitok.Fg)
+                if (tail.isNotEmpty()) Text(tail, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
+            }
         }
         BrassButton(onClick = { Perms.openNotificationAccessSettings(context) }, modifier = Modifier.fillMaxWidth()) {
             Text("Включить")
