@@ -263,6 +263,7 @@ class BackupManager(
                 put("currency", a.currency)
                 put("balanceMinor", a.balanceMinor); put("updatedAt", a.updatedAt)
                 put("checkedAt", a.checkedAt ?: JSONObject.NULL); put("estimated", a.estimated)
+                put("excluded", a.excluded)
             })
         }
         root.put("accounts", accountsJson)
@@ -574,7 +575,9 @@ class BackupManager(
                     // Copies before B-29: a balance the bank told is exact as of its update.
                     checkedAt = if (o.has("checkedAt")) (if (o.isNull("checkedAt")) null else o.getLong("checkedAt"))
                         else o.getLong("updatedAt").takeIf { o.getLong("balanceMinor") != 0L },
-                    estimated = o.optBoolean("estimated", false)
+                    estimated = o.optBoolean("estimated", false),
+                    // Copies before B-88 have no mark: such an account counts.
+                    excluded = o.optBoolean("excluded", false)
                 )
             },
             transactions = root.objects("transactions").map { o ->
