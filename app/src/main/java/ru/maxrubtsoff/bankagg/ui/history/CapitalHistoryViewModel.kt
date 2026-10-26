@@ -20,6 +20,8 @@ import ru.maxrubtsoff.bankagg.domain.model.Transaction
 import ru.maxrubtsoff.bankagg.domain.model.CapitalEvents
 import ru.maxrubtsoff.bankagg.domain.model.CapitalHistory
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
+import ru.maxrubtsoff.bankagg.domain.model.ChartMark
+import ru.maxrubtsoff.bankagg.domain.model.ChartMarks
 import ru.maxrubtsoff.bankagg.domain.model.DayValue
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
 import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
@@ -60,6 +62,8 @@ data class HistoryUi(
     val series: List<DayValue>,
     val change: CapitalChange?,
     val events: List<HistoryEvent>,
+    /** Dots of the significant actions on the chart (F-49). */
+    val marks: List<ChartMark>,
     /** Rows by day, for a week and a month (F-48). */
     val days: List<HistoryDay>,
     /** Rows by month, for a year and for everything (F-48). */
@@ -103,11 +107,13 @@ class CapitalHistoryViewModel(
         val pages = CapitalHistory.sections(kept).map { p ->
             val full = CapitalHistory.series(i.days, period, day, p)
             val shown = CapitalEvents.within(all, CapitalHistory.startOf(period, i.days, day), p)
+            // A year and all-time are drawn by weeks: a point stands for the week behind it (F-46).
+            val drawn = CapitalHistory.thin(if (long) CapitalHistory.weekly(full) else full)
             HistoryUi(
                 period = period, part = p, kept = kept, today = day,
-                // A year and all-time are drawn by weeks: a point stands for the week behind it (F-46).
-                series = CapitalHistory.thin(if (long) CapitalHistory.weekly(full) else full), change = CapitalHistory.change(full),
+                series = drawn, change = CapitalHistory.change(full),
                 events = shown,
+                marks = ChartMarks.of(drawn, shown, p, CapitalHistory.average(CapitalHistory.series(i.days, period, day, CapitalPart.ACCOUNTS))),
                 days = if (long) emptyList() else HistoryRows.days(shown, p),
                 months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList()
             )

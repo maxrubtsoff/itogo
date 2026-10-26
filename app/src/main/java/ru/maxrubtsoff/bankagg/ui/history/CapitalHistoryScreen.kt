@@ -254,6 +254,7 @@ private fun ColumnScope.HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, o
                 Spacer(Modifier.height(12.dp))
                 CapitalChart(points = u.series.map { it.minor }, axis = axisOf(u), selected = selected,
                     onScrub = { picked = u.series[it].date.toEpochDay() }, onRelease = { scrollTick++ }, color = color,
+                    marks = u.marks, markColor = { it.color() },
                     range = if (selected != null && span != null && span.days > 1) (selected - 1)..selected else null
                 )
                 Spacer(Modifier.height(10.dp))

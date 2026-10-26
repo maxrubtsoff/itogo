@@ -87,6 +87,8 @@ import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
 import ru.maxrubtsoff.bankagg.ui.common.DeltaLine
 import ru.maxrubtsoff.bankagg.ui.common.PeriodChips
 import ru.maxrubtsoff.bankagg.ui.common.CapitalChart
+import ru.maxrubtsoff.bankagg.domain.model.ChartMark
+import ru.maxrubtsoff.bankagg.domain.model.MarkShape
 import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.ui.common.ShotDragLayer
@@ -306,7 +308,13 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             CapitalChart(
                 points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"),
                 selected = marked, onScrub = { marked = it }, onRelease = {},
-                range = marked?.takeIf { it > 0 }?.let { (it - 1)..it }
+                range = marked?.takeIf { it > 0 }?.let { (it - 1)..it },
+                // Significant actions (F-49): a big dot with a sum, a small one, a ring (a deposit closed).
+                marks = listOf(
+                    ChartMark(2, CapitalPart.ACCOUNTS, MarkShape.BIG, 1_500_000L, "+15 000 ₽"),
+                    ChartMark(5, CapitalPart.DEPOSITS, MarkShape.SMALL, 300_000L, null),
+                    ChartMark(7, CapitalPart.DEPOSITS, MarkShape.RING, -2_000_000L, "−20 000 ₽")
+                )
             )
 
             Caption("Строка истории")
