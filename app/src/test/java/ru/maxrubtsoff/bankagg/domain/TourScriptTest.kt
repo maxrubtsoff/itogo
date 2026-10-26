@@ -150,3 +150,14 @@ class TourScriptTest {
         }
     }
 }
+
+class TourStartAfterSetupTest {
+    @Test fun not_loaded_never_starts_general_tour() =
+        assertFalse(TourScript.shouldStartAfterSetup(false, true, true, emptySet()))
+    @Test fun loaded_empty_after_setup_starts() =
+        assertTrue(TourScript.shouldStartAfterSetup(true, true, true, emptySet()))
+    @Test fun loaded_with_general_done_does_not_start() =
+        assertFalse(TourScript.shouldStartAfterSetup(true, true, true, setOf(TourSection.GENERAL)))
+    @Test fun not_onboarded_does_not_start() =
+        assertFalse(TourScript.shouldStartAfterSetup(true, false, true, emptySet()))
+}

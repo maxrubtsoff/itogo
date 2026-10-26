@@ -209,4 +209,8 @@ object TourScript {
 
     /** The tour after the first setup: once, unless it was taken or skipped. */
     fun startAfterSetup(done: Set<TourSection>): Boolean = TourSection.GENERAL !in done
+
+    /** B-103: the same, but only once the taken tours are loaded (an empty set while loading is not «none taken»). */
+    fun shouldStartAfterSetup(loaded: Boolean, onboarded: Boolean, setupSeen: Boolean, done: Set<TourSection>): Boolean =
+        loaded && onboarded && setupSeen && startAfterSetup(done)
 }

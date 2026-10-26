@@ -524,8 +524,10 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     val startRoute = remember { startRouteOf(startFeatures) }
     val banksVm: BanksViewModel = viewModel(factory = factory)
     // F-30: the tours taken; the general one opens once, right after the first setup.
-    val tourKeys by container.settings.toursDone.collectAsStateWithLifecycle(initialValue = emptySet())
-    val toursDone = tourKeys.mapNotNull { TourSection.fromKey(it) }.toSet()
+    val tourKeys by container.settings.toursDone.collectAsStateWithLifecycle<Set<String>?>(initialValue = null)
+    // B-103: «not loaded yet» is not «nothing taken» — a tour must not reopen on a re-created Activity.
+    val toursLoaded = tourKeys != null
+    val toursDone = tourKeys.orEmpty().mapNotNull { TourSection.fromKey(it) }.toSet()
     var setupSeen by rememberSaveable { mutableStateOf(false) }
     if (!onboarded) setupSeen = true
     if (!onboarded) {
@@ -544,12 +546,12 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     var pendingTour by remember { mutableStateOf<TourSection?>(null) }
     var tour by remember { mutableStateOf<TourSession?>(null) }
     val notifAccess by rememberNotificationAccess()
-    LaunchedEffect(onboarded, setupSeen) {
-        if (onboarded && setupSeen && TourScript.startAfterSetup(toursDone)) pendingTour = TourSection.GENERAL
+    LaunchedEffect(toursLoaded, onboarded, setupSeen) {
+        if (TourScript.shouldStartAfterSetup(toursLoaded, onboarded, setupSeen, toursDone)) pendingTour = TourSection.GENERAL
     }
     val tourScope = rememberCoroutineScope()
     val tourOffer: (TourSection, Boolean) -> (() -> Unit)? = { section, hasData ->
-        if (TourScript.offerInSection(section, features, hasData, toursDone)) ({ pendingTour = section }) else null
+        if (toursLoaded && TourScript.offerInSection(section, features, hasData, toursDone)) ({ pendingTour = section }) else null
     }
 
     // A tap on one of the app's notifications opens what it is about.
