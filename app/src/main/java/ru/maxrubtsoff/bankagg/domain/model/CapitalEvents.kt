@@ -327,8 +327,15 @@ object CapitalEvents {
                     dealPrice = (java.math.BigInteger.valueOf(o.rubMinor) * java.math.BigInteger.valueOf(1_000_000L) / java.math.BigInteger.valueOf(o.amountMinor)).toLong()
                 }
             }
-            val shownFrom = if (qty0 != 0L) r0 else dealPrice ?: r0
-            if (effect == 0L || shownFrom == r1) return@mapNotNull null
+            if (effect == 0L) return@mapNotNull null
+            // One rate «was» per currency: the held rate, the deal's price, or — both at once — the average the effect implies.
+            val shownFrom = when {
+                dealPrice == null -> r0
+                qty0 == 0L -> dealPrice!!
+                qty > 0L -> (java.math.BigInteger.valueOf(FxMath.rubOf(qty, r1) - effect) * java.math.BigInteger.valueOf(1_000_000L) /
+                    java.math.BigInteger.valueOf(qty)).toLong()
+                else -> r0
+            }
             RevaluationLeg(cur, shownFrom, r1, qty, effect)
         }
         val rest = revalued - legs.sumOf { it.effectMinor }

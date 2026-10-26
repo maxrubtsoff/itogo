@@ -77,6 +77,19 @@ class CapitalEventsTest {
         assertEquals("$ 80,00 → 80,74 ₽", e.subtitle)
     }
 
+    @Test fun revaluationOnSecondBuyDayShowsFigures() {
+        // 100 $ held at 80,00, 50 $ more bought at 82,00; the CBR says 80,54 both days: only the new part loses.
+        val e = reval(
+            events(
+                listOf(pointFx(d0, 805_400), pointFx(d1, 1_208_100)),
+                listOf(buy("USD", d0, 10_000, 800_000), buy("USD", d1, 5_000, 410_000)),
+                listOf(FxRate("USD", d0, 80_540_000), FxRate("USD", d1, 80_540_000))
+            )
+        )
+        assertEquals(-7_300L, e.reason!!.legs.single().effectMinor)
+        assertEquals("$ 81,03 → 80,54 ₽", e.subtitle)
+    }
+
     @Test fun revaluationWithManualRemainder() {
         val e = reval(
             events(
