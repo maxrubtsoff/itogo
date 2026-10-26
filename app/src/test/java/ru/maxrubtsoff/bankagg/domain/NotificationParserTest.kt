@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import ru.maxrubtsoff.bankagg.domain.parser.OpDirection
 import ru.maxrubtsoff.bankagg.domain.model.TransactionKind
 import ru.maxrubtsoff.bankagg.domain.parser.NotificationParser
 
@@ -182,5 +183,26 @@ class NotificationParserTest {
     @Test fun explicit_sign_still_works() {
         assertEquals(110_000L, NotificationParser.parse(null, "+1 100 ₽ Иван И.")!!.amount.minor)
         assertEquals(-50_000L, NotificationParser.parse(null, "−500 ₽ Магнит")!!.amount.minor)
+    }
+
+    // B-84: "входящий перевод … от Имени" is income.
+
+    @Test fun incoming_transfer_with_sender_is_income() {
+        val op = NotificationParser.parse(null, "Входящий перевод 500 ₽ от Ивана Иванова")!!
+        assertEquals(50_000L, op.amount.minor)
+        assertEquals(TransactionKind.TRANSFER, op.kind)
+        assertEquals(OpDirection.IN, op.direction)
+    }
+
+    @Test fun transfer_from_name_not_adjacent_is_income() {
+        assertEquals(50_000L, NotificationParser.parse(null, "Перевод 500 ₽ от Ивана Иванова")!!.amount.minor)
+    }
+
+    @Test fun outgoing_word_wins() {
+        assertEquals(-70_000L, NotificationParser.parse(null, "Исходящий перевод 700 ₽ Ивану Петрову")!!.amount.minor)
+    }
+
+    @Test fun payment_from_name_stays_out() {
+        assertEquals(-20_000L, NotificationParser.parse(null, "Оплата 200 ₽ от Ивана Иванова")!!.amount.minor)
     }
 }

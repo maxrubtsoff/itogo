@@ -95,15 +95,18 @@ object NotificationParser {
     /** Money left the account. Wins over the kind: "Списание … Перевод …" is an expense (B-45). */
     private val OUT_MARKS = listOf(
         "списание", "списан", "снятие", "оплата", "покупка", "платеж", "платёж", "комисси",
-        "получатель", "отправлен", "вы перевели", "перевод на карту", "перевод со счет",
+        "получатель", "отправлен", "исходящ", "вы перевели", "перевод на карту", "перевод со счет",
         "перевод с карты", "перевод на счет получателя"
     )
 
     /** Money came into the account. */
     private val IN_MARKS = listOf(
         "зачисление", "зачислен", "поступление", "поступил", "пополнение", "отправитель",
-        "вам перевели", "перевод от", "возврат", "начислен", "кэшбэк", "кешбэк"
+        "вам перевели", "перевод от", "входящ", "перевод получен", "получен перевод", "вам поступил", "возврат", "начислен", "кэшбэк", "кешбэк"
     )
+
+    /** "… от Ивана Иванова" / "от Иван И." — the sender; matched on the original case (B-84). */
+    private val IN_FROM = Regex("""(?<![А-Яа-яЁё])от[  ]+[А-ЯЁ][а-яё]""")
 
     /** "Перевод на 1 100 ₽" — as "Пополнение на …", the money is credited. */
     private val TRANSFER_IN = Regex("""перевод[  ]на[  ]?(?=\d)""", RegexOption.IGNORE_CASE)
@@ -209,7 +212,8 @@ object NotificationParser {
         hits: List<Hit>
     ): OpDirection? {
         val out = OUT_MARKS.mapNotNull { m -> low.indexOf(m).takeIf { it >= 0 } }.minOrNull()
-        val income = IN_MARKS.mapNotNull { m -> low.indexOf(m).takeIf { it >= 0 } }.minOrNull()
+        val income = (IN_MARKS.mapNotNull { m -> low.indexOf(m).takeIf { it >= 0 } } +
+            listOfNotNull(IN_FROM.find(clean)?.range?.first)).minOrNull()
         if (out != null && (income == null || out <= income)) return OpDirection.OUT
         if (income != null) return OpDirection.IN
 
