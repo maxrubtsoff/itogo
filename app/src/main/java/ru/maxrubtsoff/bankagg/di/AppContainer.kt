@@ -199,4 +199,12 @@ class AppContainer(context: Context) {
 class LockSession {
     var unlocked = false
     var backgroundedAt: Long? = null
+    /** «Забыли код?» passed the phone's own check; lives in this process only, never saved (B-93). */
+    var phoneVerified = false
+
+    fun markUnlocked() {
+        unlocked = true
+        backgroundedAt = null
+        phoneVerified = false
+    }
 }

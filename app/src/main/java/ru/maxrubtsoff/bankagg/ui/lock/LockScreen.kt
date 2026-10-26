@@ -79,10 +79,13 @@ fun LockScreen(
     /** The phone's own lock check; null — the phone has no screen lock. */
     phoneCheck: ((onSuccess: () -> Unit) -> Unit)?,
     onNewPin: suspend (String) -> Unit,
+    /** The phone check was passed earlier in this process: «new code» survives a turn, not a process death. */
+    verified: Boolean,
+    onVerified: () -> Unit,
     onReset: () -> Unit
 ) {
     var forgot by remember { mutableStateOf(false) }
-    var settingNew by rememberSaveable { mutableStateOf(false) }
+    var settingNew by remember { mutableStateOf(verified) }
     var resting by remember { mutableStateOf<Pair<Long, Long>?>(null) }   // until (wall clock), next pause
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val scope = rememberCoroutineScope()
@@ -119,7 +122,7 @@ fun LockScreen(
         },
         biometric = if (biometric) onBiometric else null,
         footer = "Забыли код?",
-        onFooter = { if (phoneCheck != null) phoneCheck { settingNew = true } else forgot = true },
+        onFooter = { if (phoneCheck != null) phoneCheck { onVerified(); settingNew = true } else forgot = true },
         rest = left?.let { sec -> "%d:%02d".format(sec / 60, sec % 60) to (resting?.second ?: 0L) }
     )
     if (forgot) {

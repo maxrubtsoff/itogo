@@ -356,6 +356,8 @@ class MainActivity : FragmentActivity() {
             onUnlocked = ::unlock,
             phoneCheck = if (PhoneCheck.available(this)) { ok -> PhoneCheck.prompt(this, ok) } else null,
             onNewPin = { pin -> container.checkPin.setNew(pin) },
+            verified = container.lockSession.phoneVerified,
+            onVerified = { container.lockSession.phoneVerified = true },
             onReset = {
                 // No screen lock to prove the owner: the code goes with the data (B-27). The phone-bound
                 // keys go first, so copies sealed with them can't be opened after the reset.
@@ -367,8 +369,7 @@ class MainActivity : FragmentActivity() {
 
     private fun unlock() {
         val session = (application as App).container.lockSession
-        session.unlocked = true
-        session.backgroundedAt = null
+        session.markUnlocked()
         locked.value = false
     }
 
