@@ -86,7 +86,7 @@ fun CapitalChart(
                         onDragStart = { p -> touch(indexAt(p.x, size.width.toFloat())) },
                         onDragEnd = { lastTouched?.let { released(it) } },
                         onDragCancel = { lastTouched?.let { released(it) } },
-                        onHorizontalDrag = { change, _ -> touch(indexAt(change.position.x, size.width.toFloat())) }
+                        onHorizontalDrag = { change, _ -> change.consume(); touch(indexAt(change.position.x, size.width.toFloat())) }
                     )
                 }
         ) {

@@ -119,16 +119,16 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
         }
     }
 
-    // The pager lives here so the swipe can take the whole screen, empty space included (B-75).
+    // The pager lives here so the swipe can take the whole screen, header and empty space included (B-75).
     val first = ui
     val sections = first?.sections ?: listOf<CapitalPart?>(null)
     val swipes = (first?.kept?.size ?: 0) > 1
     val pager = key(first != null) {
         rememberPagerState(initialPage = first?.let { CapitalHistory.pageOf(it.part, sections) } ?: 0) { if (swipes) sections.size else 1 }
     }
-    Scaffold(topBar = { ScreenHeader("История капитала", onBack) }) { padding ->
+    Scaffold(modifier = Modifier.sectionSwipe(pager), topBar = { ScreenHeader("История капитала", onBack) }) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).sectionSwipe(pager).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val u = ui
