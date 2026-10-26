@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -219,13 +222,16 @@ private fun HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (Histo
     Column(Modifier.fillMaxSize().nestedScroll(collapse.connection)) {
         Hero(u, change, at, span, selected, collapse, color, onScrub = { picked = u.series[it].date.toEpochDay() }, onPeriod = { picked = null; vm.setPeriod(it) })
         Spacer(Modifier.height(12.dp))
-        Column(Modifier.weight(1f).verticalScroll(list)) {
+        // While a day is picked the list gets a tail as tall as itself, so even the last day can stand right under the chart.
+        var viewport by remember { mutableIntStateOf(0) }
+        val tail = if (span != null) with(LocalDensity.current) { viewport.toDp() } else 0.dp
+        Column(Modifier.weight(1f).onSizeChanged { viewport = it.height }.verticalScroll(list)) {
             Column(
                 Modifier.onPlaced { anchors["root"] = it },
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Events(u, span, open, { open = it }, anchors, onReset = { picked = null }, onTap = onTap)
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp + tail))
             }
         }
     }
@@ -250,19 +256,24 @@ private fun Hero(
                     style = hero.copy(fontSize = lerp(hero.fontSize, 24.sp, t), lineHeight = lerp(hero.lineHeight, 28.sp, t)),
                     color = Slitok.Fg, minSize = 20.sp
                 )
-                if (at != null && span != null) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        if (span.days == 1) RuDays.dayWeekday(at.date, u.today) else RuDays.span(span.from, span.to, u.today),
-                        style = MaterialTheme.typography.labelMedium, color = Slitok.Brass2, maxLines = 1, overflow = TextOverflow.Ellipsis
-                    )
-                }
+                // The caption line is always there and the figures line has a floor, so picking a day
+                // never changes the height of the hero: the chart stays where it is under the finger (U-67).
+                Spacer(Modifier.height(2.dp))
+                val picked = at != null && span != null
+                Text(
+                    when {
+                        picked -> if (span!!.days == 1) RuDays.dayWeekday(at!!.date, u.today) else RuDays.span(span.from, span.to, u.today)
+                        change.deltaMinor != 0L -> "с ${RuDays.dayMonth(change.from.date, u.today)}"
+                        else -> " "
+                    },
+                    style = MaterialTheme.typography.labelMedium, color = if (picked) Slitok.Brass2 else Slitok.Muted,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
                 // What the point moved, and the period's change: folds away in the strip.
-                Column(Modifier.collapseHeight { 1f - collapse.fraction }) {
-                    if (at == null) Spacer(Modifier.height(2.dp))
-                    if (at != null && span != null) {
+                Column(Modifier.collapseHeight { 1f - collapse.fraction }.heightIn(min = 24.dp)) {
+                    if (picked) {
                         val step = CapitalHistory.stepAt(u.series, selected ?: 0)
-                        val word = RuDays.spanWord(span.days)
+                        val word = RuDays.spanWord(span!!.days)
                         if (step != null && step != 0L) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
                                 MoneyText(
@@ -273,19 +284,16 @@ private fun Hero(
                                 Text(word, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         } else {
-                            Text("без изменений $word", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+                            Text("без изменений $word", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     } else if (change.deltaMinor == 0L) {
-                        Text("без изменений ${u.period.spanWord}", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+                        Text("без изменений ${u.period.spanWord}", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-                            MoneyText(
-                                deltaText(change), style = MaterialTheme.typography.bodyMedium,
-                                color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f, fill = false), compact = deltaText(change, compact = true)
-                            )
-                            MoneyText("с ${RuDays.dayMonth(change.from.date, u.today)}", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 2)
-                        }
+                        MoneyText(
+                            deltaText(change), style = MaterialTheme.typography.bodyMedium,
+                            color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
+                            compact = deltaText(change, compact = true)
+                        )
                     }
                 }
                 Spacer(Modifier.height(lerp(12.dp, 6.dp, t)))
