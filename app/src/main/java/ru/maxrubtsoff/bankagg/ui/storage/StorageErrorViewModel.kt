@@ -12,8 +12,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.maxrubtsoff.bankagg.data.backup.BackupFileCheck
-import ru.maxrubtsoff.bankagg.data.local.StorageGate
-import ru.maxrubtsoff.bankagg.data.local.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.model.PasswordResult
+import ru.maxrubtsoff.bankagg.domain.model.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.repository.StorageAccess
 
 /** A copy picked on the screen: waits for its password, or has been given a wrong one. */
 data class PickedCopy(val uri: Uri, val wrongPassword: Boolean)
@@ -30,12 +31,12 @@ data class StorageErrorState(
 
 /**
  * The last-resort screen when the data does not open (B-91). It talks to the
- * [StorageGate] only; the database itself is never touched here.
+ * [StorageAccess] only; the database itself is never touched here.
  */
 class StorageErrorViewModel(
-    private val gate: StorageGate,
+    private val gate: StorageAccess,
     private val check: (Uri, CharArray?) -> BackupFileCheck.Result,
-    /** Loads the copy into the fresh database that [StorageGate.startOver] made. */
+    /** Loads the copy into the fresh database that [StorageAccess.startOver] made. */
     private val restoreInto: suspend (Uri, CharArray?) -> Unit
 ) : ViewModel() {
 
@@ -65,9 +66,9 @@ class StorageErrorViewModel(
     /** The backup password, typed on the screen: it opens the data without the phone's key. */
     fun unlock(password: CharArray) = launchBusy {
         when (gate.unlockWithPassword(password)) {
-            StorageGate.PasswordResult.OPENED -> Unit
-            StorageGate.PasswordResult.WRONG_PASSWORD -> _state.update { it.copy(passwordWrong = true) }
-            StorageGate.PasswordResult.FAILED -> _state.update { it.copy(message = "Не получилось открыть. Попробуйте ещё раз чуть позже.") }
+            PasswordResult.OPENED -> Unit
+            PasswordResult.WRONG_PASSWORD -> _state.update { it.copy(passwordWrong = true) }
+            PasswordResult.FAILED -> _state.update { it.copy(message = "Не получилось открыть. Попробуйте ещё раз чуть позже.") }
         }
     }
 

@@ -8,7 +8,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.flow.first
 import ru.maxrubtsoff.bankagg.App
-import ru.maxrubtsoff.bankagg.data.local.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.model.StorageStatus
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
 import ru.maxrubtsoff.bankagg.domain.model.Reminders
 import java.time.Duration

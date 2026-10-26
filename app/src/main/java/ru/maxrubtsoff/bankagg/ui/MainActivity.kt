@@ -116,7 +116,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import ru.maxrubtsoff.bankagg.data.local.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.model.StorageStatus
 import ru.maxrubtsoff.bankagg.ui.storage.StorageErrorScreen
 import ru.maxrubtsoff.bankagg.ui.storage.StorageErrorViewModel
 import androidx.compose.ui.Alignment

@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import ru.maxrubtsoff.bankagg.data.local.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.model.StorageStatus
 import ru.maxrubtsoff.bankagg.domain.model.StorageAction
 import ru.maxrubtsoff.bankagg.domain.model.StorageDecision
 import ru.maxrubtsoff.bankagg.domain.model.StorageGuard

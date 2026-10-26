@@ -11,7 +11,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.App
-import ru.maxrubtsoff.bankagg.data.local.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.model.StorageStatus
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.BankSignal
 

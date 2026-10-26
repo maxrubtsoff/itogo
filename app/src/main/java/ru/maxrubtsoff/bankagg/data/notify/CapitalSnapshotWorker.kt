@@ -7,7 +7,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import ru.maxrubtsoff.bankagg.App
-import ru.maxrubtsoff.bankagg.data.local.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.model.StorageStatus
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit

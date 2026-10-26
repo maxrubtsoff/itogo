@@ -7,33 +7,27 @@ import kotlin.concurrent.thread
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import ru.maxrubtsoff.bankagg.domain.model.PasswordResult
 import ru.maxrubtsoff.bankagg.domain.model.StorageAction
 import ru.maxrubtsoff.bankagg.domain.model.StorageDecision
 import ru.maxrubtsoff.bankagg.domain.model.StorageGuard
-
-/** Whether the app's data is open (B-91). */
-sealed interface StorageStatus {
-    data object Ready : StorageStatus
-    /** The Keystore does not answer yet: nothing is opened, nothing is made, a retry may help. */
-    data object Waiting : StorageStatus
-    /** The data can't be opened now; the file is untouched and the user chooses what next. */
-    class Blocked(val decision: StorageDecision) : StorageStatus
-}
+import ru.maxrubtsoff.bankagg.domain.model.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.repository.StorageAccess
 
 /**
  * The one place that opens the database. Everything that needs the data asks
  * [isReady] first; while it is false no empty database exists and nothing is written.
  */
-class StorageGate(context: Context) {
+class StorageGate(context: Context) : StorageAccess {
 
     private val appContext = context.applicationContext
     private val _status = MutableStateFlow<StorageStatus>(StorageStatus.Waiting)
-    val status: StateFlow<StorageStatus> = _status.asStateFlow()
+    override val status: StateFlow<StorageStatus> = _status.asStateFlow()
 
     @Volatile var database: AppDatabase? = null
         private set
 
-    val isReady: Boolean get() = database != null
+    override val isReady: Boolean get() = database != null
 
     /** Opens the data if it is not open yet; safe to call from anywhere, any number of times. */
     @Synchronized
@@ -52,14 +46,12 @@ class StorageGate(context: Context) {
         return next
     }
 
-    enum class PasswordResult { OPENED, WRONG_PASSWORD, FAILED }
-
     /**
      * The backup password opens the data where the phone's key is lost (B-91): the
      * passphrase it unseals goes back under the phone's key and the database opens.
      */
     @Synchronized
-    fun unlockWithPassword(password: CharArray): PasswordResult {
+    override fun unlockWithPassword(password: CharArray): PasswordResult {
         if (database != null) return PasswordResult.OPENED
         val passphrase = DbPasswordSeal.open(appContext, password) ?: return PasswordResult.WRONG_PASSWORD
         if (!DatabaseCipher.adopt(appContext, passphrase)) return PasswordResult.FAILED
@@ -79,7 +71,7 @@ class StorageGate(context: Context) {
     }
 
     /** Another try after a refusal. */
-    fun retry(): StorageStatus = open()
+    override fun retry(): StorageStatus = open()
 
     /**
      * «Начать заново»: the old file is moved aside to `.broken` (never erased) and an
@@ -87,7 +79,7 @@ class StorageGate(context: Context) {
      * could not be moved, and then nothing changes.
      */
     @Synchronized
-    fun startOver(): Boolean {
+    override fun startOver(): Boolean {
         if (database != null) return false
         val decision = (status.value as? StorageStatus.Blocked)?.decision ?: return false
         if (StorageAction.START_OVER !in StorageGuard.actions(decision)) return false

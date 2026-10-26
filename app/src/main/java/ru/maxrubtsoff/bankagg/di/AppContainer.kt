@@ -27,6 +27,7 @@ import ru.maxrubtsoff.bankagg.data.backup.BackupPassword
 import ru.maxrubtsoff.bankagg.data.embed.OnnxTextEmbedder
 import ru.maxrubtsoff.bankagg.data.local.AppDatabase
 import ru.maxrubtsoff.bankagg.data.local.StorageGate
+import ru.maxrubtsoff.bankagg.domain.repository.StorageAccess
 import ru.maxrubtsoff.bankagg.data.local.RoomTransactionRunner
 import ru.maxrubtsoff.bankagg.data.ocr.ShotImageStore
 import ru.maxrubtsoff.bankagg.data.ocr.TesseractOcrEngine
@@ -79,10 +80,11 @@ class AppContainer(context: Context) {
     val appContext: Context = context.applicationContext
 
     /** Opens the data; while it is closed (B-91) nothing below that needs the database may be touched. */
-    val storage by lazy { StorageGate(appContext) }
+    private val gate by lazy { StorageGate(appContext) }
+    val storage: StorageAccess get() = gate
     val isReady: Boolean get() = storage.isReady
     // A getter, not a lazy: the repositories below are made only once the data is open.
-    private val db: AppDatabase get() = storage.database ?: error("data is closed")
+    private val db: AppDatabase get() = gate.database ?: error("data is closed")
 
     val settings: SettingsRepository by lazy { SettingsStore(appContext) }
 

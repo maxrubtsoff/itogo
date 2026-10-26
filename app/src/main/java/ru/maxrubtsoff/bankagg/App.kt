@@ -10,7 +10,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
-import ru.maxrubtsoff.bankagg.data.local.StorageStatus
+import ru.maxrubtsoff.bankagg.domain.model.StorageStatus
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.di.AppContainer
@@ -27,7 +27,7 @@ class App : Application(), ImageLoaderFactory {
         instance = this
         // First: opening the database decides whether a missing Keystore key may be made anew (B-91).
         // Closed data (the Keystore busy, the key lost) leaves everything below that needs it waiting.
-        container.storage.open()
+        container.storage.retry()
         // Saved logos are on screen from the first frame; a stale set refreshes in the background.
         container.bankIcons.start()
         MainScope().launch {
