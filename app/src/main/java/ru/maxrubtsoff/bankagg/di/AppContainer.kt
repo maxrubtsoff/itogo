@@ -45,6 +45,7 @@ import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.usecase.GetCapital
+import ru.maxrubtsoff.bankagg.domain.usecase.HistoryLock
 import ru.maxrubtsoff.bankagg.domain.usecase.HistoryOperations
 import ru.maxrubtsoff.bankagg.domain.usecase.BuildCapitalHistory
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordCapitalDay
@@ -184,18 +185,20 @@ class AppContainer(context: Context) {
 
     /** The capital's daily points (F-36). */
     val capitalHistory: CapitalHistoryRepository by lazy { CapitalHistoryRepositoryImpl(db.capitalSnapshotDao()) }
+    /** One lock for every writer of the saved days. */
+    val historyLock by lazy { HistoryLock() }
     val historyOperations by lazy {
         HistoryOperations(
             ledgerRepository, eventRepository, cashRepository, fxRepository, depositRepository, capitalHistory,
-            ratesRepository, settings, getCapital, transactionRunner, today
+            ratesRepository, settings, getCapital, transactionRunner, today, lock = historyLock
         )
     }
-    val recordCapitalDay by lazy { RecordCapitalDay(getCapital, capitalHistory) }
+    val recordCapitalDay by lazy { RecordCapitalDay(getCapital, capitalHistory, historyLock) }
     val buildCapitalHistory by lazy {
         BuildCapitalHistory(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today)
     }
 
-    val syncCapitalPast by lazy { SyncCapitalPast(capitalHistory, depositRepository, fxRepository, ratesRepository, settings, today) }
+    val syncCapitalPast by lazy { SyncCapitalPast(capitalHistory, depositRepository, fxRepository, ratesRepository, settings, today, historyLock) }
 
     /** Rebuilds the past once when the history is empty, then keeps today's point up to date. */
     suspend fun trackCapitalHistory() {

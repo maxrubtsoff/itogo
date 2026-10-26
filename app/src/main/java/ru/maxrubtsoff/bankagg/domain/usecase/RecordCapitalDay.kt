@@ -15,7 +15,8 @@ import ru.maxrubtsoff.bankagg.domain.repository.CapitalHistoryRepository
  */
 class RecordCapitalDay(
     private val getCapital: GetCapital,
-    private val history: CapitalHistoryRepository
+    private val history: CapitalHistoryRepository,
+    private val lock: HistoryLock = HistoryLock()
 ) {
     /** Follows the capital for as long as the caller lives. */
     @OptIn(FlowPreview::class)
@@ -33,7 +34,7 @@ class RecordCapitalDay(
             snap.today, snap.totalMinor,
             CapitalPart.entries.associateWith { p -> snap.parts.firstOrNull { it.part == p }?.valueMinor ?: 0L }
         )
-        if (history.days().lastOrNull() != point) history.upsert(point)
+        lock.run { if (history.days().lastOrNull() != point) history.upsert(point) }
     }
 
     private companion object {

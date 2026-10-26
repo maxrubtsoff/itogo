@@ -83,7 +83,8 @@ class HistoryOperations(
     private val getCapital: GetCapital,
     private val run: TransactionRunner,
     private val today: Today,
-    private val zone: ZoneId = ZoneId.systemDefault()
+    private val zone: ZoneId = ZoneId.systemDefault(),
+    private val lock: HistoryLock = HistoryLock()
 ) {
 
     suspend fun detail(event: HistoryEvent): OperationDetail {
@@ -166,6 +167,8 @@ class HistoryOperations(
     }
 
     suspend fun delete(refs: List<HistoryRef>): Removed = run.run {
+        // The same rule as [check]: a purchase that a later sale rests on stays, whoever asks.
+        if (check(refs) != null) return@run Removed(emptyList())
         val allRates = rates.all()
         val taken = ArrayList<Removed.Item>()
         val shifts = ArrayList<CapitalShift>()
@@ -279,8 +282,10 @@ class HistoryOperations(
     /** Today's point is the daily record's; the saved days before it move here. */
     private suspend fun shift(shifts: List<CapitalShift>) {
         if (shifts.isEmpty()) return
-        val changed = CapitalPast.withShifts(history.days(), shifts, included(), today.date.value)
-        if (changed.isNotEmpty()) history.upsertAll(changed)
+        lock.run {
+            val changed = CapitalPast.withShifts(history.days(), shifts, included(), today.date.value)
+            if (changed.isNotEmpty()) history.upsertAll(changed)
+        }
     }
 
     private fun dayOf(ms: Long): LocalDate = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()

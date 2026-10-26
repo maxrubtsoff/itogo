@@ -24,7 +24,8 @@ class SyncCapitalPast(
     private val fx: FxRepository,
     private val rates: RatesRepository,
     private val settings: SettingsRepository,
-    private val today: Today
+    private val today: Today,
+    private val lock: HistoryLock = HistoryLock()
 ) {
     suspend fun track() = coroutineScope {
         launch { trackDeposits() }
@@ -36,8 +37,10 @@ class SyncCapitalPast(
 
     private suspend fun trackDeposits() {
         deposits.observeAll().distinctUntilChanged().collect { list ->
-            val changed = CapitalPast.withDeposits(history.days(), list, included(), today.date.value)
-            if (changed.isNotEmpty()) history.upsertAll(changed)
+            lock.run {
+                val changed = CapitalPast.withDeposits(history.days(), list, included(), today.date.value)
+                if (changed.isNotEmpty()) history.upsertAll(changed)
+            }
         }
     }
 
@@ -48,8 +51,10 @@ class SyncCapitalPast(
             known = list
             // The first list is only remembered: a deal made before has nothing to compare with.
             if (before == null) return@collect
-            val changed = CapitalPast.withFxChange(history.days(), before, list, rates.all(), included(), today.date.value)
-            if (changed.isNotEmpty()) history.upsertAll(changed)
+            lock.run {
+                val changed = CapitalPast.withFxChange(history.days(), before, list, rates.all(), included(), today.date.value)
+                if (changed.isNotEmpty()) history.upsertAll(changed)
+            }
         }
     }
 }
