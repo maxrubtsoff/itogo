@@ -37,6 +37,7 @@ class RepairFromJournalTest {
         override fun observeRecent(limit: Int): Flow<List<CapturedEvent>> = emptyFlow()
         override suspend fun trim(parsedBefore: Long, unparsedBefore: Long) = 0
         override suspend fun all(): List<CapturedEvent> = stored.toList()
+        override suspend fun byHash(hash: String): CapturedEvent? = stored.firstOrNull { it.dedupHash == hash }
         override suspend fun updateParse(id: Long, parsed: Boolean, dedupHash: String, contentHash: String) {
             val i = stored.indexOfFirst { it.id == id }
             stored[i] = stored[i].copy(parsed = parsed, dedupHash = dedupHash, contentHash = contentHash)
@@ -73,6 +74,7 @@ class RepairFromJournalTest {
         override suspend fun account(accountId: String): Account? = accounts[accountId]
         override suspend fun transaction(id: String): Transaction? = txs.firstOrNull { it.id == id }
         override suspend fun deleteTransaction(id: String) { txs.removeAll { it.id == id } }
+        override suspend fun updateTransaction(tx: Transaction) { txs.replaceAll { if (it.id == tx.id) tx else it } }
         override suspend fun setCountedBalance(accountId: String, balanceMinor: Long, estimated: Boolean) {
             accounts[accountId]?.let {
                 accounts[accountId] = it.copy(balance = Money.ofMinor(balanceMinor), estimated = estimated)
@@ -255,5 +257,35 @@ class RepairFromJournalTest {
 
         assertEquals(1_000L, ledger.accounts[account]!!.checkedAt)
         assertEquals(700_000L, ledger.accounts[account]!!.balance.minor)
+    }
+
+    @Test fun account_with_a_balance_but_no_operations_is_not_deleted() = runTest {
+        val (event, tx) = stored(1, adText, 3_000L, 10_000_000L)
+        val ledger = FakeLedger(mutableMapOf(account to acc(250_000L, null)), mutableListOf(tx!!))
+
+        RepairFromJournal(FakeEvents(listOf(event)), ledger, direct)()
+
+        assertEquals(250_000L, ledger.accounts[account]!!.balance.minor)
+    }
+
+    @Test fun account_with_another_log_entry_is_not_deleted() = runTest {
+        val (ad, adTx) = stored(1, adText, 3_000L, 10_000_000L)
+        // A real push the parser reads for the same account, whose operation is missing from the ledger.
+        val (real, _) = stored(2, "Покупка 2 000,50 RUR в YANDEX.TAXI. Баланс: 9 999,50 RUR", 2_000L, -200_050L, 999_950L)
+        val ledger = FakeLedger(mutableMapOf(account to acc(0L, null)), mutableListOf(adTx!!))
+
+        RepairFromJournal(FakeEvents(listOf(ad, real)), ledger, direct)()
+
+        assertTrue(ledger.accounts.containsKey(account))
+    }
+
+    @Test fun poisoned_account_with_no_operations_forgets_the_false_balance_but_stays() = runTest {
+        val (event, tx) = stored(1, adText, 3_000L, 10_000_000L, 5_000_000L)
+        val ledger = FakeLedger(mutableMapOf(account to acc(5_000_000L, 3_000L)), mutableListOf(tx!!))
+
+        RepairFromJournal(FakeEvents(listOf(event)), ledger, direct)()
+
+        assertEquals(0L, ledger.accounts[account]!!.balance.minor)
+        assertNull(ledger.accounts[account]!!.checkedAt)
     }
 }

@@ -48,6 +48,7 @@ class RepairFromJournal(
         // a push that is no operation any more is no base (B-90).
         val all = events.all()
         val changedAt = changes.map { it.event.postedAt }.toSet()
+        val withEvents = mutableSetOf<String>()
         val bases = affected.mapNotNull { id ->
             val account = ledger.account(id) ?: return@mapNotNull null
             val mine = all.mapNotNull { e ->
@@ -56,6 +57,7 @@ class RepairFromJournal(
                 if (accountId(e.brand.key, op.currency) != id) null
                 else RepairEvent(e.postedAt, op.balance?.minor)
             }
+            if (mine.isNotEmpty()) withEvents += id
             val since = account.checkedAt?.let { ledger.sumSince(id, it) } ?: 0L
             id to RepairBase.pick(account, mine, changedAt, since)
         }.toMap()
@@ -96,8 +98,16 @@ class RepairFromJournal(
                 RepairBase.None -> {
                     val account = ledger.account(id)
                     when {
-                        // Created only by a false operation: nothing left to show.
-                        !ledger.hasTransactions(id) -> ledger.deleteAccount(id)
+                        // Created only by a false operation: nothing left to show
+                        // (a balance, a manual figure or another log entry says it was not).
+                        !ledger.hasTransactions(id) -> {
+                            if (account != null && account.balance.minor == 0L && account.checkedAt == null && id !in withEvents) {
+                                ledger.deleteAccount(id)
+                            } else if (account?.checkedAt != null) {
+                                // The balance came from the false push alone: forget it, keep the account.
+                                ledger.resetBalanceBase(id)
+                            }
+                        }
                         // Never checked: the app has no base to rebuild, as before.
                         account?.checkedAt == null -> Unit
                         // The only exact figure was false: count from the operations.
