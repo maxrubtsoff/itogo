@@ -160,10 +160,11 @@ abstract class AppDatabase : RoomDatabase() {
             val passphrase = (prepared as? DatabaseCipher.Prepared.Ready)?.passphrase
             val db = Room.databaseBuilder(app, AppDatabase::class.java, NAME)
                 .apply { passphrase?.let { openHelperFactory(SupportOpenHelperFactory(it)) } }
-                // Data is rebuilt from notifications and protected by backup,
-                // so a schema bump rebuilds rather than crashing on update.
+                // From v10 real data lives here (see the migrations above): a missing migration, or a
+                // downgrade, must not wipe it. It fails to open instead, and [open] answers CORRUPT,
+                // which leaves the file alone. Only the development schemas 1..8 are still rebuilt.
                 .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8)
                 .build()
             // Opened now, not at the first query: a file that does not open must be known here.
             return try {
