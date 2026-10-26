@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -186,8 +186,11 @@ private fun ImeSheet(onDismiss: () -> Unit, scroll: Boolean, content: @Composabl
     }
     val latestClose by rememberUpdatedState(close)
     val flingPx = with(LocalDensity.current) { FlingDismiss.toPx() }
+    // The status bar's height comes from the activity's window: inside the dialog it can arrive as 0 (B-76).
+    val density = LocalDensity.current
+    val topInset = with(density) { WindowInsets.statusBars.getTop(density).toDp() } + 8.dp
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        ClearSystemBars(dim = 0f)
+        ClearSystemBars(dim = 0f, imeInRoom = true)
         LaunchedEffect(Unit) { progress.animateTo(1f, Motion.tween(Motion.NORMAL)) }
         val none = remember { MutableInteractionSource() }
         Box(
@@ -195,7 +198,7 @@ private fun ImeSheet(onDismiss: () -> Unit, scroll: Boolean, content: @Composabl
                 .fillMaxSize()
                 .drawBehind { drawRect(Slitok.Scrim, alpha = progress.value) }
                 .clickable(interactionSource = none, indication = null) { close() }
-                .statusBarsPadding(),
+                .padding(top = topInset),
             contentAlignment = Alignment.BottomCenter
         ) {
             Column(
@@ -392,13 +395,17 @@ fun SlitokDatePicker(initial: LocalDate?, onPick: (LocalDate) -> Unit, onDismiss
  * the gesture bar there unless told not to (B-40). The veil then covers it too.
  */
 @Composable
-private fun ClearSystemBars(dim: Float? = null) {
+private fun ClearSystemBars(dim: Float? = null, imeInRoom: Boolean = false) {
     val view = LocalView.current
     SideEffect {
         val window = view.dialogWindow() ?: return@SideEffect
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) window.isNavigationBarContrastEnforced = false
         if (dim != null) window.setDimAmount(dim)
+        // The room for the keyboard is already in the sheet; the window must not resize on top of it.
+        if (imeInRoom && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        }
     }
 }
 
