@@ -116,7 +116,7 @@ fun CashbackLineRow(
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (categoryName.isBlank()) Slitok.Muted else Slitok.Fg,
                     // Long names ("Связь, интернет и ТВ") wrap instead of losing their end (B-15).
-                    maxLines = 2,
+                    maxLines = if (categoryName.isBlank()) 1 else 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (note != null) {
