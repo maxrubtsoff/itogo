@@ -119,8 +119,8 @@ fun CapitalHistoryScreen(vm: CapitalHistoryViewModel, partArg: String?, onBack: 
                 Text(e.title, style = MaterialTheme.typography.titleMedium, color = Slitok.Fg)
                 e.subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted) }
                 e.amountMinor?.let {
-            MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg, compact = MoneyCompact.short(it, signed = true))
-        }
+                    MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg, compact = MoneyCompact.short(it, signed = true))
+                }
                 Text("Этого вклада больше нет", style = MaterialTheme.typography.bodySmall, color = Slitok.Faint)
             }
         }

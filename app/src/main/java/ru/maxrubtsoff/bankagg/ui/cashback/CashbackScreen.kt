@@ -276,7 +276,8 @@ private fun CategoryPanel(
     var sorting by remember { mutableStateOf(false) }
     // Rows glide to new places only after a sort change, not when a group opens.
     var reordering by remember { mutableStateOf(false) }
-    LaunchedEffect(order) {
+    // The flag drops by its own timer: picking the same order changes nothing else to wake it.
+    LaunchedEffect(reordering) {
         if (reordering) {
             kotlinx.coroutines.delay(CLOSE_MS + 100L)
             reordering = false

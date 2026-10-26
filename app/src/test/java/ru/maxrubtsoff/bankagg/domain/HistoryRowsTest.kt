@@ -106,6 +106,19 @@ class HistoryRowsTest {
         assertEquals(2, g.sources.size)
     }
 
+    @Test fun monthInterestPartTitlesAreUniform() {
+        val single = HistoryEvent(
+            LocalDate.of(2026, 10, 3), CapitalPart.DEPOSITS, "Проценты", "Мой", 10L, kind = HistoryKind.INTEREST,
+            target = HistoryTarget.Deposit("a"), bank = BankBrand.SBER
+        )
+        val withParts = interestDay(4, "a" to 5L, "b" to 5L).copy(date = LocalDate.of(2026, 10, 4))
+            .let { d -> d.copy(parts = d.parts.map { if (it.title == "a") it.copy(title = "«Мой»") else it }) }
+        val g = rows(listOf(single, withParts)).single() as HistoryRow.Group
+        val a = g.children.single { it.target == HistoryTarget.Deposit("a") }
+        assertEquals("«Мой»", a.title)
+        assertEquals(BankBrand.SBER.title, a.subtitle)
+    }
+
     private fun reval(day: Int, vararg legs: RevaluationLeg, manual: Long = 0L): HistoryEvent {
         val reason = RevaluationReason(legs.toList(), manual)
         return ev(day, HistoryKind.REVALUATION, CapitalPart.CURRENCY, legs.sumOf { it.effectMinor } + manual, "Переоценка валюты").copy(reason = reason)

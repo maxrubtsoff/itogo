@@ -90,11 +90,18 @@ object HistoryRows {
     private fun dated(e: HistoryEvent, today: LocalDate): HistoryEvent =
         e.copy(subtitle = listOfNotNull(e.subtitle, RuDays.dayMonth(e.date, today)).joinToString(" · "))
 
+    /** A day's interest on one deposit as a part, shaped like the parts of a many-deposit day: «name» over the bank. */
+    private fun depositPart(e: HistoryEvent): HistoryEvent {
+        val name = e.subtitle ?: return e
+        val bank = e.bank?.title ?: return e.copy(title = name, subtitle = null)
+        return if (name == bank) e.copy(title = bank, subtitle = null) else e.copy(title = "«$name»", subtitle = bank)
+    }
+
     /** A month's interest: one row, split by deposit. One deposit — the row leads to it. */
     private fun interest(id: String, same: List<HistoryEvent>, page: CapitalPart?): HistoryRow {
         val byDeposit = LinkedHashMap<String, HistoryEvent>()
         same.forEach { e ->
-            val items = if (e.parts.isNotEmpty()) e.parts else listOf(e.copy(title = e.subtitle ?: e.title, subtitle = null))
+            val items = if (e.parts.isNotEmpty()) e.parts else listOf(depositPart(e))
             items.forEach { p ->
                 val dep = p.target as? HistoryTarget.Deposit ?: return@forEach
                 val prev = byDeposit[dep.id]

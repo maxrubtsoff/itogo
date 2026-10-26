@@ -34,14 +34,6 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile private var instance: AppDatabase? = null
 
-        // v6 drops the category dictionary for fixed groups (domain CategoryGroups)
-        // and adds groupKey / shot drafts. v7 adds the deposits and deposit_shots
-        // tables. v8 adds events.contentHash (dedup by content within a time
-        // window). v9 adds fx_operations, fx_rates and cash and drops
-        // accounts.kind. The app is in development, so older schemas are rebuilt by the
-        // destructive fallback rather than migrated. From v10 on, real data lives
-        // here, so each new version comes with a migration that keeps it.
-        // v11: an account can be left out of the capital (U-18).
         /** F-48: the log of cash hand edits. Starts empty — the past deltas are unknown, none are invented. */
         private val MIGRATION_17_18 = object : Migration(17, 18) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -119,6 +111,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // v6 drops the category dictionary for fixed groups (domain CategoryGroups)
+        // and adds groupKey / shot drafts. v7 adds the deposits and deposit_shots
+        // tables. v8 adds events.contentHash (dedup by content within a time
+        // window). v9 adds fx_operations, fx_rates and cash and drops
+        // accounts.kind. The app is in development, so older schemas are rebuilt by the
+        // destructive fallback rather than migrated. From v10 on, real data lives
+        // here, so each new version comes with a migration that keeps it.
+        // v11: an account can be left out of the capital (U-18).
         private val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `deposit_topups` (`id` TEXT NOT NULL, `depositId` TEXT NOT NULL, `epochDay` INTEGER NOT NULL, `amountMinor` INTEGER NOT NULL, PRIMARY KEY(`id`))")
