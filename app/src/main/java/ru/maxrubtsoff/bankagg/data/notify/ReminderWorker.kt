@@ -8,6 +8,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.flow.first
 import ru.maxrubtsoff.bankagg.App
+import ru.maxrubtsoff.bankagg.data.local.StorageStatus
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
 import ru.maxrubtsoff.bankagg.domain.model.Reminders
 import java.time.Duration
@@ -19,6 +20,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
     override suspend fun doWork(): Result {
         val container = (applicationContext as App).container
+        if (!container.isReady && container.storage.retry() != StorageStatus.Ready) return Result.retry()
         container.checkReminders()
         container.trimJournal()
         return Result.success()

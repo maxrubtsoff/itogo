@@ -106,9 +106,13 @@ class CashbackWidget : GlanceAppWidget() {
     // The month is recomputed on every draw; how many rows render is decided by
     // the widget's size in [Content], so a larger widget simply shows more.
     private suspend fun load(context: Context): Model {
-        val repo = App.instance.container.cashbackRepository
         val today = LocalDate.now()
         val key = CashbackMonth.keyOf(today)
+        // Closed data (B-91): an empty widget until the app has opened it.
+        if (!App.instance.container.isReady) {
+            return Model(CashbackMonth.shortLabel(key), emptyList(), 0, emptyList(), emptyList(), false, null)
+        }
+        val repo = App.instance.container.cashbackRepository
         if (!App.instance.container.settings.currentFeatures().showCashback) {
             return Model(CashbackMonth.shortLabel(key), emptyList(), 0, emptyList(), emptyList(), false, null, cashbackOff = true)
         }

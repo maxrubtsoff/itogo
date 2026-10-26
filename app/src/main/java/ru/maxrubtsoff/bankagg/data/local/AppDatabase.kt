@@ -7,6 +7,8 @@ import androidx.room.Database
 import androidx.room.Room
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import androidx.room.RoomDatabase
+import ru.maxrubtsoff.bankagg.domain.model.StorageDecision
+import java.io.File
 
 @Database(
     entities = [
@@ -32,7 +34,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun capitalSnapshotDao(): CapitalSnapshotDao
 
     companion object {
-        @Volatile private var instance: AppDatabase? = null
 
         /** B-92: the notification key keeps two equal pushes without a balance apart; old rows have none. */
         private val MIGRATION_18_19 = object : Migration(18, 19) {
@@ -133,25 +134,57 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        fun get(context: Context): AppDatabase =
-            instance ?: synchronized(this) {
-                instance ?: run {
-                    val prepared = DatabaseCipher.prepare(context.applicationContext, NAME)
-                    val passphrase = (prepared as? DatabaseCipher.Prepared.Ready)?.passphrase
-                    if (prepared is DatabaseCipher.Prepared.Blocked) {
-                        // Until the next commit the old way: start empty (the file is replaced).
-                        context.deleteDatabase(NAME)
-                    }
-                    Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, NAME)
-                        .apply { passphrase?.let { openHelperFactory(SupportOpenHelperFactory(it)) } }
-                        // Data is rebuilt from notifications and protected by backup,
-                        // so a schema bump rebuilds rather than crashing on update.
-                        .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
-                        .fallbackToDestructiveMigration()
-                        .build()
-                        .also { instance = it }
-                }
+        /** What [open] came to (B-91). */
+        sealed interface OpenResult {
+            class Opened(val db: AppDatabase) : OpenResult
+            /** The file is left exactly as it is; [decision] says why it was not opened. */
+            class Blocked(val decision: StorageDecision) : OpenResult
+        }
+
+        /**
+         * Opens the database, or says why not. A file that can't be opened is never
+         * deleted and no empty one is made in its place: the user decides on the
+         * last-resort screen ([quarantine] moves the file aside, it is not erased).
+         */
+        fun open(context: Context): OpenResult {
+            val app = context.applicationContext
+            val prepared = DatabaseCipher.prepare(app, NAME)
+            if (prepared is DatabaseCipher.Prepared.Blocked) return OpenResult.Blocked(prepared.decision)
+            val passphrase = (prepared as? DatabaseCipher.Prepared.Ready)?.passphrase
+            val db = Room.databaseBuilder(app, AppDatabase::class.java, NAME)
+                .apply { passphrase?.let { openHelperFactory(SupportOpenHelperFactory(it)) } }
+                // Data is rebuilt from notifications and protected by backup,
+                // so a schema bump rebuilds rather than crashing on update.
+                .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                .fallbackToDestructiveMigration()
+                .build()
+            // Opened now, not at the first query: a file that does not open must be known here.
+            return try {
+                db.openHelper.writableDatabase
+                OpenResult.Opened(db)
+            } catch (e: Exception) {
+                android.util.Log.w("AppDatabase", "database did not open", e)
+                runCatching { db.close() }
+                OpenResult.Blocked(StorageDecision.CORRUPT)
             }
+        }
+
+        /**
+         * «Начать заново»: the old file (and its journal files) is renamed to
+         * `bankagg.db.broken`, never deleted. False if it could not be moved.
+         */
+        fun quarantine(context: Context): Boolean {
+            val file = context.getDatabasePath(NAME)
+            if (!file.exists()) return true
+            var target = File(file.path + ".broken")
+            if (target.exists()) target = File(file.path + ".broken." + System.currentTimeMillis())
+            if (!file.renameTo(target)) return false
+            listOf("-wal", "-shm", "-journal").forEach { suffix ->
+                val side = File(file.path + suffix)
+                if (side.exists()) side.renameTo(File(target.path + suffix))
+            }
+            return true
+        }
 
         const val NAME = "bankagg.db"
     }

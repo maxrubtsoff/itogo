@@ -9,6 +9,8 @@ import ru.maxrubtsoff.bankagg.ui.common.ShotImage
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import ru.maxrubtsoff.bankagg.data.local.StorageStatus
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.di.AppContainer
@@ -24,22 +26,35 @@ class App : Application(), ImageLoaderFactory {
         container = AppContainer(this)
         instance = this
         // First: opening the database decides whether a missing Keystore key may be made anew (B-91).
-        val banks = container.banks   // fills the bank directory before anything reads a bank
+        // Closed data (the Keystore busy, the key lost) leaves everything below that needs it waiting.
+        container.storage.open()
         // Saved logos are on screen from the first frame; a stale set refreshes in the background.
         container.bankIcons.start()
-        // Banks chosen before F-22 become the user's banks, once.
-        MainScope().launch { banks.migrate() }
-        // Candidates noticed by the old, looser check that aren't banks go away (B-25).
-        MainScope().launch { container.newBankAnswers.sweep() }
+        MainScope().launch {
+            container.storage.status.first { it is StorageStatus.Ready }
+            startDatabaseWork()
+        }
         ReminderWorker.schedule(this)
         CapitalSnapshotWorker.schedule(this)
-        // The capital's history: the past is rebuilt once, today's point follows every change (F-36).
-        MainScope().launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { container.trackCapitalHistory() } }
-        container.autoBackup.start()
         // Pictures saved before F-26 get sealed with the phone's key.
         MainScope().launch(kotlinx.coroutines.Dispatchers.IO) {
             ShotImageFiles.sealExisting(listOf(java.io.File(filesDir, "cashback_shots"), java.io.File(filesDir, "deposit_shots")))
         }
+    }
+
+    private val databaseWorkStarted = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** Everything that reads or writes the database; once, when the data is open (at launch or after a retry). */
+    private fun startDatabaseWork() {
+        if (!databaseWorkStarted.compareAndSet(false, true)) return
+        // Banks chosen before F-22 become the user's banks, once.
+        val banks = container.banks   // fills the bank directory before anything reads a bank
+        MainScope().launch { banks.migrate() }
+        // Candidates noticed by the old, looser check that aren't banks go away (B-25).
+        MainScope().launch { container.newBankAnswers.sweep() }
+        // The capital's history: the past is rebuilt once, today's point follows every change (F-36).
+        MainScope().launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { container.trackCapitalHistory() } }
+        container.autoBackup.start()
         // Operations the old parser read wrong are re-read from the log, once (B-45, B-46).
         MainScope().launch { container.repairJournal() }
         // Old journal texts go once a day; on start too, the worker may not have run for a while (U-33).

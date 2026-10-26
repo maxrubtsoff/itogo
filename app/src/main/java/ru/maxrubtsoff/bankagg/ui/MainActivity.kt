@@ -116,6 +116,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import ru.maxrubtsoff.bankagg.data.local.StorageStatus
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -333,12 +334,20 @@ class MainActivity : FragmentActivity() {
                     // nor fed shared pictures or notification routes: they wait for the code (B-31).
                     val isLocked = locked.value
                     Box(if (isLocked) Modifier.clearAndSetSemantics { } else Modifier) {
-                        AppRoot(
-                            container, factory, startFeatures,
-                            if (isLocked) emptyList() else shared.value,
-                            if (isLocked) null else openRoute.value,
-                            { openRoute.value = null }
-                        ) { shared.value = emptyList() }
+                        val storage by container.storage.status.collectAsStateWithLifecycle()
+                        if (storage is StorageStatus.Ready) {
+                            AppRoot(
+                                container, factory, startFeatures,
+                                if (isLocked) emptyList() else shared.value,
+                                if (isLocked) null else openRoute.value,
+                                { openRoute.value = null }
+                            ) { shared.value = emptyList() }
+                        } else {
+                            // B-91: the data is closed; no navigation, no screen model touches the database.
+                            Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                                Text("Данные пока не открылись. Закройте приложение и откройте снова.")
+                            }
+                        }
                     }
                     // U-61: the lock dissolves instead of vanishing; it appears at once (the app must not show first).
                     androidx.compose.animation.AnimatedVisibility(
@@ -406,7 +415,7 @@ class MainActivity : FragmentActivity() {
         val session = (application as App).container.lockSession
         if (!locked.value) session.backgroundedAt = System.currentTimeMillis()
         // Leaving the app: don't wait for the backup's quiet period.
-        (application as App).container.autoBackup.flush()
+        (application as App).container.takeIf { it.isReady }?.autoBackup?.flush()
     }
 
     /**

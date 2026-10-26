@@ -40,7 +40,9 @@ import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.maxrubtsoff.bankagg.data.security.PhoneKeys
+import ru.maxrubtsoff.bankagg.domain.model.BackupGuard
 import ru.maxrubtsoff.bankagg.domain.model.BackupRotation
+import ru.maxrubtsoff.bankagg.domain.model.CopyStats
 import ru.maxrubtsoff.bankagg.domain.model.CopyKind
 
 /**
@@ -83,12 +85,39 @@ class BackupManager(
     // ---- copies kept by the app ----
 
     /** Writes the current data as [today]'s automatic copy (replacing an earlier one of the day) and drops old copies. */
-    suspend fun autoSave(today: LocalDate = LocalDate.now()) = withContext(Dispatchers.IO) {
+    suspend fun autoSave(today: LocalDate = LocalDate.now()): Boolean = withContext(Dispatchers.IO) {
         val key = PhoneKeys.backupKey()
-        val bytes = export().toByteArray()
+        val json = export()
+        val fresh = statsOf(json)
+        // B-91: an empty database does not overwrite today's copy, and never pushes older copies out.
+        if (!BackupGuard.mayOverwrite(todayStats(today, key), fresh)) return@withContext false
+        val rotate = BackupGuard.mayRotate(fresh)
+        val bytes = json.toByteArray()
         // Without a working Keystore the copy stays plain rather than not being made at all.
-        if (key != null) write(BackupRotation.autoName(today), BackupCipher.seal(bytes, key))
-        else write(BackupRotation.plainName(today), bytes)
+        if (key != null) write(BackupRotation.autoName(today), BackupCipher.seal(bytes, key), rotate)
+        else write(BackupRotation.plainName(today), bytes, rotate)
+        true
+    }
+
+    /** What the user entered or the bank told, counted in a copy's JSON. */
+    private fun statsOf(json: String): CopyStats {
+        val root = JSONObject(json)
+        return CopyStats(STAT_KEYS.sumOf { root.optJSONArray(it)?.length() ?: 0 })
+    }
+
+    /** Today's automatic copy, null if there is none; one that can't be read counts as full (better a skipped write than a lost copy). */
+    private fun todayStats(today: LocalDate, key: javax.crypto.SecretKey?): CopyStats? {
+        val names = setOf(BackupRotation.autoName(today), BackupRotation.plainName(today))
+        val found = listAll().firstOrNull { it.name in names } ?: return null
+        return runCatching {
+            val bytes = readRef(found.ref)
+            val json = when (BackupCipher.kind(bytes)) {
+                BackupCipher.Kind.PLAIN -> String(bytes, Charsets.UTF_8)
+                BackupCipher.Kind.DEVICE -> String(BackupCipher.open(bytes, key!!), Charsets.UTF_8)
+                else -> error("unreadable")
+            }
+            statsOf(json)
+        }.getOrDefault(CopyStats(1))
     }
 
     /** «Сохранить сейчас»: a copy with its time that the automatic one never rewrites. */
@@ -182,18 +211,18 @@ class BackupManager(
     }
 
     /** Writes (or rewrites) [name] in the backup folder, drops what the rotation says, returns its ref. */
-    private fun write(name: String, bytes: ByteArray): String {
+    private fun write(name: String, bytes: ByteArray, rotate: Boolean = true): String {
         val ref: String
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val own = listViaMediaStore()
             ref = writeViaMediaStore(own.firstOrNull { it.name == name }?.ref, name, bytes)
-            val stale = BackupRotation.toDelete(own.map { it.name } + name).toSet()
+            val stale = if (rotate) BackupRotation.toDelete(own.map { it.name } + name).toSet() else emptySet()
             own.filter { it.name in stale && it.name != name }.forEach { runCatching { context.contentResolver.delete(Uri.parse(it.ref), null, null) } }
         } else {
             val file = File(appDir(), name).apply { writeBytes(bytes) }
             ref = file.absolutePath
             val files = appDir().listFiles()?.toList().orEmpty()
-            val stale = BackupRotation.toDelete(files.map { it.name }).toSet()
+            val stale = if (rotate) BackupRotation.toDelete(files.map { it.name }).toSet() else emptySet()
             files.filter { it.name in stale && it.name != name }.forEach { it.delete() }
         }
         return ref
@@ -687,6 +716,8 @@ class BackupManager(
     private companion object {
         // v10: subscription look and pictures (F-33); v7: own bank pictures; v6: banks; v5: cash currency, cash, capital parts, rates (v4: deposits; v3: cashback groupKey).
         const val FORMAT_VERSION = 10
+        /** The arrays of the copy that hold what the user entered or the bank told (B-91). */
+        val STAT_KEYS = listOf("accounts", "transactions", "cashback", "deposits", "subscriptions", "fxOperations")
         const val FOLDER = "BankAggregator"
     }
 }

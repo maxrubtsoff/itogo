@@ -16,6 +16,7 @@ class NewBankActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val pkg = intent.getStringExtra(EXTRA_PKG) ?: return
         val container = (context.applicationContext as App).container
+        if (!container.isReady) return   // closed data (B-91): the answer stays unanswered, the app asks again
         val done = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {

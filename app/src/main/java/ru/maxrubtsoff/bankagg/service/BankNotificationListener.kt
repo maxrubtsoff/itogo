@@ -11,6 +11,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.App
+import ru.maxrubtsoff.bankagg.data.local.StorageStatus
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.BankSignal
 
@@ -37,6 +38,9 @@ class BankNotificationListener : NotificationListenerService() {
         val container = (applicationContext as App).container
 
         scope.launch {
+            // Closed data (B-91): one more try, and if it stays closed this push is skipped —
+            // there is nowhere safe to write it, and a plain copy would be worse than a missed one.
+            if (!container.isReady && container.storage.retry() != StorageStatus.Ready) return@launch
             // Accounts switched off (F-21): bank notifications aren't collected at all.
             if (!container.settings.currentFeatures().collectsNotifications) return@launch
             val extras = notification.extras

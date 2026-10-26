@@ -59,7 +59,9 @@ class AutoBackup(
     suspend fun save() = writing.withLock {
         pending.set(false)
         runCatching { backup.autoSave() }
-            .onSuccess {
+            .onSuccess { written ->
+                // Not written: an empty database must not replace today's copy (B-91).
+                if (!written) return@onSuccess
                 val now = System.currentTimeMillis()
                 settings.setLastBackupAt(now)
                 _lastSaved.value = now

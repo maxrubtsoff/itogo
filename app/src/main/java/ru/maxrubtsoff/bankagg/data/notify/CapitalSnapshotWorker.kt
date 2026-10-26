@@ -7,6 +7,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import ru.maxrubtsoff.bankagg.App
+import ru.maxrubtsoff.bankagg.data.local.StorageStatus
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
@@ -16,6 +17,7 @@ class CapitalSnapshotWorker(context: Context, params: WorkerParameters) : Corout
 
     override suspend fun doWork(): Result {
         val container = (applicationContext as App).container
+        if (!container.isReady && container.storage.retry() != StorageStatus.Ready) return Result.retry()
         runCatching { container.recordCapitalDay.now() }
         return Result.success()
     }
