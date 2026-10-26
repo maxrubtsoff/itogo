@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -64,6 +66,17 @@ private fun Tabs(labels: List<String>, rawPosition: Float, onSelect: (Int) -> Un
         val segment = (maxWidth - GAP * (n - 1)) / n
         val position = rawPosition.coerceIn(0f, (n - 1).toFloat())
         val step = with(androidx.compose.ui.platform.LocalDensity.current) { (segment + GAP).toPx() }
+        // One size for every tab: the largest at which the longest label still fits its segment.
+        val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+        val base = MaterialTheme.typography.labelLarge
+        val room = with(androidx.compose.ui.platform.LocalDensity.current) { (segment - 8.dp).toPx() }
+        val fit = remember(labels, room) {
+            var sp = base.fontSize.value
+            while (sp > 10f && labels.any {
+                    measurer.measure(it, base.copy(fontSize = sp.sp, fontWeight = FontWeight.SemiBold), maxLines = 1, softWrap = false).size.width > room
+                }) sp -= 0.5f
+            sp
+        }
         Box(
             Modifier
                 .matchParentSize()
@@ -90,12 +103,14 @@ private fun Tabs(labels: List<String>, rawPosition: Float, onSelect: (Int) -> Un
                         .padding(vertical = 9.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    AmountText(
+                    Text(
                         label,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = base,
+                        fontSize = fit.sp,
                         color = tint,
                         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-                        minSize = 10.sp
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }
