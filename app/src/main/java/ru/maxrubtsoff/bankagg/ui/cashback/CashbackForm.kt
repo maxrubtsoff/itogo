@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -94,43 +95,50 @@ fun CashbackLineRow(
     onPercentDone: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Row(
+    // Two stable rows (category + «×», then percent + note), so the height is the same
+    // before and after a pick, at any font scale.
+    Column(
         modifier
             .keepVisibleWhenFocused()
             .fillMaxWidth()
-            .heightIn(min = 60.dp)
             .padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            Modifier.weight(1f).clickable(onClick = onPickCategory),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            CategoryIcon(iconKey, size = 36.dp)
-            androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                Modifier.weight(1f).clickable(onClick = onPickCategory),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CategoryIcon(iconKey, size = 36.dp)
                 Text(
                     // B-54: wrap only between words (a hyphen is a break point too), never inside one.
                     categoryName.ifBlank { "Выберите категорию" }.breakAfterHyphens(),
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (categoryName.isBlank()) Slitok.Muted else Slitok.Fg,
                     // Long names ("Связь, интернет и ТВ") wrap instead of losing their end (B-15).
-                    maxLines = if (categoryName.isBlank()) 1 else 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (note != null) {
-                    Text(
-                        note,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (percentState == PercentState.Error) Slitok.Coral else Slitok.Brass2
-                    )
-                }
+            }
+            IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Filled.Close, contentDescription = "Убрать категорию", tint = Slitok.Faint, modifier = Modifier.size(18.dp))
             }
         }
-        PercentField(percentText, onPercentChange, percentState, percentFocus, onPercentDone)
-        IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Filled.Close, contentDescription = "Убрать категорию", tint = Slitok.Faint, modifier = Modifier.size(18.dp))
+        Row(
+            Modifier.padding(start = 48.dp).heightIn(min = 40.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PercentField(percentText, onPercentChange, percentState, percentFocus, onPercentDone)
+            if (note != null) {
+                Text(
+                    note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (percentState == PercentState.Error) Slitok.Coral else Slitok.Brass2,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
