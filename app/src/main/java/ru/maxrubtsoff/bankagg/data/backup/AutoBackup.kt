@@ -78,6 +78,6 @@ class AutoBackup(
     private companion object {
         const val DELAY_MS = 30_000L
         /** What the user entered or the bank told; screenshots and rates come back by themselves. */
-        val TABLES = arrayOf("accounts", "transactions", "cashback", "deposits", "fx_operations", "cash", "cash_changes", "subscriptions")
+        val TABLES = arrayOf("accounts", "transactions", "cashback", "deposits", "deposit_topups", "fx_operations", "cash", "cash_changes", "subscriptions")
     }
 }
