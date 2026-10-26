@@ -13,6 +13,9 @@ import ru.maxrubtsoff.bankagg.domain.model.Deposit
 import ru.maxrubtsoff.bankagg.domain.model.DepositTopUp
 import ru.maxrubtsoff.bankagg.domain.model.HistoryKind
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRow
+import ru.maxrubtsoff.bankagg.domain.model.HistoryRows
+import ru.maxrubtsoff.bankagg.domain.model.RowKind
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.domain.model.HistoryTarget
 import ru.maxrubtsoff.bankagg.domain.model.Transaction
 import ru.maxrubtsoff.bankagg.domain.model.TransactionKind
@@ -131,8 +134,8 @@ class CapitalEventsTest {
         }
     }
 
-    @Test fun rubTransactionPointsToAccounts() {
-        assertEquals(HistoryTarget.Section(CapitalPart.ACCOUNTS), build(tx = listOf(txOf("RUB"))).single().target)
+    @Test fun rubleOperationsLeadNowhere() {
+        assertNull(build(tx = listOf(txOf("RUB"))).single().target)
     }
 
     @Test fun fxTransactionPointsToCurrency() {
@@ -224,19 +227,21 @@ class CapitalEventsTest {
     }
 
     @Test fun spendGroupedPerDay() {
-        val rows = CapitalEvents.group(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE)))
+        val rows = HistoryRows.days(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE)))
         val g = rows.single() as HistoryRow.Group
         assertEquals(2, g.count)
         assertEquals(-400L, g.totalMinor)
-        assertEquals("Списания · 2", g.title)
+        assertEquals("Списания", g.title)
+        assertEquals("2 операции", g.subtitle)
+        assertEquals(RowKind.SUM, g.rowKind)
     }
 
     @Test fun singleSpendStaysSingle() {
-        assertTrue(CapitalEvents.group(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE))).single() is HistoryRow.Single)
+        assertTrue(HistoryRows.days(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE))).single() is HistoryRow.Single)
     }
 
     @Test fun spendAndTransferGroupedSeparately() {
-        val rows = CapitalEvents.group(
+        val rows = HistoryRows.days(
             eventsOf(
                 op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -200, TransactionKind.EXPENSE),
                 op("3", "a", -300, TransactionKind.TRANSFER, who = "Иван"), op("4", "a", -400, TransactionKind.TRANSFER, who = "Анна")
@@ -246,13 +251,13 @@ class CapitalEventsTest {
     }
 
     @Test fun incomeNeverGrouped() {
-        val rows = CapitalEvents.group(eventsOf(op("1", "a", 100, TransactionKind.INCOME), op("2", "a", 200, TransactionKind.INCOME)))
+        val rows = HistoryRows.days(eventsOf(op("1", "a", 100, TransactionKind.INCOME), op("2", "a", 200, TransactionKind.INCOME)))
         assertEquals(2, rows.size)
         assertTrue(rows.all { it is HistoryRow.Single })
     }
 
     @Test fun groupIdIsStableByDayAndKind() {
-        val g = CapitalEvents.group(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE))).single() as HistoryRow.Group
+        val g = HistoryRows.days(eventsOf(op("1", "a", -100, TransactionKind.EXPENSE), op("2", "a", -300, TransactionKind.EXPENSE))).single() as HistoryRow.Group
         assertEquals("${d1.toEpochDay()}:SPEND", g.id)
     }
 
@@ -280,5 +285,31 @@ class CapitalEventsTest {
     @Test fun monthKeyOfNearestDay() {
         val day = CapitalEvents.nearestDay(listOf(ev(LocalDate.of(2026, 8, 31)), ev(LocalDate.of(2026, 7, 1))), LocalDate.of(2026, 9, 2))!!
         assertEquals("2026-08", java.time.YearMonth.from(day).toString())
+    }
+
+    // ---- F-50: kinds of lines ----
+
+    @Test fun kindOfEvent() {
+        val plain = ev(d1)
+        assertEquals(RowKind.SUM, HistoryRows.kindOf(plain))
+        assertEquals(RowKind.GO, HistoryRows.kindOf(plain.copy(target = HistoryTarget.Currency("USD"))))
+        assertEquals(RowKind.OPEN, HistoryRows.kindOf(plain.copy(target = HistoryTarget.Currency("USD"), parts = listOf(plain))))
+    }
+
+    @Test fun transferGroupIsSum() {
+        val g = HistoryRows.days(eventsOf(op("1", "a", -300, TransactionKind.TRANSFER, who = "Иван"), op("2", "a", -400, TransactionKind.TRANSFER, who = "Анна"))).single() as HistoryRow.Group
+        assertEquals("Переводы", g.title)
+        assertEquals(RowKind.SUM, g.rowKind)
+    }
+
+    @Test fun currencySpendGroupOpens() {
+        val usd = { id: String -> txOf("USD").copy(id = id, kind = TransactionKind.EXPENSE) }
+        val g = HistoryRows.days(CapitalEvents.build(listOf(usd("1"), usd("2")), emptyList(), emptyList(), emptyList(), null, emptyList(), today, ZoneOffset.UTC)).single() as HistoryRow.Group
+        assertEquals(RowKind.OPEN, g.rowKind)
+    }
+
+    @Test fun operationsPlural() {
+        assertEquals(listOf("1 операция", "2 операции", "5 операций", "11 операций", "21 операция", "22 операции"),
+            listOf(1, 2, 5, 11, 21, 22).map { RuPlural.operations(it) })
     }
 }

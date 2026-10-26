@@ -73,6 +73,10 @@ import ru.maxrubtsoff.bankagg.ui.common.AmountText
 import ru.maxrubtsoff.bankagg.ui.common.CapitalChart
 import ru.maxrubtsoff.bankagg.ui.common.Dot
 import ru.maxrubtsoff.bankagg.ui.common.EmptyState
+import ru.maxrubtsoff.bankagg.ui.common.HistoryLine
+import ru.maxrubtsoff.bankagg.ui.common.signedSum
+import ru.maxrubtsoff.bankagg.domain.model.HistoryRows
+import ru.maxrubtsoff.bankagg.domain.model.RowKind
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.PagerTabs
 import ru.maxrubtsoff.bankagg.ui.common.SectionPager
@@ -259,19 +263,12 @@ private fun Events(
                 val key = m.month.toString()
                 val expanded = key in open
                 Panel(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.fillMaxWidth().clickable { setOpen(if (expanded) open - key else open + key) }.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(RuDays.monthTitle(m.month, u.today), style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(RuPlural.events(m.events.size), style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        MoneyText(signedSum(m.deltaMinor), style = Amounts.Small, color = if (m.deltaMinor > 0L) Slitok.Mint else Slitok.Fg)
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Faint, modifier = Modifier.size(20.dp))
-                    }
+                    HistoryLine(
+                        RuDays.monthTitle(m.month, u.today), RuPlural.events(m.events.size), m.deltaMinor, RowKind.OPEN,
+                        expanded = expanded, onClick = { setOpen(if (expanded) open - key else open + key) }
+                    )
                     if (expanded) {
-                        CapitalEvents.group(m.events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
+                        HistoryRows.days(m.events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
                             HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Slitok.Line)
                             Text(
                                 dayCaption(day, u.today), style = MaterialTheme.typography.labelMedium, color = if (day == picked) Slitok.Brass2 else Slitok.Muted,
@@ -283,7 +280,7 @@ private fun Events(
                 }
             }
         }
-        else -> CapitalEvents.group(events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
+        else -> HistoryRows.days(events).groupBy { it.date }.toSortedMap(compareByDescending { it }).forEach { (day, list) ->
             Caption(dayCaption(day, u.today), if (day == picked) Slitok.Brass2 else Slitok.Muted, mark(day))
             Panel(Modifier.fillMaxWidth()) {
                 list.forEachIndexed { i, r ->
@@ -295,45 +292,29 @@ private fun Events(
     }
 }
 
-/** A single event, or a folded group that opens on tap into its events (F-39). */
+/** A single event, or a folded group that opens on tap into its events (F-39, F-50). */
 @Composable
 private fun RowItem(row: HistoryRow, opened: List<String>, toggle: (String) -> Unit, onTap: (HistoryEvent) -> Unit) {
     when (row) {
         is HistoryRow.Single -> EventRow(row.event, onTap)
         is HistoryRow.Group -> {
             val expanded = row.id in opened
-            Row(
-                Modifier.fillMaxWidth().clickable { toggle(row.id) }.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Dot(row.children.first().part.color())
-                Text(row.title, style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                MoneyText(signedSum(row.totalMinor), style = Amounts.Small, color = if (row.totalMinor > 0L) Slitok.Mint else Slitok.Fg)
-                Icon(
-                    if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null, tint = Slitok.Faint, modifier = Modifier.size(20.dp)
-                )
-            }
-            if (expanded) row.children.forEach { Box(Modifier.padding(start = 16.dp)) { EventRow(it, onTap) } }
+            val kind = row.rowKind
+            HistoryLine(
+                row.title, row.subtitle, row.totalMinor, kind, expanded = expanded,
+                lead = { Dot(row.children.first().part.color()) }, onClick = { toggle(row.id) }
+            )
+            if (expanded && kind == RowKind.OPEN) row.children.forEach { EventRow(it, onTap, nested = true) }
         }
     }
 }
 
 @Composable
-private fun EventRow(e: HistoryEvent, onTap: (HistoryEvent) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().then(if (e.target != null) Modifier.clickable { onTap(e) } else Modifier)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Dot(e.part.color())
-        Column(Modifier.weight(1f)) {
-            Text(e.title, style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            e.subtitle?.let { MoneyText(it, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = if (e.reason != null) 2 else 1) }
-        }
-        e.amountMinor?.let { MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg) }
-        if (e.target != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Faint, modifier = Modifier.size(20.dp))
-    }
+private fun EventRow(e: HistoryEvent, onTap: (HistoryEvent) -> Unit, nested: Boolean = false) {
+    HistoryLine(
+        e.title, e.subtitle, e.amountMinor, HistoryRows.kindOf(e), nested = nested,
+        subtitleLines = if (e.reason != null) 2 else 1, lead = { Dot(e.part.color()) }, onClick = { onTap(e) }
+    )
 }
 
 @Composable
@@ -355,12 +336,6 @@ private fun axisOf(u: HistoryUi): List<String> {
 /** "+13 622 ₽ · +0,6 %" / "−4 000 ₽ · −0,2 %" with a real minus sign. */
 internal fun deltaText(c: CapitalChange, compact: Boolean = false): String =
     (if (compact) MoneyCompact.short(c.deltaMinor, signed = true) else signedSum(c.deltaMinor)) + (c.percentBp?.let { " · " + signedPercent(it) } ?: "")
-
-internal fun signedSum(minor: Long): String = when {
-    minor > 0L -> "+" + Money.ofMinor(minor).format()
-    minor < 0L -> "−" + Money.ofMinor(-minor).format()
-    else -> Money.ZERO.format()
-}
 
 /** Hundredths of a percent → "+0,6 %" (one decimal, no ",0"). */
 internal fun signedPercent(bp: Long): String {

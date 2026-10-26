@@ -70,6 +70,8 @@ import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.ButtonRow
 import ru.maxrubtsoff.bankagg.ui.common.DangerButton
 import ru.maxrubtsoff.bankagg.ui.common.Dot
+import ru.maxrubtsoff.bankagg.ui.common.HistoryLine
+import ru.maxrubtsoff.bankagg.domain.model.RowKind
 import ru.maxrubtsoff.bankagg.ui.common.EmptyState
 import ru.maxrubtsoff.bankagg.ui.common.GhostButton
 import ru.maxrubtsoff.bankagg.ui.common.ListRow
@@ -305,6 +307,13 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                 points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"),
                 selected = marked, onScrub = { marked = it }, onRelease = {}
             )
+
+            Caption("Строка истории")
+            HistoryLine("Новый вклад", "Сбер", 10_000_000, RowKind.GO)
+            HistoryLine("Проценты", "2 вклада", 34_000, RowKind.OPEN, expanded = true)
+            HistoryLine("Сбер", "Проценты", 21_000, RowKind.GO, nested = true)
+            HistoryLine("Списания", "4 операции", -320_000, RowKind.SUM)
+            HistoryLine("Пополнение", "Иван", 500_000, RowKind.SUM, highlighted = true)
 
             Caption("Перенос скрина пальцем")
             ShotDragDemo()

@@ -44,6 +44,8 @@ object RuPlural {
     /** "1 событие", "3 события", "5 событий". */
     fun events(n: Int): String = "$n " + form(n, "событие", "события", "событий")
 
+    fun operations(n: Int): String = "$n " + form(n, "операция", "операции", "операций")
+
     fun banks(n: Int): String = "$n " + form(n, "банк", "банка", "банков")
 
     /** «30 секунд», «1 минута», «1 час» — how long the lock keypad rests (B-27). */

@@ -17,7 +17,11 @@ data class HistoryEvent(
     val reason: RevaluationReason? = null,
     val kind: HistoryKind = HistoryKind.TRANSACTION,
     /** Where a tap leads (F-44); null — nowhere. */
-    val target: HistoryTarget? = null
+    val target: HistoryTarget? = null,
+    /** What the line opens into (F-47); empty — it does not open. */
+    val parts: List<HistoryEvent> = emptyList(),
+    /** The bank of a part that is a deposit, for its icon (F-47). */
+    val bank: BankBrand? = null
 )
 
 /** What an event is, so the list can tell them apart and the screen can lead to the object. */
@@ -48,7 +52,13 @@ sealed interface HistoryRow {
         val totalMinor: Long,
         val children: List<HistoryEvent>
     ) : HistoryRow {
-        val title: String get() = (if (kind == HistoryKind.SPEND) "Списания" else "Переводы") + " · " + count
+        val title: String get() = when (kind) {
+            HistoryKind.SPEND -> "Списания"
+            HistoryKind.TRANSFER -> "Переводы"
+            else -> "Операции"
+        }
+        val subtitle: String get() = RuPlural.operations(count)
+        val rowKind: RowKind get() = HistoryRows.groupKind(kind, children)
     }
 }
 
@@ -127,7 +137,8 @@ object CapitalEvents {
                 TransactionKind.UNKNOWN -> "Операция"
             }
             val part = if (t.currency == Currencies.RUB) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY
-            val target = if (t.currency == Currencies.RUB) HistoryTarget.Section(CapitalPart.ACCOUNTS) else HistoryTarget.Currency(t.currency)
+            // A ruble operation leads nowhere: the whole of «Счета» says nothing about it (F-50).
+            val target = if (t.currency == Currencies.RUB) null else HistoryTarget.Currency(t.currency)
             out += HistoryEvent(
                 dayOf(t.postedAt, zone), part, title, t.counterparty ?: titleOf[t.accountId], t.amount.minor,
                 kind = when (t.kind) {
@@ -187,23 +198,6 @@ object CapitalEvents {
             used += back.id
         }
         return used
-    }
-
-    /** A day's spendings, and a day's transfers, fold into one row each when there are two or more (F-39). */
-    fun group(events: List<HistoryEvent>): List<HistoryRow> {
-        fun foldable(e: HistoryEvent) = e.kind == HistoryKind.SPEND || e.kind == HistoryKind.TRANSFER
-        val buckets = events.filter(::foldable).groupBy { it.date to it.kind }
-        val seen = HashSet<Pair<LocalDate, HistoryKind>>()
-        val out = ArrayList<HistoryRow>()
-        for (e in events) {
-            val list = if (foldable(e)) buckets.getValue(e.date to e.kind) else null
-            when {
-                list == null || list.size < 2 -> out += HistoryRow.Single(e)
-                seen.add(e.date to e.kind) ->
-                    out += HistoryRow.Group("${e.date.toEpochDay()}:${e.kind.name}", e.date, e.kind, list.size, list.sumOf { it.amountMinor ?: 0L }, list)
-            }
-        }
-        return out
     }
 
     /** «Проценты» and «Переоценка валюты»: what a part moved from one day to the next beyond the deals themselves. */
