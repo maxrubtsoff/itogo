@@ -245,7 +245,8 @@ private class LabelSpot(val layout: TextLayoutResult, val plate: Rect, val negat
 /**
  * Where the plate of [size] for the dot at [index] goes: above, below, left, right, then the four corners;
  * the first place where it crosses neither the line (sampled every ~2 dp), another of [dots] (~7 dp round)
- * nor the edge. None free — null, no sum.
+ * nor the edge. None free — the first place squeezed into the canvas (the plate is alone, the sum must show);
+ * null only when the canvas is smaller than the plate.
  */
 internal fun placeLabel(plot: Plot, index: Int, size: Size, dots: List<Offset>, width: Float, height: Float, dp: Float): Rect? {
     val n = plot.xs.size
@@ -294,8 +295,14 @@ internal fun placeLabel(plot: Plot, index: Int, size: Size, dots: List<Offset>, 
         Offset(cx - diag - w, cy - diag - h), Offset(cx + diag, cy + diag),
         Offset(cx - diag - w, cy + diag), Offset(cx + diag, cy - diag - h)
     )
-    return candidates.map { Rect(it, size) }.firstOrNull { r ->
+    val strict = candidates.map { Rect(it, size) }.firstOrNull { r ->
         r.left >= 0f && r.top >= 0f && r.right <= width && r.bottom <= height &&
             !hitsLine(r) && !hitsDot(r, own) && others.none { hitsDot(r, it) }
     }
+    if (strict != null) return strict
+    // The plate is alone on the chart and the finger waits for the sum: no free place — squeeze
+    // it into the edges anyway, off the picked dot if it can be. Only a canvas too small for it gives null.
+    if (w > width || h > height) return null
+    val squeezed = candidates.map { Rect(Offset(it.x.coerceIn(0f, width - w), it.y.coerceIn(0f, height - h)), size) }
+    return squeezed.firstOrNull { !hitsDot(it, own) } ?: squeezed.first()
 }

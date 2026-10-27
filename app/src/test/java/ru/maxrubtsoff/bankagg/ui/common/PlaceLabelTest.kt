@@ -21,8 +21,16 @@ class PlaceLabelTest {
         assertTrue(r.left >= 0f && r.right <= 220f && r.top >= 0f && r.bottom <= 200f)
     }
 
-    @Test fun noRoomMeansNoPlate() {
-        assertNull(placeLabel(flat, 1, Size(60f, 20f), emptyList(), 220f, 30f, 1f))
+    @Test fun canvasSmallerThanPlateMeansNoPlate() {
+        assertNull(placeLabel(flat, 1, Size(60f, 20f), emptyList(), 220f, 15f, 1f))
+    }
+
+    @Test fun tightCornerStillGetsAPlateInsideTheCanvas() {
+        // Low, at the left edge, the line climbs steeply to the right: no clean place.
+        val plot = Plot(floatArrayOf(6f, 40f, 74f), floatArrayOf(120f, 20f, 10f))
+        val r = placeLabel(plot, 0, Size(60f, 20f), listOf(Offset(6f, 120f), Offset(40f, 20f)), 80f, 130f, 1f)
+        assertNotNull(r)
+        assertTrue(r!!.left >= 0f && r.right <= 80f && r.top >= 0f && r.bottom <= 130f)
     }
 
     @Test fun avoidsAnotherDot() {
