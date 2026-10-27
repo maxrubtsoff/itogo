@@ -1,4 +1,14 @@
+<p align="center"><img src="docs/assets/store/icon-512.png" width="112" alt="Иконка Itogo"></p>
+
 # Itogo
+
+<p align="center">
+  <img src="docs/assets/store/screen-1-obzor.png" width="180" alt="Обзор">
+  <img src="docs/assets/store/screen-2-vklady.png" width="180" alt="Вклады">
+  <img src="docs/assets/store/screen-3-cashback.png" width="180" alt="Кэшбэк">
+  <img src="docs/assets/store/screen-4-valuta.png" width="180" alt="Валюта">
+  <img src="docs/assets/store/screen-5-podpiski.png" width="180" alt="Подписки">
+</p>
 
 Личное Android-приложение: собирает балансы и операции
 по счетам из push-уведомлений банков и показывает общий капитал — счета, вклады,
