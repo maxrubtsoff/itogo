@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- B-63: sample look of the cashback widget for the widget picker. -->
+<!-- B-63: превью виджета кэшбэка для пикера. Совпадает с живым виджетом:
+     категория слева, процент справа — латунью, выровнен по правому краю. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -22,7 +23,6 @@
         android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -31,23 +31,13 @@
             android:text="Супермаркеты"
             android:textColor="#FFFFFFFF"
             android:textSize="12sp" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
             android:text="10%"
-            android:textColor="#FF59E2A6"
-            android:textSize="12sp"
+            android:textColor="#FFF0C878"
+            android:textSize="14sp"
             android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="Т-Банк"
-            android:textColor="#FF8EA39B"
-            android:textSize="11sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -56,7 +46,6 @@
         android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -65,23 +54,13 @@
             android:text="АЗС"
             android:textColor="#FFFFFFFF"
             android:textSize="12sp" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
             android:text="7%"
-            android:textColor="#FF59E2A6"
-            android:textSize="12sp"
+            android:textColor="#FFF0C878"
+            android:textSize="14sp"
             android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="Сбер"
-            android:textColor="#FF8EA39B"
-            android:textSize="11sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -90,7 +69,6 @@
         android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -99,23 +77,13 @@
             android:text="Кафе"
             android:textColor="#FFFFFFFF"
             android:textSize="12sp" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
             android:text="5%"
-            android:textColor="#FF59E2A6"
-            android:textSize="12sp"
+            android:textColor="#FFF0C878"
+            android:textSize="14sp"
             android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="Альфа-Банк"
-            android:textColor="#FF8EA39B"
-            android:textSize="11sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -124,7 +92,6 @@
         android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -133,23 +100,13 @@
             android:text="Аптеки"
             android:textColor="#FFFFFFFF"
             android:textSize="12sp" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
             android:text="5%"
-            android:textColor="#FF59E2A6"
-            android:textSize="12sp"
+            android:textColor="#FFF0C878"
+            android:textSize="14sp"
             android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="ВТБ"
-            android:textColor="#FF8EA39B"
-            android:textSize="11sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -158,7 +115,6 @@
         android:layout_weight="1"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -167,22 +123,12 @@
             android:text="Такси"
             android:textColor="#FFFFFFFF"
             android:textSize="12sp" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
             android:text="3%"
-            android:textColor="#FF59E2A6"
-            android:textSize="12sp"
+            android:textColor="#FFF0C878"
+            android:textSize="14sp"
             android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="Яндекс Банк"
-            android:textColor="#FF8EA39B"
-            android:textSize="11sp" />
     </LinearLayout>
 </LinearLayout>

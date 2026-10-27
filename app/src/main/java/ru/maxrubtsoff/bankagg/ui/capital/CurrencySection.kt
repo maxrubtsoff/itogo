@@ -235,7 +235,7 @@ private fun PositionRow(p: FxPortfolio.Position, onClick: () -> Unit) {
                 Spacer(Modifier.width(8.dp))
                 MoneyText(
                     p.valueMinor?.let { Money.ofMinor(it).format() } ?: "нет курса",
-                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                    style = ru.maxrubtsoff.bankagg.ui.theme.Amounts.Row,
                     color = if (p.valueMinor == null) Slitok.Brass2 else Slitok.Fg,
                     maxLines = 1, softWrap = false
                 )
@@ -249,8 +249,8 @@ private fun PositionRow(p: FxPortfolio.Position, onClick: () -> Unit) {
                 )
                 p.unrealizedMinor?.takeIf { p.qtyMinor > 0 }?.let { g ->
                     Spacer(Modifier.width(8.dp))
-                    MoneyText(signedRub(g), style = MaterialTheme.typography.bodySmall, color = gainColor(g),
-                        fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+                    MoneyText(signedRub(g), style = ru.maxrubtsoff.bankagg.ui.theme.Amounts.Small, color = gainColor(g),
+                        maxLines = 1, softWrap = false)
                 }
             }
         }
@@ -271,7 +271,7 @@ private fun HoldingRow(h: CurrencyHolding) {
                 Spacer(Modifier.width(8.dp))
                 MoneyText(
                     h.valueMinor?.let { Money.ofMinor(it).format() } ?: "нет курса",
-                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                    style = ru.maxrubtsoff.bankagg.ui.theme.Amounts.Row,
                     color = if (h.valueMinor == null) Slitok.Brass2 else Slitok.Fg,
                     maxLines = 1, softWrap = false
                 )
