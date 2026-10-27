@@ -205,4 +205,45 @@ class NotificationParserTest {
     @Test fun payment_from_name_stays_out() {
         assertEquals(-20_000L, NotificationParser.parse(null, "Оплата 200 ₽ от Ивана Иванова")!!.amount.minor)
     }
+
+    private val alfa = "Списано 440.00 счет *4863 п/п №92712 от 27.10.26 в адрес АО \"АЛЬФА-БАНК\" счет 0741. Остаток 3079.36"
+
+    @Test fun alfaBusinessPaymentOrderParsed() {
+        for (title in listOf(null, "Альфа-Бизнес")) {
+            val op = NotificationParser.parse(title, alfa)!!
+            assertEquals(-44_000L, op.amount.minor)
+            assertEquals("RUB", op.currency)
+            assertEquals(OpDirection.OUT, op.direction)
+            assertEquals(307_936L, op.balance!!.minor)
+            assertEquals(TransactionKind.EXPENSE, op.kind)
+        }
+    }
+
+    @Test fun alfaBusinessRecipientAccountIsNotOurs() {
+        val op = NotificationParser.parse(null, alfa)!!
+        assertTrue(op.balance!!.minor != 74_100L)
+        assertTrue(op.amount.minor != -92_712L && op.amount.minor != -2_710L)
+        assertNull(op.counterparty)
+    }
+
+    @Test fun alfaBusinessWithoutOwnMaskIsNull() {
+        assertNull(NotificationParser.parse(null, "Списано 440.00 счет 0741. Остаток 3079.36"))
+    }
+
+    @Test fun bareAmountStillNotAnAmount() {
+        assertNull(NotificationParser.parse(null, "Списано 440.00"))
+        assertNull(NotificationParser.parse(null, "Оплата 440.00 счет *4863"))
+    }
+
+    @Test fun alfaBusinessWithoutBalance() {
+        val op = NotificationParser.parse(null, "Списано 440.00 счет *4863 п/п №92712")!!
+        assertEquals(-44_000L, op.amount.minor)
+        assertNull(op.balance)
+    }
+
+    @Test fun alfaBusinessCredit() {
+        val op = NotificationParser.parse(null, "Зачислено 1000.00 счет *4863 п/п №1. Остаток 5000.00")!!
+        assertEquals(OpDirection.IN, op.direction)
+        assertEquals(100_000L, op.amount.minor)
+    }
 }

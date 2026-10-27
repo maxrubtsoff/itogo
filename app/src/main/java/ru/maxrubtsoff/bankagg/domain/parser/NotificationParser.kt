@@ -31,8 +31,9 @@ object NotificationParser {
      * 2 — direction apart from the kind, advertisements are not operations
      * (B-45, B-46).
      * 3 — amount only with a currency mark, card/phone masks (B-82…B-84).
+     * 4 — Альфа-Бизнес, списание по п/п без знака валюты (B-107).
      */
-    const val VERSION = 3
+    const val VERSION = 4
 
 
     /**
@@ -76,6 +77,16 @@ object NotificationParser {
         """[*•·∙‧]+[  ]?\d{2,}""" +
             """|(?<![a-zа-яё])(?:ecmc|mc|maes|maestro|mastercard|master|mir|visa|мир)[-*   ·•]?\d{4}(?!\d)""" +
             """|(?:сч[её]т|карт[аы])[  ]?(?:№[  ]?)?-?\d{4,}(?:[  ]\d{4})*(?!\d)(?![   ]?(?:$MARK_ALT)(?![a-zа-яё]))""",
+        RegexOption.IGNORE_CASE
+    )
+
+    /**
+     * Payment order without a currency mark ("Списано 440.00 счет *4863 п/п …
+     * Остаток 3079.36"): the amount stands right after the verb and our own
+     * account mask right after it. The recipient's "счет 0741" has no star (B-107).
+     */
+    private val ORDER_AMOUNT = Regex(
+        """(?<![а-яё])(?:списано|зачислено)[\s  ]+$NUM[\s  ]+сч[её]т[\s  ]+[*•]\d{4}(?!\d)""",
         RegexOption.IGNORE_CASE
     )
 
@@ -152,12 +163,17 @@ object NotificationParser {
         val low = clean.lowercase()
         if (isPromo(low)) return null
 
-        val kind = detectKind(blob)
+        val detected = detectKind(blob)
         val counterparty = counterparty(text)
         // No direction — no operation: a push without an operation sign is an
         // advertisement, a balance notice or something else (B-45, B-46).
-        val hits = hits(clean)
-        val direction = detectDirection(low, clean, kind, counterparty, hits) ?: return null
+        val hits = hits(clean).ifEmpty { orderHit(blob) }
+        val direction = detectDirection(low, clean, detected, counterparty, hits) ?: return null
+        val kind = when {
+            detected != TransactionKind.UNKNOWN -> detected
+            direction == OpDirection.OUT -> TransactionKind.EXPENSE
+            else -> TransactionKind.INCOME
+        }
 
         val balanceAt = BALANCE_MARKERS.mapNotNull { m -> low.indexOf(m).takeIf { it >= 0 } }.minOrNull()
 
@@ -183,6 +199,11 @@ object NotificationParser {
             counterparty = counterparty
         )
     }
+
+    private fun orderHit(text: String): List<Hit> =
+        ORDER_AMOUNT.find(text)?.let {
+            listOf(Hit(it.groups[1]!!.range.first, it.groupValues[1], Currencies.RUB))
+        } ?: emptyList()
 
     private fun hits(text: String): List<Hit> {
         val after = AMOUNT_THEN_CCY.findAll(text).map {
