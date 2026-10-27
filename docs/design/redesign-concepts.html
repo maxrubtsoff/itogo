@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Itogo — новые концепты</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=Geologica:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--page:#0b0b0c;--ink:#ececec;--mute:#8a8a8f;--line:#222}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--page);color:var(--ink);font-family:Onest,system-ui,sans-serif;padding:40px 16px 80px}
+.intro{max-width:1180px;margin:0 auto 48px}
+.intro h1{font-weight:600;font-size:34px;letter-spacing:-.02em}
+.intro p{color:var(--mute);margin-top:10px;max-width:720px;line-height:1.5}
+.concept{max-width:1180px;margin:0 auto 72px}
+.chead{display:flex;flex-wrap:wrap;gap:12px 32px;align-items:flex-end;margin-bottom:22px;border-top:1px solid var(--line);padding-top:24px}
+.chead h2{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.chead .tag{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.12em}
+.chead ul{list-style:none;color:var(--mute);font-size:14px;line-height:1.6;flex:1;min-width:280px}
+.chead li::before{content:"— "}
+.row{display:flex;flex-wrap:wrap;gap:28px;justify-content:center}
+.phone{width:360px;height:760px;border-radius:44px;overflow:hidden;position:relative;flex:none;box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 8px #1a1a1c,0 0 0 9px #333}
+.cap{width:360px;text-align:center;color:var(--mute);font-size:13px;margin-top:14px}
+.scr{height:100%;overflow:hidden;position:relative}
+.sb{height:34px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:13px;font-weight:600}
+.b{display:inline-grid;place-items:center;border-radius:50%;font-size:9px;font-weight:700;color:#fff;flex:none}
+.vtb{background:#1d4ed8}.mkb{background:#e2312b}.gpb{background:#16357a}.skb{background:#d61f45}.ozon{background:#2563ff}.alfa{background:#ef3124}.tb{background:#ffdd2d;color:#111}.raif{background:#fee600;color:#111}.rshb{background:#1f8a4c}
+.num small{opacity:.42;font-size:.62em}
+svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:420px){.phone,.cap{width:100%;max-width:360px}}
+
+/* ============ A: ГРАФИТ И ЛАЙМ ============ */
+.A{background:#0a0a0a;color:#f4f4f2;font-family:Onest,sans-serif;--lime:#c8f25a;--lav:#b7b2ff;--peach:#ff9f7a;--card:#161616;--card2:#1e1e1e;--mu:#7d7d7d}
+.A .top{display:flex;justify-content:space-between;align-items:center;padding:6px 20px 0}
+.A .ib{width:42px;height:42px;border-radius:50%;background:var(--card2);display:grid;place-items:center;color:#ddd}
+.A h3{font-size:15px;font-weight:500;color:var(--mu)}
+.A .hello{padding:14px 20px 0;font-size:28px;font-weight:600;letter-spacing:-.03em}
+.A .donut{position:relative;width:236px;height:236px;margin:14px auto 0}
+.A .donut .c{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.A .donut .k{font-size:12px;color:var(--mu)}
+.A .donut .v{font-size:25px;font-weight:600;letter-spacing:-.03em;margin-top:4px}
+.A .donut .d{font-size:12px;color:var(--lime);margin-top:4px}
+.A .legend{display:flex;gap:8px;padding:16px 20px 0;flex-wrap:wrap}
+.A .lg{flex:1;min-width:96px;background:var(--card);border-radius:20px;padding:12px}
+.A .lg i{display:block;width:8px;height:8px;border-radius:50%;margin-bottom:10px}
+.A .lg b{display:block;font-size:13px;font-weight:600}
+.A .lg span{font-size:11px;color:var(--mu)}
+.A .promo{margin:12px 20px 0;background:var(--lav);color:#151320;border-radius:22px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.A .promo b{font-size:18px;font-weight:600;display:block}
+.A .promo span{font-size:12px;opacity:.7}
+.A .arrow{width:36px;height:36px;border-radius:50%;background:#151320;color:var(--lav);display:grid;place-items:center}
+.A .nav{position:absolute;bottom:18px;left:20px;right:20px;height:64px;background:#1b1b1b;border-radius:40px;display:flex;align-items:center;justify-content:space-between;padding:0 8px}
+.A .nav a{height:48px;min-width:48px;border-radius:30px;display:flex;align-items:center;justify-content:center;gap:8px;color:#9a9a9a;font-size:13px;font-weight:600}
+.A .nav a.on{background:var(--lime);color:#111;padding:0 18px}
+.A .chips{display:flex;gap:6px;padding:14px 20px 0;overflow:hidden}
+.A .chip{padding:9px 15px;border-radius:30px;background:var(--card2);font-size:13px;font-weight:500;white-space:nowrap;color:#cfcfcf}
+.A .chip.on{background:var(--lime);color:#111}
+.A .bigsum{padding:18px 20px 0}
+.A .bigsum .v{font-size:38px;font-weight:600;letter-spacing:-.035em}
+.A .bigsum .s{font-size:13px;color:var(--mu);margin-top:4px}
+.A .bigsum .s em{font-style:normal;color:var(--lime)}
+.A .bars{display:flex;align-items:flex-end;gap:6px;height:74px;padding:14px 20px 0}
+.A .bars i{flex:1;background:#232323;border-radius:8px}
+.A .bars i.hi{background:var(--lime)}
+.A .bars i.md{background:var(--lav)}
+.A .list{padding:14px 20px 0;display:flex;flex-direction:column;gap:8px}
+.A .dep{background:var(--card);border-radius:22px;padding:14px;display:grid;grid-template-columns:40px 1fr auto;gap:4px 12px;align-items:center}
+.A .dep .b{width:40px;height:40px;grid-row:span 2}
+.A .dep .n{font-size:14px;font-weight:600}
+.A .dep .m{font-size:12px;color:var(--mu)}
+.A .dep .r{text-align:right;font-size:14px;font-weight:600}
+.A .dep .p{text-align:right;font-size:12px;color:var(--lime)}
+.A .dep .pb{grid-column:1/-1;height:6px;border-radius:6px;background:#262626;margin-top:8px;overflow:hidden}
+.A .dep .pb i{display:block;height:100%;border-radius:6px;background:var(--lime)}
+.A .cb{background:var(--card);border-radius:24px;padding:14px;margin:0 20px 8px}
+.A .cbh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.A .cbh .b{width:32px;height:32px}
+.A .cbh b{flex:1;font-weight:600;font-size:15px}
+.A .cbh .e{font-size:12px;color:var(--mu)}
+.A .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.A .tile{background:var(--card2);border-radius:16px;padding:10px}
+.A .tile b{display:block;font-size:20px;font-weight:600;letter-spacing:-.02em}
+.A .tile span{font-size:11px;color:var(--mu)}
+.A .tile.hot{background:var(--lime);color:#111}.A .tile.hot span{color:#3a4a10}
+.A .tile.all{background:transparent;border:1px dashed #3a3a3a}
+.A .fab{position:absolute;right:20px;bottom:96px;height:52px;padding:0 20px;border-radius:30px;background:var(--lime);color:#111;font-weight:600;display:flex;align-items:center;gap:8px;font-size:14px}
+.A .hint{margin:12px 20px 10px;border-radius:18px;background:#1a1d12;color:var(--lime);font-size:13px;padding:12px 14px;display:flex;justify-content:space-between}
+
+/* ============ B: МОНОЛИТ (тёмный верх / светлый низ) ============ */
+.B{background:#eeeeec;color:#141414;font-family:Manrope,sans-serif;--dk:#202020;--dk2:#2e2e2e;--mu:#8b8b8b;--acc:#ff7a59}
+.B .hero{background:radial-gradient(120% 80% at 50% 0%,#3a3a3a 0%,#1e1e1e 60%);color:#fff;border-radius:0 0 40px 40px;padding-bottom:22px}
+.B .top{display:flex;justify-content:space-between;align-items:center;padding:6px 18px 0}
+.B .top .t{font-size:16px;font-weight:600}
+.B .ib{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center}
+.B .tot{text-align:center;padding-top:22px}
+.B .tot .k{font-size:13px;color:#a8a8a8}
+.B .tot .v{font-size:36px;font-weight:700;letter-spacing:-.03em;margin-top:6px}
+.B .tot .v small{color:#777;opacity:1}
+.B .acts{display:flex;justify-content:center;gap:26px;margin-top:20px}
+.B .act{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:#cfcfcf}
+.B .act i{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;color:#fff}
+.B .act.w i{background:#fff;color:#111}
+.B .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:20px 16px 0}
+.B .pc{background:rgba(255,255,255,.08);border-radius:24px;padding:14px;border:1px solid rgba(255,255,255,.06)}
+.B .pc .h{display:flex;align-items:center;gap:8px;font-size:12px;color:#bbb}
+.B .pc .h i{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-style:normal;font-size:13px}
+.B .pc b{display:block;font-size:17px;margin-top:18px;letter-spacing:-.02em}
+.B .pc span{font-size:11px;color:#7fd99a}
+.B .sec{display:flex;justify-content:space-between;align-items:baseline;padding:20px 20px 8px}
+.B .sec b{font-size:16px}
+.B .sec a{font-size:13px;color:var(--acc);font-weight:600}
+.B .row2{display:flex;align-items:center;gap:12px;padding:9px 20px}
+.B .row2 .ic{width:42px;height:42px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:18px;flex:none}
+.B .row2 .t{flex:1}.B .row2 .t b{display:block;font-size:14px;font-weight:600}.B .row2 .t span{font-size:12px;color:var(--mu)}
+.B .row2 .r{text-align:right;font-weight:700;font-size:15px}
+.B .stack{display:flex}.B .stack .b{width:20px;height:20px;border:2px solid #eeeeec;margin-left:-6px;font-size:7px}
+.B .nav{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:#fff;border-radius:40px;padding:6px;display:flex;gap:2px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.B .nav a{height:46px;padding:0 14px;border-radius:30px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#8b8b8b}
+.B .nav a.on{background:#1e1e1e;color:#fff;padding:0 18px}
+.B .seg{display:flex;background:rgba(255,255,255,.08);border-radius:30px;padding:4px;margin:16px 16px 0}
+.B .seg a{flex:1;text-align:center;font-size:12px;font-weight:600;padding:9px 0;border-radius:24px;color:#aaa}
+.B .seg a.on{background:#fff;color:#111}
+.B .depc{margin:0 16px 10px;background:#fff;border-radius:26px;padding:16px}
+.B .depc .h{display:flex;align-items:center;gap:10px}
+.B .depc .h .b{width:36px;height:36px}
+.B .depc .h b{flex:1;font-size:15px}
+.B .depc .h span:not(.b){font-size:12px;color:var(--mu);background:#f2f2f0;padding:5px 10px;border-radius:20px}
+.B .depc .g{display:grid;grid-template-columns:repeat(3,1fr);margin-top:14px;gap:6px}
+.B .depc .g span{display:block;font-size:11px;color:var(--mu)}
+.B .depc .g b{font-size:14px}
+.B .depc .g .pl{color:#16a34a}
+.B .dots{display:flex;gap:3px;margin-top:12px}.B .dots i{flex:1;height:6px;border-radius:3px;background:#ececea}.B .dots i.f{background:#1e1e1e}
+.B .catrow{display:flex;gap:8px;overflow:hidden;padding:0 16px}
+.B .cat{flex:none;width:104px;background:#fff;border-radius:22px;padding:12px}
+.B .cat .ic{font-size:20px}
+.B .cat b{display:block;font-size:24px;margin-top:8px;letter-spacing:-.03em}
+.B .cat span{font-size:12px;color:var(--mu)}
+.B .cat .stack{margin-top:8px;padding-left:6px}
+.B .cat.dk{background:#1e1e1e;color:#fff}
+
+/* ============ C: ПЕРЛАМУТР ============ */
+.C{background:#0e0e10;color:#f2f2f2;font-family:Geologica,sans-serif;--pearl:linear-gradient(135deg,#e9f0c9 0%,#cfd6ee 45%,#e8e1f4 70%,#f3efc4 100%);--card:#18181b;--mu:#76767c}
+.C .hero{background:var(--pearl);color:#121212;border-radius:0 0 36px 36px;padding-bottom:16px}
+.C .top{display:flex;justify-content:space-between;align-items:center;padding:6px 18px 0}
+.C .pill{height:38px;padding:0 14px;border-radius:30px;background:#141414;color:#f4f4f4;display:flex;align-items:center;gap:6px;font-size:13px}
+.C .greet{padding:20px 22px 0;font-size:30px;font-weight:200;letter-spacing:-.02em;line-height:1.1}
+.C .greet b{font-weight:600}
+.C .bal{margin:18px 16px 0;background:#141414;color:#fff;border-radius:24px;padding:16px 18px}
+.C .bal .k{font-size:12px;color:#9a9a9a}
+.C .bal .v{font-size:30px;font-weight:300;letter-spacing:-.03em;text-align:right;margin-top:14px}
+.C .bal .v b{font-weight:500}
+.C .lines{margin:14px 16px 0;background:var(--card);border-radius:22px;padding:4px 16px}
+.C .ln{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #26262a;font-size:14px}
+.C .ln:last-child{border:0}
+.C .ln span{color:#b9b9bf;display:flex;align-items:center;gap:10px;font-weight:300}
+.C .ln i{width:6px;height:18px;border-radius:3px}
+.C .ln b{font-weight:400}
+.C .ln em{font-style:normal;color:#bfe39a;font-size:11px;display:block;text-align:right}
+.C .cbx{margin:12px 16px 0;background:var(--card);border-radius:22px;padding:14px 16px}
+.C .cbx .h{display:flex;justify-content:space-between;font-size:14px;margin-bottom:12px}
+.C .cbx .h span{color:var(--mu);font-size:12px}
+.C .cols{display:flex;gap:6px;align-items:flex-end;height:104px}
+.C .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%;background:#202024;border-radius:12px;padding:6px 0;position:relative}
+.C .col i{width:calc(100% - 10px);border-radius:8px}
+.C .col span{position:absolute;top:6px;font-size:11px;color:#bbb}
+.C .capt{display:flex;gap:6px;margin-top:8px}.C .capt span{flex:1;font-size:10px;color:var(--mu);text-align:center}
+.C .nav{position:absolute;bottom:16px;left:16px;right:16px;height:60px;border-radius:30px;background:rgba(30,30,34,.85);backdrop-filter:blur(12px);display:flex;justify-content:space-around;align-items:center;border:1px solid #2a2a2e}
+.C .nav a{color:#7a7a80;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px}
+.C .nav a.on{color:#121212;background:var(--pearl);padding:7px 14px;border-radius:22px}
+.C .ttl{padding:12px 22px 0;font-size:28px;font-weight:300;letter-spacing:-.02em}
+.C .ttl b{font-weight:600}
+.C .newg{margin:16px 16px 0;background:var(--pearl);color:#141414;border-radius:24px;padding:16px 18px;display:flex;justify-content:space-between;align-items:center}
+.C .newg span{font-size:12px;opacity:.6;display:block}
+.C .newg b{font-size:17px;font-weight:500}
+.C .newg i{width:34px;height:34px;border-radius:50%;border:1.5px solid #141414;display:grid;place-items:center;font-style:normal;font-size:20px}
+.C .lbl{padding:20px 22px 8px;font-size:15px;color:#cfcfcf;font-weight:300}
+.C .gc{margin:0 16px 10px;background:var(--card);border-radius:22px;padding:14px 16px}
+.C .gc .h{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding-bottom:10px;border-bottom:1px solid #26262a}
+.C .gc .h span{font-size:11px;color:var(--mu)}
+.C .gc .pct{display:flex;justify-content:space-between;font-size:10px;color:var(--mu);margin-top:10px}
+.C .gc .pr{height:12px;border-radius:6px;background:#26262a;margin-top:6px;overflow:hidden}
+.C .gc .pr i{display:block;height:100%;background:linear-gradient(90deg,#f1f3c2,#cfd6ee);border-radius:6px}
+.C .gc .g3{display:grid;grid-template-columns:repeat(3,1fr);margin-top:12px}
+.C .gc .g3 span{display:block;font-size:10px;color:var(--mu)}
+.C .gc .g3 b{font-size:13px;font-weight:400}
+.C .cbank{margin:0 16px 10px;background:var(--card);border-radius:22px;padding:14px 16px}
+.C .cbank .h{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:15px}
+.C .cbank .h .b{width:28px;height:28px}
+.C .cbank .h span:not(.b){margin-left:auto;font-size:11px;color:var(--mu)}
+.C .tg{display:flex;flex-wrap:wrap;gap:6px}
+.C .tg span{border:1px solid #2e2e33;border-radius:20px;padding:6px 11px;font-size:12px;font-weight:300;color:#d4d4d8}
+.C .tg span b{font-weight:500;color:#e8edc0;margin-left:4px}
+.C .tg span.max{background:var(--pearl);color:#141414;border:0}.C .tg span.max b{color:#141414}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Itogo — три новых направления</h1>
+  <p>Те же экраны и те же данные, что сейчас в приложении: Обзор, Капитал → Вклады, Платежи → Кэшбэк. Функции не добавлены — меняется только подача. Цель: меньше рамок и обводок, больше воздуха, один яркий акцент вместо золотого градиента на всём, крупные «живые» цифры.</p>
+</div>
+
+<!-- ===================== A ===================== -->
+<section class="concept">
+  <div class="chead">
+    <div><div class="tag">Концепт A</div><h2>Графит и лайм</h2></div>
+    <ul>
+      <li>Чистый чёрный фон, карточки без обводок — только плоские серые плашки</li>
+      <li>Один кислотный акцент (лайм) + лавандовый второй; золото уходит</li>
+      <li>Кольцо-диаграмма вместо полоски; плитки кэшбэка с крупными процентами</li>
+      <li>Навигация — плавающая «таблетка», подпись только у активной вкладки</li>
+    </ul>
+  </div>
+  <div class="row">
+    <div>
+      <div class="phone"><div class="scr A">
+        <div class="sb"><span>9:41</span><span>●●● 5G</span></div>
+        <div class="top"><h3>Обзор</h3><div style="display:flex;gap:8px"><span class="ib"><svg class="i"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="ib"><svg class="i"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span></div></div>
+        <div class="donut">
+          <svg viewBox="0 0 236 236" width="236" height="236" style="transform:rotate(-90deg)">
+            <circle cx="118" cy="118" r="100" stroke="#1d1d1d" stroke-width="22" fill="none"/>
+            <circle cx="118" cy="118" r="100" stroke="#c8f25a" stroke-width="22" fill="none" stroke-linecap="round" stroke-dasharray="548 80" stroke-dashoffset="0"/>
+            <circle cx="118" cy="118" r="100" stroke="#b7b2ff" stroke-width="22" fill="none" stroke-linecap="round" stroke-dasharray="34 594" stroke-dashoffset="-570"/>
+            <circle cx="118" cy="118" r="100" stroke="#ff9f7a" stroke-width="22" fill="none" stroke-linecap="round" stroke-dasharray="2 626" stroke-dashoffset="-618"/>
+          </svg>
+          <div class="c"><div class="k">Общий капитал</div><div class="v num">85 135 866<small>,54 ₽</small></div><div class="d">+372 962 ₽ по вкладам</div></div>
+        </div>
+        <div class="legend">
+          <div class="lg"><i style="background:#ff9f7a"></i><b>1,28 млн</b><span>Счета</span></div>
+          <div class="lg"><i style="background:#b7b2ff"></i><b>6,51 млн</b><span>Вклады</span></div>
+          <div class="lg"><i style="background:#c8f25a"></i><b>77,3 млн</b><span>Валюта</span></div>
+        </div>
+        <div class="promo"><div><span>Кэшбэк · октябрь</span><b>5% на 4 категории</b><span>Супермаркеты, АЗС, Кафе, Онлайн</span></div><span class="arrow">→</span></div>
+        <div class="nav"><a class="on"><svg class="i"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Обзор</a><a><svg class="i"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M16 13h2M3 10h18"/></svg></a><a><svg class="i"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/></svg></a><a><svg class="i"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></a></div>
+      </div></div>
+      <div class="cap">Обзор</div>
+    </div>
+
+    <div>
+      <div class="phone"><div class="scr A">
+        <div class="sb"><span>9:41</span><span>●●● 5G</span></div>
+        <div class="top"><h3>Капитал</h3><span class="ib"><svg class="i"><path d="M4 7h16M7 12h10M10 17h4"/></svg></span></div>
+        <div class="chips"><span class="chip">Счета</span><span class="chip on">Вклады · 14</span><span class="chip">Валюта</span><span class="chip">Наличные</span></div>
+        <div class="bigsum"><div class="v num">6 510 462<small>,99 ₽</small></div><div class="s"><em>+2 233,98 ₽</em> сегодня · вложено 6,14 млн → 6,85 млн</div></div>
+        <div class="bars"><i style="height:30%"></i><i style="height:45%"></i><i class="md" style="height:62%"></i><i style="height:38%"></i><i class="hi" style="height:100%"></i><i style="height:52%"></i><i style="height:28%"></i><i style="height:40%"></i><i style="height:20%"></i></div>
+        <div class="list">
+          <div class="dep"><span class="b vtb">ВТБ</span><span class="n">Вклад 12</span><span class="r">666 527 ₽</span><span class="m">ещё 33 дн.</span><span class="p">+49 027,81</span><span class="pb"><i style="width:88%"></i></span></div>
+          <div class="dep"><span class="b mkb">МКБ</span><span class="n">Вклад 6</span><span class="r">378 142 ₽</span><span class="m">ещё 75 дн.</span><span class="p">+15 642,12</span><span class="pb"><i style="width:58%"></i></span></div>
+          <div class="dep"><span class="b gpb">ГПБ</span><span class="n">Вклад 13</span><span class="r">723 227 ₽</span><span class="m">ещё 76 дн.</span><span class="p">+63 227,65</span><span class="pb"><i style="width:76%"></i></span></div>
+        </div>
+        <div class="fab">+ Вклад</div>
+        <div class="nav"><a><svg class="i"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg></a><a class="on"><svg class="i"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M16 13h2M3 10h18"/></svg>Капитал</a><a><svg class="i"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/></svg></a><a><svg class="i"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></a></div>
+      </div></div>
+      <div class="cap">Капитал → Вклады (столбики — закрытия по месяцам, как в DepositMonthsChart)</div>
+    </div>
+
+    <div>
+      <div class="phone"><div class="scr A">
+        <div class="sb"><span>9:41</span><span>●●● 5G</span></div>
+        <div class="top"><h3>Платежи</h3><span class="ib">+</span></div>
+        <div class="chips"><span class="chip on">Кэшбэк</span><span class="chip">Подписки</span><span class="chip" style="margin-left:auto">Октябрь ▾</span></div>
+        <div class="hint"><span>Ноябрь близко — добавить заранее</span><span>→</span></div>
+        <div class="cb"><div class="cbh"><span class="b ozon">OZ</span><b>Ozon Банк</b><span class="e">изменить</span></div>
+          <div class="tiles"><div class="tile hot"><b>5%</b><span>АЗС</span></div><div class="tile hot"><b>5%</b><span>Рестораны</span></div><div class="tile"><b>3%</b><span>Онлайн</span></div><div class="tile"><b>2%</b><span>Красота</span></div><div class="tile"><b>1%</b><span>Такси</span></div><div class="tile all"><b>4%</b><span>На всё</span></div></div></div>
+        <div class="cb"><div class="cbh"><span class="b alfa">А</span><b>Альфа-Банк</b><span class="e">изменить</span></div>
+          <div class="tiles"><div class="tile"><b>4%</b><span>Онлайн</span></div><div class="tile"><b>4%</b><span>Красота</span></div><div class="tile"><b>3%</b><span>Такси</span></div></div></div>
+        <div class="nav"><a><svg class="i"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg></a><a><svg class="i"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M16 13h2M3 10h18"/></svg></a><a class="on"><svg class="i"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/></svg>Платежи</a><a><svg class="i"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></a></div>
+      </div></div>
+      <div class="cap">Платежи → Кэшбэк (максимум месяца подсвечен)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== B ===================== -->
+<section class="concept">
+  <div class="chead">
+    <div><div class="tag">Концепт B</div><h2>Монолит</h2></div>
+    <ul>
+      <li>Тёмный «сейф» сверху с главной цифрой, светлый тёплый низ со списками</li>
+      <li>Круглые кнопки действий под суммой — то, что уже есть: скрыть, состав, добавить</li>
+      <li>Белые карточки без теней, чёрный активный пункт в белой навигации</li>
+      <li>Спокойный, «банковский премиум»; один тёплый акцент для ссылок</li>
+    </ul>
+  </div>
+  <div class="row">
+    <div>
+      <div class="phone"><div class="scr B">
+        <div class="hero">
+          <div class="sb" style="color:#fff"><span>9:41</span><span>●●● 5G</span></div>
+          <div class="top"><span class="t">Обзор</span><span class="ib"><svg class="i"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8"/></svg></span></div>
+          <div class="tot"><div class="k">Общий капитал</div><div class="v num">85 135 866<small>,54 ₽</small></div></div>
+          <div class="acts">
+            <div class="act"><i><svg class="i"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></i>Скрыть</div>
+            <div class="act w"><i><svg class="i"><path d="M12 5v14M5 12h14"/></svg></i>Наличные</div>
+            <div class="act"><i><svg class="i"><path d="M4 6h16M4 12h10M4 18h6"/></svg></i>Состав</div>
+          </div>
+          <div class="pair">
+            <div class="pc"><div class="h"><i>%</i>Вклады</div><b>6 510 462 ₽</b><span>+372 962,99 накоплено</span></div>
+            <div class="pc"><div class="h"><i>$</i>Валюта</div><b>77 347 336 ₽</b><span style="color:#aaa">курс ЦБ на 21.10</span></div>
+          </div>
+        </div>
+        <div class="sec"><b>Кэшбэк · октябрь</b><a>все</a></div>
+        <div class="row2"><span class="ic">🛒</span><div class="t"><b>Супермаркеты</b><span>РСХБ, СКБ</span></div><div class="stack"><span class="b rshb">Р</span><span class="b skb">С</span></div><span class="r">5%</span></div>
+        <div class="row2"><span class="ic">⛽</span><div class="t"><b>АЗС</b><span>Ozon Банк</span></div><span class="r">5%</span></div>
+        <div class="row2"><span class="ic">☕</span><div class="t"><b>Кафе</b><span>Райффайзен</span></div><span class="r">5%</span></div>
+        <div class="nav"><a class="on">Обзор</a><a>Капитал</a><a>Платежи</a><a>⚙</a></div>
+      </div></div>
+      <div class="cap">Обзор</div>
+    </div>
+
+    <div>
+      <div class="phone"><div class="scr B">
+        <div class="hero" style="padding-bottom:20px">
+          <div class="sb" style="color:#fff"><span>9:41</span><span>●●● 5G</span></div>
+          <div class="top"><span class="t">Капитал</span><span class="ib">+</span></div>
+          <div class="seg"><a>Счета</a><a class="on">Вклады</a><a>Валюта</a><a>Наличные</a></div>
+          <div class="tot" style="padding-top:18px"><div class="k">14 вкладов</div><div class="v num">6 510 462<small>,99 ₽</small></div><div style="font-size:13px;color:#7fd99a;margin-top:6px">+2 233,98 ₽ сегодня</div></div>
+        </div>
+        <div class="sec"><b>По закрытию</b><a>сортировка</a></div>
+        <div class="depc"><div class="h"><span class="b vtb">ВТБ</span><b>Вклад 12</b><span>33 дн.</span></div>
+          <div class="g"><div><span>Сейчас</span><b>666 527 ₽</b></div><div><span>Доход</span><b class="pl">+49 027</b></div><div><span>К выдаче</span><b>~668 т.</b></div></div>
+          <div class="dots"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div></div>
+        <div class="depc"><div class="h"><span class="b mkb">МКБ</span><b>Вклад 6</b><span>75 дн.</span></div>
+          <div class="g"><div><span>Сейчас</span><b>378 142 ₽</b></div><div><span>Доход</span><b class="pl">+15 642</b></div><div><span>К выдаче</span><b>~384 т.</b></div></div>
+          <div class="dots"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="nav"><a>⌂</a><a class="on">Капитал</a><a>Платежи</a><a>⚙</a></div>
+      </div></div>
+      <div class="cap">Капитал → Вклады (прогресс срока сегментами)</div>
+    </div>
+
+    <div>
+      <div class="phone"><div class="scr B">
+        <div class="hero" style="padding-bottom:18px">
+          <div class="sb" style="color:#fff"><span>9:41</span><span>●●● 5G</span></div>
+          <div class="top"><span class="t">Платежи</span><span class="ib">+</span></div>
+          <div class="seg"><a class="on">Кэшбэк</a><a>Подписки</a></div>
+          <div class="tot" style="padding-top:16px"><div class="k">Октябрь · 10 банков · 12 категорий</div><div class="v">до 5%</div></div>
+        </div>
+        <div class="sec"><b>Лучшее в месяце</b><a>по банкам</a></div>
+        <div class="catrow">
+          <div class="cat dk"><span class="ic">🛒</span><b>5%</b><span style="color:#aaa">Супермаркеты</span><div class="stack"><span class="b rshb">Р</span><span class="b skb">С</span></div></div>
+          <div class="cat"><span class="ic">⛽</span><b>5%</b><span>АЗС</span><div class="stack"><span class="b ozon">OZ</span></div></div>
+          <div class="cat"><span class="ic">☕</span><b>5%</b><span>Кафе</span><div class="stack"><span class="b raif">R</span></div></div>
+        </div>
+        <div class="sec"><b>Базовый</b></div>
+        <div class="row2"><span class="ic"><span class="b alfa" style="width:30px;height:30px">А</span></span><div class="t"><b>Альфа-Банк, МКБ</b><span>на всё</span></div><span class="r">5%</span></div>
+        <div class="row2"><span class="ic"><span class="b tb" style="width:30px;height:30px">Т</span></span><div class="t"><b>Т-Банк, Ozon</b><span>на всё</span></div><span class="r">4%</span></div>
+        <div class="nav"><a>⌂</a><a>Капитал</a><a class="on">Платежи</a><a>⚙</a></div>
+      </div></div>
+      <div class="cap">Платежи → Кэшбэк (по категориям, переключатель «по банкам»)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== C ===================== -->
+<section class="concept">
+  <div class="chead">
+    <div><div class="tag">Концепт C</div><h2>Перламутр</h2></div>
+    <ul>
+      <li>Шапка — переливающийся пастельный градиент (лайм → лаванда), остальное тёмное</li>
+      <li>Тонкий лёгкий шрифт для больших цифр, жирный — только для акцентов</li>
+      <li>Цветные «колонки» кэшбэка вместо сетки чипов; прогресс вкладов градиентом</li>
+      <li>Самый «молодёжный» и мягкий из трёх; перламутр — фирменный знак</li>
+    </ul>
+  </div>
+  <div class="row">
+    <div>
+      <div class="phone"><div class="scr C">
+        <div class="hero">
+          <div class="sb"><span>9:41</span><span>●●● 5G</span></div>
+          <div class="top"><span class="pill">☰</span><span class="pill">👁 скрыть</span></div>
+          <div class="greet">Добрый вечер,<br><b>Максим</b></div>
+          <div class="bal"><div class="k">Общий капитал</div><div class="v num"><b>85 135 866</b><small>,54 ₽</small></div></div>
+        </div>
+        <div class="lines">
+          <div class="ln"><span><i style="background:#f6b38f"></i>Счета</span><b>1 278 067 ₽</b></div>
+          <div class="ln"><span><i style="background:#cdc7ff"></i>Вклады</span><div><b>6 510 462 ₽</b><em>+372 962 накоплено</em></div></div>
+          <div class="ln"><span><i style="background:#e4ef9e"></i>Валюта</span><b>77 347 336 ₽</b></div>
+        </div>
+        <div class="cbx"><div class="h">Кэшбэк · октябрь<span>все →</span></div>
+          <div class="cols">
+            <div class="col"><span>5%</span><i style="height:70%;background:#f4c6d4"></i></div>
+            <div class="col"><span>5%</span><i style="height:70%;background:#cfe6c4"></i></div>
+            <div class="col"><span>5%</span><i style="height:70%;background:#eef0a8"></i></div>
+            <div class="col"><span>5%</span><i style="height:70%;background:#cdc7ff"></i></div>
+            <div class="col"><span>4%</span><i style="height:56%;background:#3a3a40"></i></div>
+          </div>
+          <div class="capt"><span>Супер</span><span>АЗС</span><span>Кафе</span><span>Онлайн</span><span>На всё</span></div>
+        </div>
+        <div class="nav"><a class="on">▦<span>Обзор</span></a><a>▭<span>Капитал</span></a><a>%<span>Платежи</span></a><a>⚙<span>Настройки</span></a></div>
+      </div></div>
+      <div class="cap">Обзор</div>
+    </div>
+
+    <div>
+      <div class="phone"><div class="scr C">
+        <div class="sb"><span>9:41</span><span>●●● 5G</span></div>
+        <div class="top"><span class="pill">Вклады ▾</span><span class="pill">по закрытию</span></div>
+        <div class="ttl">Мои <b>вклады</b></div>
+        <div class="newg"><div><span>14 вкладов · +2 233,98 ₽ сегодня</span><b>6 510 462,99 ₽</b></div><i>+</i></div>
+        <div class="lbl">Ближайшие закрытия</div>
+        <div class="gc"><div class="h"><span style="font-size:14px;color:#f2f2f2;display:flex;gap:8px;align-items:center"><span class="b vtb" style="width:22px;height:22px;font-size:7px">ВТБ</span>Вклад 12</span><span>подробнее</span></div>
+          <div class="pct"><span>открыт</span><span>88%</span><span>закрытие</span></div><div class="pr"><i style="width:88%"></i></div>
+          <div class="g3"><div><span>Сейчас</span><b>666 527 ₽</b></div><div><span>Доход</span><b style="color:#bfe39a">+49 027</b></div><div><span>Осталось</span><b>33 дн.</b></div></div></div>
+        <div class="gc"><div class="h"><span style="font-size:14px;color:#f2f2f2;display:flex;gap:8px;align-items:center"><span class="b mkb" style="width:22px;height:22px;font-size:7px">МКБ</span>Вклад 6</span><span>подробнее</span></div>
+          <div class="pct"><span>открыт</span><span>58%</span><span>закрытие</span></div><div class="pr"><i style="width:58%"></i></div>
+          <div class="g3"><div><span>Сейчас</span><b>378 142 ₽</b></div><div><span>Доход</span><b style="color:#bfe39a">+15 642</b></div><div><span>Осталось</span><b>75 дн.</b></div></div></div>
+        <div class="nav"><a>▦<span>Обзор</span></a><a class="on">▭<span>Капитал</span></a><a>%<span>Платежи</span></a><a>⚙<span>Настройки</span></a></div>
+      </div></div>
+      <div class="cap">Капитал → Вклады</div>
+    </div>
+
+    <div>
+      <div class="phone"><div class="scr C">
+        <div class="sb"><span>9:41</span><span>●●● 5G</span></div>
+        <div class="top"><span class="pill">Кэшбэк ▾</span><span class="pill">Октябрь</span></div>
+        <div class="ttl">Кэшбэк <b>октября</b></div>
+        <div class="newg"><div><span>Ноябрь уже близко</span><b>Добавить заранее</b></div><i>+</i></div>
+        <div class="lbl">10 банков · 12 категорий</div>
+        <div class="cbank"><div class="h"><span class="b ozon">OZ</span>Ozon Банк<span>изменить</span></div>
+          <div class="tg"><span class="max">АЗС<b>5%</b></span><span class="max">Рестораны<b>5%</b></span><span>Онлайн<b>3%</b></span><span>Красота<b>2%</b></span><span>Такси<b>1%</b></span><span>На всё<b>4%</b></span></div></div>
+        <div class="cbank"><div class="h"><span class="b alfa">А</span>Альфа-Банк<span>изменить</span></div>
+          <div class="tg"><span>Онлайн<b>4%</b></span><span>Красота<b>4%</b></span><span>Такси<b>3%</b></span><span>АЗС<b>2%</b></span><span>Рестораны<b>1%</b></span><span class="max">На всё<b>5%</b></span></div></div>
+        <div class="nav"><a>▦<span>Обзор</span></a><a>▭<span>Капитал</span></a><a class="on">%<span>Платежи</span></a><a>⚙<span>Настройки</span></a></div>
+      </div></div>
+      <div class="cap">Платежи → Кэшбэк</div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

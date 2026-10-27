@@ -35,7 +35,7 @@ if ($null -ne $j.tool_input.edits) {
 
 # 1. Signing / keystore — an update must install over the current app.
 if ($p -match '(?i)\.(keystore|jks)$' -or $p -match '(?i)/debug\.keystore$') {
-    Block "подпись и keystore не трогаем — иначе обновление не встанет поверх. Переход на ключ публикации — только по docs/publishing.md и решению Максима."
+    Block "подпись и keystore не трогаем — иначе обновление не встанет поверх. Переход на ключ публикации — только по docs/publishing.md и решению пользователя."
 }
 if ($p -match '(?i)/build\.gradle\.kts$' -and $text -match 'signingConfigs') {
     Block "не меняем signingConfigs в build.gradle.kts — стабильная подпись (см. docs/publishing.md)."
