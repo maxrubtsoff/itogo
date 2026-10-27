@@ -51,4 +51,16 @@ class TourFrameTest {
         val none = TourFrame.cardTop(null, 300f, 14f, safe)
         assertEquals(120f + (1780f - 300f) / 2f, none, 0f)
     }
+
+    @Test fun cardAboveBottomWindowNeverOverlapsIt() {
+        val window = Rect(0f, 1400f, 1000f, 2000f)
+        val top = TourFrame.cardTop(window, 300f, 16f, safe)
+        assertTrue(top + 300f <= window.top)
+    }
+
+    @Test fun tallWindowKeepsCardInsideSafeTop() {
+        val window = Rect(0f, 300f, 1000f, 2000f)
+        val top = TourFrame.cardTop(window, 300f, 16f, safe)
+        assertTrue(top >= safe.top)
+    }
 }

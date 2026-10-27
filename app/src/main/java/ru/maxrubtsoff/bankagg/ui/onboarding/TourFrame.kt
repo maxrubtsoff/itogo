@@ -37,13 +37,15 @@ internal object TourFrame {
     fun radius(targetRadius: Float, grown: Float, window: Rect): Float =
         (targetRadius + grown).coerceAtMost(minOf(window.width, window.height) / 2f).coerceAtLeast(0f)
 
-    /** The top of the card: under the part when it fits, else over it, else against the bottom; centred without a part. */
+    /** The top of the card: under the part when it fits, else over it, else against the bottom (never over a window in the lower half); centred without a part. */
     fun cardTop(window: Rect?, cardHeight: Float, gap: Float, safe: Rect): Float {
         if (window == null) return (safe.top + (safe.height - cardHeight) / 2f).coerceAtLeast(safe.top)
         val below = window.bottom + gap
         if (below + cardHeight <= safe.bottom) return below
         val above = window.top - gap - cardHeight
         if (above >= safe.top) return above
+        // No room either way: a window low on the screen (a sheet) is never laid over — up to the top edge instead.
+        if (window.top > safe.top + safe.height / 2f) return above.coerceAtLeast(safe.top)
         return (safe.bottom - cardHeight).coerceAtLeast(safe.top)
     }
 }
