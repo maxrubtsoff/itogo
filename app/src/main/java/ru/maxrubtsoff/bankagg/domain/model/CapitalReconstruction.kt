@@ -49,6 +49,12 @@ object CapitalReconstruction {
         return days.minOrNull() ?: LocalDate.MIN
     }
 
+    /** Accounts as the repair sees them: one without operations is known from always, so [build] keeps its balance in every day. */
+    fun withoutBareStarts(accounts: List<Account>, transactions: List<Transaction>): List<Account> {
+        val withOps = transactions.map { it.accountId }.toSet()
+        return accounts.map { if (it.id in withOps) it else it.copy(updatedAt = 0L, checkedAt = null) }
+    }
+
     /** What the account held before its first known operation: balance minus all its operations. */
     fun openingOf(account: Account, transactions: List<Transaction>): Long =
         account.balance.minor - transactions.filter { it.accountId == account.id }.sumOf { it.amount.minor }
@@ -128,13 +134,16 @@ object CapitalReconstruction {
      * Once (B-109): saved days earlier than the latest [knownFrom] of the counted accounts may hold
      * a balance nobody knew then. Their «Счета» and «Валюта» become the lesser of the saved and the
      * [rebuilt] value, so a second pass changes nothing and the part only ever goes down. Returns
-     * the changed points only.
+     * the changed points only. Accounts without operations are left out: their start is
+     * unknown, so the saved days stay as recorded ([rebuilt] must count them whole, see [withoutBareStarts]).
      */
     fun capUnknown(
         saved: List<CapitalPoint>, rebuilt: List<CapitalPoint>, accounts: List<Account>, transactions: List<Transaction>,
         included: Set<CapitalPart>, today: LocalDate, zone: ZoneId = ZoneId.systemDefault()
     ): List<CapitalPoint> {
-        val lastKnown = accounts.filterNot { it.excluded }.maxOfOrNull { knownFrom(it, transactions, zone) } ?: return emptyList()
+        // Only an account with operations has a known start; one with a bare balance update has none (no creation date).
+        val withOps = transactions.map { it.accountId }.toSet()
+        val lastKnown = accounts.filter { !it.excluded && it.id in withOps }.maxOfOrNull { knownFrom(it, transactions, zone) } ?: return emptyList()
         val byDay = rebuilt.associateBy { it.date }
         val capped = listOf(CapitalPart.ACCOUNTS, CapitalPart.CURRENCY)
         return saved.mapNotNull { p ->

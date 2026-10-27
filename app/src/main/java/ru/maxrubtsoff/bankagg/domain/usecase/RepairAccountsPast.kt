@@ -39,7 +39,7 @@ class RepairAccountsPast(
         val transactions = ledger.observeTransactions(Int.MAX_VALUE).first()
         val all = CapitalPart.entries.toSet()
         val rebuilt = CapitalReconstruction.build(
-            accounts, transactions, deposits.observeAll().first(), fx.all(), rates.all(), cash.get(), all, day
+            CapitalReconstruction.withoutBareStarts(accounts, transactions), transactions, deposits.observeAll().first(), fx.all(), rates.all(), cash.get(), all, day
         )
         val included = settings.capitalParts.first() intersect settings.features.first().capitalParts
         lock.run {

@@ -112,4 +112,21 @@ class CapitalReconstructionTest {
         val none = CapitalEvents.build(txs, listOf(a.copy(excluded = true)), emptyList(), emptyList(), null, points, today, zone)
         assertTrue(none.none { it.kind == HistoryKind.ACCOUNT_OPEN })
     }
+
+    @Test fun capUnknown_accountWithoutOps_updatedYesterday_leavesSavedDaysAlone() {
+        val a = acc("a", 1_000L, updated = today.minusDays(1))
+        val rebuilt = build(CapitalReconstruction.withoutBareStarts(listOf(a), emptyList()), emptyList())
+        val day = LocalDate.of(2026, 9, 1)
+        val saved = CapitalPoint(day, 1_000L, mapOf(CapitalPart.ACCOUNTS to 1_000L))
+        assertTrue(CapitalReconstruction.capUnknown(listOf(saved), rebuilt, listOf(a), emptyList(), all, today, zone).isEmpty())
+    }
+
+    @Test fun capUnknown_neverRaises() {
+        val a = acc("a", 1_000L)
+        val txs = listOf(tx("1", "a", 100L, LocalDate.of(2026, 10, 1)))
+        val rebuilt = build(listOf(a), txs)
+        val day = LocalDate.of(2026, 9, 20)
+        val saved = CapitalPoint(day, 0L, mapOf(CapitalPart.ACCOUNTS to 0L))
+        assertTrue(CapitalReconstruction.capUnknown(listOf(saved), rebuilt, listOf(a), txs, all, today, zone).isEmpty())
+    }
 }
