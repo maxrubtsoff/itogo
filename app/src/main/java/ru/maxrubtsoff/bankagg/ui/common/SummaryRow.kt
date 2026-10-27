@@ -71,7 +71,8 @@ fun SummaryRow(
                 Spacer(Modifier.width(10.dp))
                 AmountText(
                     Money.ofMinor(valueMinor).format(),
-                    style = Amounts.Row,
+                    // A step under Amounts.Row: wide Unbounded at 16 sp made seven-figure sums bulky.
+                    style = Amounts.Row.copy(fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium),
                     color = if (dimmed) Slitok.Faint else Slitok.Fg,
                     minSize = 11.sp,
                     textAlign = TextAlign.End,
