@@ -88,6 +88,10 @@ enum class KopeckLook(val scale: Float, val alpha: Float) {
  */
 object HideToggle {
     fun visible(hasAmounts: Boolean, hidden: Boolean): Boolean = hasAmounts || hidden
+
+    /** B-116: hiding is app-wide, so the eye counts every section with sums, not only the capital. */
+    fun hasAmounts(features: Features, capitalHasData: Boolean, activeSubscriptions: Int): Boolean =
+        (features.showCapital && capitalHasData) || (features.showSubscriptions && activeSubscriptions > 0)
 }
 
 /**

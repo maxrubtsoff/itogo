@@ -487,6 +487,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     val cashbackVm: CashbackViewModel = viewModel(factory = factory)
     val subscriptionsVm: SubscriptionsViewModel = viewModel(factory = factory)
     val depositsVm: DepositsViewModel = viewModel(factory = factory)
+    val subscriptionsState by subscriptionsVm.state.collectAsStateWithLifecycle()
 
     val snackbar = remember { SnackbarHostState() }
     UndoSnackbarEffect(container.undo, snackbar)
@@ -744,7 +745,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         features = features,
                         newBanks = newBanks,
                         onOpenNewBanks = { nav.navigate(Routes.NEW_BANKS) },
-                        onToggleHidden = toggleHidden
+                        onToggleHidden = toggleHidden,
+                        activeSubscriptions = subscriptionsState.active.size
                     ) }
                 }
             }

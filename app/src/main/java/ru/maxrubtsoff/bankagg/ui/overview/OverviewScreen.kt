@@ -138,7 +138,8 @@ fun OverviewScreen(
     features: Features = Features.ALL,
     newBanks: List<BankCandidate> = emptyList(),
     onOpenNewBanks: () -> Unit = {},
-    onToggleHidden: () -> Unit = {}
+    onToggleHidden: () -> Unit = {},
+    activeSubscriptions: Int = 0
 ) {
     val snapshot by vm.snapshot.collectAsStateWithLifecycle()
     val days by vm.days.collectAsStateWithLifecycle()
@@ -152,7 +153,7 @@ fun OverviewScreen(
     ) {
         ScreenHeader("Обзор") {
             val hidden = LocalAmountsHidden.current
-            val hasAmounts = snapshot?.parts?.any { it.hasData } == true
+            val hasAmounts = HideToggle.hasAmounts(features, snapshot?.parts?.any { it.hasData } == true, activeSubscriptions)
             if (HideToggle.visible(hasAmounts, hidden)) IconButton(onClick = onToggleHidden, modifier = Modifier.tourTarget(TourTarget.HIDE_EYE, radius = 24.dp)) {
                 Icon(
                     if (hidden) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
