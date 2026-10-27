@@ -63,6 +63,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -278,8 +279,7 @@ private fun InlineSheet(host: InlineSheetHost, scroll: Boolean, content: @Compos
                 Modifier
                     .fillMaxWidth()
                     .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                    .padding(horizontal = 20.dp)
-                    .navigationBarsPadding(),
+                    .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) { latest() }
         }
@@ -287,13 +287,16 @@ private fun InlineSheet(host: InlineSheetHost, scroll: Boolean, content: @Compos
     }
 }
 
-/** The tour's sheet host: the sheet rises from the bottom of the screen and goes back down. */
+/**
+ * The tour's sheet host: the sheet rises from the bottom of the screen and goes back down.
+ * [bottomInset] is what the app's bottom bar (with the system bar) takes, so the sheet stands above it (B-112).
+ */
 @Composable
-fun InlineSheetLayer(host: InlineSheetHost, modifier: Modifier = Modifier) {
+fun InlineSheetLayer(host: InlineSheetHost, modifier: Modifier = Modifier, bottomInset: Dp = 0.dp) {
     val shown = host.content
     var last by remember { mutableStateOf(shown) }
     SideEffect { if (shown != null) last = shown }
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+    Box(modifier.fillMaxSize().padding(bottom = bottomInset), contentAlignment = Alignment.BottomCenter) {
         AnimatedVisibility(
             visible = shown != null,
             enter = slideInVertically(Motion.tween(Motion.NORMAL)) { it } + fadeIn(Motion.tween(Motion.NORMAL)),

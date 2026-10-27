@@ -179,7 +179,7 @@ fun TourSandboxLayer(session: TourSession, padding: PaddingValues) {
                     TourView.SHOT -> ShotScreen(session, factory)
                 }
             }
-            InlineSheetLayer(session.sheets)
+            InlineSheetLayer(session.sheets, bottomInset = padding.calculateBottomPadding())
             // «Добавить …»: the same sheet of the screen, opened by the tour from outside.
             if (session.sheetOpen) {
                 AddSheet(
