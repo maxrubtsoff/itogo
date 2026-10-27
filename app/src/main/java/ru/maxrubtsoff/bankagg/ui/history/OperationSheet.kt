@@ -35,6 +35,8 @@ import ru.maxrubtsoff.bankagg.ui.capital.label
 import ru.maxrubtsoff.bankagg.ui.capital.parseAmountMinor
 import ru.maxrubtsoff.bankagg.ui.common.AmountField
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
+import ru.maxrubtsoff.bankagg.ui.common.BankPickSheet
+import ru.maxrubtsoff.bankagg.ui.common.SelectRow
 import ru.maxrubtsoff.bankagg.ui.common.BankNote
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.DangerButton
@@ -166,6 +168,7 @@ private fun EditBody(d: OperationDetail, today: LocalDate, vm: CapitalHistoryVie
     var date by remember { mutableStateOf(seed.date) }
     var accountId by remember { mutableStateOf(seed.accountId) }
     var picking by remember { mutableStateOf(false) }
+    var pickingBank by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val unit = Currencies.symbolOf(d.currency ?: Currencies.RUB)
     val isFx = ref is HistoryRef.Fx
@@ -189,11 +192,16 @@ private fun EditBody(d: OperationDetail, today: LocalDate, vm: CapitalHistoryVie
         SlitokChip(date.format(DATE_FMT), selected = false, onClick = { picking = true })
     }
     if (ref is HistoryRef.Tx && d.accounts.size > 1) {
-        Text("Счёт", style = MaterialTheme.typography.labelMedium, color = Slitok.Muted)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            d.accounts.forEach { a ->
-                SlitokChip(a.title, a.id == accountId, { accountId = a.id }, Modifier.fillMaxWidth(), leading = { BankIcon(a.brand, 28.dp) })
-            }
+        Text("Банк", style = MaterialTheme.typography.labelMedium, color = Slitok.Muted)
+        val acc = d.accounts.firstOrNull { it.id == accountId }
+        SelectRow(acc?.title, "Выберите банк", onClick = { pickingBank = true }, leading = acc?.let { { BankIcon(it.brand, 36.dp) } })
+        if (pickingBank) {
+            BankPickSheet(
+                acc?.brand,
+                onPick = { b -> d.accounts.firstOrNull { it.brand.key == b.key }?.let { accountId = it.id } },
+                onDismiss = { pickingBank = false },
+                banks = d.accounts.map { it.brand }
+            )
         }
     }
     error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Slitok.Coral) }

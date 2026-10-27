@@ -15,11 +15,12 @@ import ru.maxrubtsoff.bankagg.ui.theme.Slitok
  * «Банк» (U-39): the one way to pick a single bank for a form — the person's
  * banks in a sheet, the picked one checked; a search when the list is long.
  * Opened from a [SelectRow]. With [onClear] the first row is «Не указан» — the
- * bank can be taken off again (checked while nothing is picked).
+ * bank can be taken off again (checked while nothing is picked). With [banks] only
+ * those are listed (U-69: an account is a bank + the operation's currency, one per bank).
  */
 @Composable
-fun BankPickSheet(selected: BankBrand?, onPick: (BankBrand) -> Unit, onDismiss: () -> Unit, onClear: (() -> Unit)? = null) {
-    val all = pickable(LocalMyBanks.current, selected)
+fun BankPickSheet(selected: BankBrand?, onPick: (BankBrand) -> Unit, onDismiss: () -> Unit, onClear: (() -> Unit)? = null, banks: List<BankBrand>? = null) {
+    val all = banks ?: pickable(LocalMyBanks.current, selected)
     var query by rememberSaveable { mutableStateOf("") }
     val shown = if (query.isBlank()) all else all.filter { it.title.contains(query.trim(), ignoreCase = true) }
     SlitokSheet(onDismiss) {
