@@ -90,6 +90,11 @@ import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.AddShotTile
 import ru.maxrubtsoff.bankagg.ui.common.PendingShotsPlate
 import ru.maxrubtsoff.bankagg.ui.common.DeltaLine
+import ru.maxrubtsoff.bankagg.ui.common.SummaryRow
+import ru.maxrubtsoff.bankagg.ui.common.SummaryTile
+import ru.maxrubtsoff.bankagg.domain.model.SummaryLine
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Savings
 import ru.maxrubtsoff.bankagg.ui.common.PeriodChips
 import ru.maxrubtsoff.bankagg.ui.common.CapitalChart
 import ru.maxrubtsoff.bankagg.domain.model.ChartMark
@@ -301,6 +306,20 @@ fun ShowcaseScreen(onBack: () -> Unit) {
 
             Caption("Скрины ждут проверки")
             PendingShotsPlate(shots = 4, thumbs = listOf("", "", ""), ready = 2, check = 1, unread = 1, onOpen = {})
+
+            Caption("Строка сводки капитала")
+            SummaryRow(
+                tile = { SummaryTile(Icons.Filled.Savings, Slitok.Violet) }, title = "Вклады", valueMinor = 452_919_759,
+                line = SummaryLine("7 вкладов", moveMinor = 5_120_740), onClick = {}
+            )
+            SummaryRow(
+                tile = { SummaryTile(Icons.Filled.Payments, Slitok.Sand) }, title = "Наличные", valueMinor = 200_000_000,
+                line = SummaryLine(""), onClick = {}
+            )
+            SummaryRow(
+                tile = { SummaryTile(Icons.Filled.Payments, Slitok.Muted) }, title = "Не в банке", valueMinor = 200_000_000,
+                line = SummaryLine("наличные · валюта"), dimmed = true
+            )
 
             Caption("История капитала")
             DeltaLine(Money.ofMinor(4_830_000), "за месяц", listOf(10L, 12, 11, 15, 14, 18, 20), onClick = {})

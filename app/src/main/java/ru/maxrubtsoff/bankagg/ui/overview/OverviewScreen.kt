@@ -101,8 +101,15 @@ import ru.maxrubtsoff.bankagg.domain.model.plural
 import ru.maxrubtsoff.bankagg.domain.model.SliceMode
 import ru.maxrubtsoff.bankagg.domain.usecase.CapitalByBank
 import ru.maxrubtsoff.bankagg.ui.common.BankSheet
-import ru.maxrubtsoff.bankagg.ui.common.BankShareRow
-import ru.maxrubtsoff.bankagg.ui.common.ThinTabs
+import ru.maxrubtsoff.bankagg.domain.model.CapitalSummary
+import ru.maxrubtsoff.bankagg.ui.common.PagerTabsStatic
+import ru.maxrubtsoff.bankagg.ui.common.SummaryRow
+import ru.maxrubtsoff.bankagg.ui.common.SummaryTile
+import ru.maxrubtsoff.bankagg.ui.common.rememberBankAccent
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.CurrencyExchange
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Savings
 import ru.maxrubtsoff.bankagg.ui.capital.CapitalViewModel
 import ru.maxrubtsoff.bankagg.ui.capital.PartDot
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
@@ -158,6 +165,7 @@ fun OverviewScreen(
     var openBank by rememberSaveable { mutableStateOf<String?>(null) }
     val days by vm.days.collectAsStateWithLifecycle()
     val glance = remember(days, snapshot?.today) { snapshot?.let { CapitalHistory.glance(days, it.today) } }
+    val partMoves = remember(days, snapshot?.today) { snapshot?.let { CapitalSummary.partMoves(days, it.today) } ?: emptyMap() }
     val notifAccess by rememberNotificationAccess()
     var tuning by rememberSaveable { mutableStateOf(false) }
 
@@ -204,6 +212,7 @@ fun OverviewScreen(
                 onTune = { tuning = true },
                 onOpenPart = onOpenCapital,
                 glance = glance,
+                partMoves = partMoves,
                 onOpenHistory = onOpenHistory,
                 onToggleIncluded = { part -> vm.setPartIncluded(part.part, !part.included) },
                 onToggleHidden = onToggleHidden,
@@ -337,6 +346,7 @@ private fun CapitalHero(
     onTune: () -> Unit,
     onOpenPart: (CapitalPart) -> Unit,
     glance: CapitalHistory.Glance?,
+    partMoves: Map<CapitalPart, Long>,
     onOpenHistory: () -> Unit = {},
     onToggleIncluded: (CapitalSnapshot.Part) -> Unit,
     onToggleHidden: () -> Unit,
@@ -355,6 +365,12 @@ private fun CapitalHero(
             Column(Modifier.padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Общий капитал", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, modifier = Modifier.weight(1f))
+                    // The cut sits by the title: it changes the rows, not the total.
+                    if (canSlice) Box(Modifier.width(148.dp)) {
+                        PagerTabsStatic(listOf("Части", "Банки"), if (byBanks) 1 else 0) {
+                            onSliceMode(if (it == 1) SliceMode.BY_BANKS else SliceMode.BY_PARTS)
+                        }
+                    }
                     IconButton(onClick = onTune) {
                         Icon(Icons.Filled.Tune, contentDescription = "Что входит в капитал", tint = Slitok.Muted)
                     }
@@ -383,29 +399,29 @@ private fun CapitalHero(
                 glance?.let {
                     DeltaLine(Money.ofMinor(it.change.deltaMinor), "за месяц", it.spark, Modifier.padding(end = 12.dp), onClick = onOpenHistory)
                 }
-                Spacer(Modifier.height(if (glance == null) 14.dp else 6.dp))
-                if (canSlice) {
-                    Box(Modifier.padding(end = 12.dp, bottom = 10.dp)) {
-                        ThinTabs(listOf("По частям", "По банкам"), if (byBanks) 1 else 0) {
-                            onSliceMode(if (it == 1) SliceMode.BY_BANKS else SliceMode.BY_PARTS)
-                        }
-                    }
-                }
+                Spacer(Modifier.height(if (glance == null) 14.dp else 12.dp))
                 if (byBanks) {
+                    val segments = slices.filter { it.share > 0f }
+                    CompositionBar(segments.map { it.share }, segments.map { s -> s.brand?.let { rememberBankAccent(it) } ?: Slitok.Faint }, Modifier.padding(end = 12.dp))
+                    Spacer(Modifier.height(6.dp))
                     slices.forEachIndexed { i, slice ->
-                        if (i > 0) HorizontalDivider(Modifier.padding(start = 22.dp, end = 12.dp), color = Slitok.Line)
-                        BankShareRow(
-                            slice,
-                            onClick = if (slice.brand != null) ({ onOpenBank(slice) }) else null,
-                            modifier = Modifier.padding(end = 12.dp)
+                        if (i > 0) HorizontalDivider(Modifier.padding(start = 52.dp, end = 12.dp), color = Slitok.Line)
+                        SummaryRow(
+                            tile = { slice.brand?.let { BankIcon(it, size = 40.dp) } ?: SummaryTile(Icons.Filled.Payments, Slitok.Muted) },
+                            title = slice.brand?.title ?: "Не в банке",
+                            valueMinor = slice.valueMinor,
+                            line = remember(slice) { CapitalSummary.bank(slice) },
+                            dimmed = slice.isRest,
+                            onClick = if (slice.brand != null) ({ onOpenBank(slice) }) else null
                         )
                     }
                 } else {
-                    CompositionBar(snap, Modifier.padding(end = 12.dp))
+                    val segments = snap.parts.filter { it.share > 0f }
+                    CompositionBar(segments.map { it.share }, segments.map { it.part.color() }, Modifier.padding(end = 12.dp))
                     Spacer(Modifier.height(6.dp))
                     shown.forEachIndexed { i, part ->
-                        if (i > 0) HorizontalDivider(Modifier.padding(start = 22.dp, end = 12.dp), color = Slitok.Line)
-                        PartRow(snap, part, onLongToggle = { onToggleIncluded(part) }) { onOpenPart(part.part) }
+                        if (i > 0) HorizontalDivider(Modifier.padding(start = 52.dp, end = 12.dp), color = Slitok.Line)
+                        PartRow(snap, part, partMoves, onLongToggle = { onToggleIncluded(part) }) { onOpenPart(part.part) }
                     }
                 }
             }
@@ -414,24 +430,24 @@ private fun CapitalHero(
 }
 
 /**
- * Segments proportional to the included parts, in their colours: one capsule,
- * parts butt against each other (U-21); a tiny part keeps at least 12 dp so it
- * reads as a piece of the bar, not a dot.
+ * Segments proportional to the shares, in their colours — parts or banks: small
+ * gaps between them; a tiny one keeps at least 12 dp so it reads as a piece of
+ * the bar, not a dot.
  */
 @Composable
-private fun CompositionBar(snap: CapitalSnapshot, modifier: Modifier = Modifier) {
-    val segments = snap.parts.filter { it.share > 0f }
+private fun CompositionBar(shares: List<Float>, colors: List<androidx.compose.ui.graphics.Color>, modifier: Modifier = Modifier) {
     // The bar grows in once per launch, not on every return to the Overview (U-29).
     val grow = remember { Animatable(if (BarIntro.pending()) 0f else 1f) }
     LaunchedEffect(Unit) { grow.animateTo(1f, Motion.tween(Motion.SLOW)) }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val minShare = (12.dp / maxWidth).coerceAtLeast(CapitalBar.MIN_SHARE)
-        val widths = remember(segments, minShare) { CapitalBar.widths(segments.map { it.share }, minShare) }
+        val widths = remember(shares, minShare) { CapitalBar.widths(shares, minShare) }
         Row(
-            Modifier.fillMaxWidth(grow.value.coerceAtLeast(0.001f)).height(8.dp).clip(RoundedCornerShape(99.dp)).background(Slitok.Inset)
+            Modifier.fillMaxWidth(grow.value.coerceAtLeast(0.001f)).height(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            segments.forEachIndexed { i, s ->
-                Box(Modifier.weight(widths[i]).fillMaxHeight().background(s.part.color()))
+            shares.indices.forEach { i ->
+                Box(Modifier.weight(widths[i]).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(colors[i]))
             }
         }
     }
@@ -444,72 +460,36 @@ private object BarIntro {
 }
 
 @Composable
-private fun PartRow(snap: CapitalSnapshot, part: CapitalSnapshot.Part, onLongToggle: () -> Unit, onClick: () -> Unit) {
+private fun PartRow(
+    snap: CapitalSnapshot,
+    part: CapitalSnapshot.Part,
+    moves: Map<CapitalPart, Long>,
+    onLongToggle: () -> Unit,
+    onClick: () -> Unit
+) {
     // Long press: count it in the total or not, without the sheet (U-7).
     LongPressMenu(
         items = listOf((if (part.included) "Не учитывать в общем капитале" else "Учитывать в общем капитале") to onLongToggle)
     ) { onLongPress ->
-    Row(
-        Modifier
-            .fillMaxWidth()
+        SummaryRow(
+            tile = { SummaryTile(part.part.icon(), part.part.color(), dimmed = !part.included) },
+            title = part.part.label,
+            valueMinor = part.valueMinor,
+            line = remember(snap, part, moves) { CapitalSummary.part(snap, part, moves) },
             // U-32: the row grows into its section of «Капитал» and shrinks back on return.
-            .sharedCard("part-${part.part.key}")
-            .pressScale()
-            .clip(RoundedCornerShape(12.dp))
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress)
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        PartDot(part.part, part.included)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    part.part.label, style = MaterialTheme.typography.bodyLarge,
-                    color = if (part.included) Slitok.Fg else Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.width(10.dp))
-                AmountText(
-                    Money.ofMinor(part.valueMinor).format(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (part.included) Slitok.Fg else Slitok.Faint,
-                    minSize = 11.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            secondLine(snap, part)?.let { (text, color) ->
-                MoneyText(text, style = MaterialTheme.typography.bodySmall, color = color)
-            }
-        }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Faint)
-    }
+            modifier = Modifier.sharedCard("part-${part.part.key}").pressScale(),
+            dimmed = !part.included,
+            onClick = onClick,
+            onLongClick = onLongPress
+        )
     }
 }
 
-/** The small line under a part: what grew, or why it doesn't count. */
-private fun secondLine(snap: CapitalSnapshot, part: CapitalSnapshot.Part): Pair<String, androidx.compose.ui.graphics.Color>? {
-    if (!part.included) return "не в итоге" to Slitok.Faint
-    return when (part.part) {
-        CapitalPart.DEPOSITS -> plural(snap.activeDeposits.size, "вклад", "вклада", "вкладов")?.let { count ->
-            val monthly = snap.depositsMonthlyMinor
-            (if (monthly != 0L) "$count${RuText.DOT}${signedRub(monthly)} в месяц" else count) to Slitok.Faint
-        }
-        CapitalPart.CURRENCY -> {
-            val c = snap.currency
-            when {
-                c.missingRates.isNotEmpty() -> "нет курса для ${c.missingRates.joinToString(", ")} — ↻" to Slitok.Brass2
-                else -> c.amountsByCurrency().takeIf { it.isNotEmpty() }?.let { list ->
-                    // U-74: the sums themselves, whole units, rubles left out.
-                    list.joinToString(RuText.DOT) {
-                        "${Currencies.symbolOf(it.currency)} ${Money.ofMinor(it.minor / 100 * 100).formatNumber()}"
-                    } to Slitok.Faint
-                }
-            }
-        }
-        CapitalPart.CASH, CapitalPart.ACCOUNTS -> null
-    }
+private fun CapitalPart.icon() = when (this) {
+    CapitalPart.ACCOUNTS -> Icons.Filled.CreditCard
+    CapitalPart.DEPOSITS -> Icons.Filled.Savings
+    CapitalPart.CURRENCY -> Icons.Filled.CurrencyExchange
+    CapitalPart.CASH -> Icons.Filled.Payments
 }
 
 @Composable

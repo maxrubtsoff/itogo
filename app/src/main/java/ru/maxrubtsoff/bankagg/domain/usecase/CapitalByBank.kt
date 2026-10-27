@@ -30,9 +30,10 @@ object CapitalByBank {
             if (counted(CapitalPart.CURRENCY)) snap.currency.holdings.filterNot { it.account.excluded }
                 .forEach { h -> h.valueMinor?.let { add(h.account.brand to BankSlice.Line(h.account.title, it)) } }
         }
-        val deposits = if (!counted(CapitalPart.DEPOSITS)) emptyList() else snap.activeDeposits.map {
-            it.brand to BankSlice.Line(it.title ?: "Вклад", DepositMath.project(it, snap.today, seriesPoints = 2).currentValue.minor)
+        val projected = if (!counted(CapitalPart.DEPOSITS)) emptyList() else snap.activeDeposits.map {
+            it to DepositMath.project(it, snap.today, seriesPoints = 2)
         }
+        val deposits = projected.map { (d, p) -> d.brand to BankSlice.Line(d.title ?: "Вклад", p.currentValue.minor) }
 
         val named = (accounts.map { it.first } + deposits.map { it.first })
             .filter { it.key != BankBrand.UNKNOWN.key }
@@ -55,7 +56,8 @@ object CapitalByBank {
                 hasCashback = cats > 0,
                 subscriptionsCount = subs.size,
                 subscriptionsMonthlyMinor = subs.sumOf { it.period.perMonth(it.priceMinor) },
-                monthCashbackCategories = cats
+                monthCashbackCategories = cats,
+                depositsMonthlyMinor = projected.filter { it.first.brand.key == brand.key }.sumOf { it.second.monthlyAccrual.minor }
             )
         }.filter { it.valueMinor != 0L }.sortedByDescending { it.valueMinor }
 

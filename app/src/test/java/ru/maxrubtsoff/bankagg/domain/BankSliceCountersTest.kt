@@ -15,8 +15,8 @@ class BankSliceCountersTest {
     @Test fun declension() {
         assertEquals("2 счёта · 3 вклада · 2 подписки", line(2, 3, 2))
         assertEquals("1 счёт · 1 вклад", line(1, 1, 0))
-        assertEquals("5 счётов · 11 вкладов · 21 подписка", line(5, 11, 21))
-        assertEquals("12 счётов", line(12, 0, 0))
+        assertEquals("5 счетов · 11 вкладов · 21 подписка", line(5, 11, 21))
+        assertEquals("12 счетов", line(12, 0, 0))
         assertEquals("", line(0, 0, 0))
     }
 }

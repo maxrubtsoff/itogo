@@ -17,6 +17,8 @@ data class BankSlice(
     val subscriptionsCount: Int = 0,
     val subscriptionsMonthlyMinor: Long = 0,
     val monthCashbackCategories: Int = 0,
+    /** Average income of the bank's deposits per month. */
+    val depositsMonthlyMinor: Long = 0,
     /** For the rest slice: how much is bought-by-hand currency. */
     val restCurrencyMinor: Long = 0,
     /** For the rest slice: how much is cash. */
@@ -32,7 +34,7 @@ data class BankSlice(
     /** «2 счёта · 1 вклад · 3 подписки»; empty positions are skipped. */
     val countersLine: String
         get() = listOfNotNull(
-            plural(accountsCount, "счёт", "счёта", "счётов"),
+            plural(accountsCount, "счёт", "счёта", "счетов"),
             plural(depositsCount, "вклад", "вклада", "вкладов"),
             plural(subscriptionsCount, "подписка", "подписки", "подписок")
         ).joinToString(" · ")

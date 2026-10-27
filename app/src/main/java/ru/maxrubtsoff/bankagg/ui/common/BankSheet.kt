@@ -122,7 +122,7 @@ private fun BankRows(
             DotRow(
                 dot = Slitok.Brass,
                 title = "Счета",
-                subtitle = plural(slice.accountsCount, "счёт", "счёта", "счётов"),
+                subtitle = plural(slice.accountsCount, "счёт", "счёта", "счетов"),
                 sumMinor = slice.accountsTotalMinor,
                 onClick = { onOpenPart(CapitalPart.ACCOUNTS) }
             )
