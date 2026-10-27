@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -61,7 +62,9 @@ fun ThinTabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
             val active = i == selected
             val tint by animateColorAsState(if (active) Slitok.Brass2 else Slitok.Muted, label = "thinTint")
             Column(
-                Modifier.clip(RoundedCornerShape(6.dp)).clickable { onSelect(i) }.padding(vertical = 4.dp),
+                // The underline spans its label only: a plain fillMaxWidth there took the whole row,
+                // so the first tab pushed the others out of sight.
+                Modifier.width(IntrinsicSize.Max).clip(RoundedCornerShape(6.dp)).clickable { onSelect(i) }.padding(vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
