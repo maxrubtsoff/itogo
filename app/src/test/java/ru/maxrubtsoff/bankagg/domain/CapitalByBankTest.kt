@@ -61,6 +61,15 @@ class CapitalByBankTest {
         assertFalse(CapitalByBank.worthShowing(s))
     }
 
+    @Test fun negativeBankHasNoShareAndRestStaysConsistent() {
+        val sn = snap(listOf(acc("1", a, 300), acc("2", b, -100)), cash = 40)
+        val s = CapitalByBank.slice(sn, emptyList(), emptyList())
+        assertEquals(0f, s.first { it.key == "b" }.share, 0f)
+        assertEquals(sn.totalMinor, s.sumOf { it.valueMinor })
+        assertNull(s.last().brand)
+        assertEquals(4000L, s.last().valueMinor)
+    }
+
     @Test fun linksShowOnlyWhereThereIsData() {
         val sub = Subscription("s", "Кино", 100, Period(PeriodUnit.MONTH), today, brand = a)
         val cb = CashbackItem("i", "2026-03", b, "Такси", 5.0)

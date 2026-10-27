@@ -31,10 +31,12 @@ private object BankAccentCache {
 
     fun resolve(brand: BankBrand, logo: Bitmap?): Color {
         val color = logo?.let { bmp ->
-            val p = Palette.from(bmp).maximumColorCount(12).generate()
-            (p.vibrantSwatch ?: p.dominantSwatch)?.takeIf { it.hsl[1] >= MIN_SATURATION }?.let { Color(it.rgb) }
+            // Palette cannot read a hardware bitmap.
+            val p = runCatching { Palette.from(bmp).maximumColorCount(12).generate() }.getOrNull()
+            p?.let { (it.vibrantSwatch ?: it.dominantSwatch)?.takeIf { s -> s.hsl[1] >= MIN_SATURATION }?.let { s -> Color(s.rgb) } }
         } ?: fallback(brand)
-        found[brand.key] = color
+        // No logo yet: do not keep the fallback, the palette colour must still get in later.
+        if (logo != null) found[brand.key] = color
         return color
     }
 

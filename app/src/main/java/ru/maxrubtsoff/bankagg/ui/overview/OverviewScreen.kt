@@ -336,12 +336,13 @@ private fun CapitalHero(
     onToggleIncluded: (CapitalSnapshot.Part) -> Unit,
     onToggleHidden: () -> Unit,
     slices: List<BankSlice>,
-    sliceMode: SliceMode,
+    sliceMode: SliceMode?,
     onSliceMode: (SliceMode) -> Unit,
     onOpenBank: (BankSlice) -> Unit
 ) {
     // F-53: the cut by banks is offered only when there are two banks to compare.
-    val canSlice = remember(slices) { CapitalByBank.worthShowing(slices) }
+    // Until the saved cut is read (null) the switch stays hidden, so it never flickers.
+    val canSlice = sliceMode != null && remember(slices) { CapitalByBank.worthShowing(slices) }
     val byBanks = canSlice && sliceMode == SliceMode.BY_BANKS
     val shown = snap.parts.filter { it.hasData }
     Panel(Modifier.fillMaxWidth(), radius = 22.dp) {

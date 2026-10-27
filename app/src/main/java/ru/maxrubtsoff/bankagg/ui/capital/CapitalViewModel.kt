@@ -93,9 +93,9 @@ class CapitalViewModel(
         ) { snap, subs, cb -> CapitalByBank.slice(snap, subs, cb) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _sliceMode = MutableStateFlow(SliceMode.BY_PARTS)
-    /** The chosen cut; kept between launches. */
-    val sliceMode: StateFlow<SliceMode> = _sliceMode.asStateFlow()
+    private val _sliceMode = MutableStateFlow<SliceMode?>(null)
+    /** The chosen cut; kept between launches. Null until it is read. */
+    val sliceMode: StateFlow<SliceMode?> = _sliceMode.asStateFlow()
 
     fun setSliceMode(mode: SliceMode) {
         _sliceMode.value = mode

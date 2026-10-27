@@ -614,6 +614,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     var tabTaps by remember { mutableIntStateOf(0) }
 
     fun openTab(route: String) {
+        paymentsBank = null // a plain tab opens unfiltered; the filter comes only from onOpenBank*
         // The start tab is the root of every stack: just return to it. Navigating
         // to it with restoreState would bring back the tab saved on top of it.
         if (route == startRoute) {
