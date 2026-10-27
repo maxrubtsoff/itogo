@@ -58,6 +58,17 @@ object RuPlural {
         }
     }
 
+    /** U-68, after a deposit scan: "Добавили 2 вклада · 1 уже был", "3 вклада уже были"; null when nothing happened. */
+    fun depositScan(added: Int, skipped: Int): String? {
+        val was = if (skipped % 10 == 1 && skipped % 100 != 11) "уже был" else "уже были"
+        return when {
+            added > 0 && skipped > 0 -> "Добавили ${deposits(added)} · $skipped $was"
+            added > 0 -> "Добавили ${deposits(added)}"
+            skipped > 0 -> "${deposits(skipped)} $was"
+            else -> null
+        }
+    }
+
     private fun form(n: Int, one: String, few: String, many: String): String {
         val mod100 = n % 100
         val mod10 = n % 10

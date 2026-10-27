@@ -263,7 +263,7 @@ class DepositsViewModel(
             }
             val seen = stash.value.mapNotNull { duplicateOf[it.id] }.distinct()
             focusOn(added + seen)
-            batchNotice(added.size, stash.value.size)?.let { undo.say(it) }
+            RuPlural.depositScan(added.size, stash.value.size)?.let { undo.say(it) }
             onDone()
             dropStash()
         }
@@ -359,12 +359,5 @@ class DepositsViewModel(
     fun deleteTopUp(depositId: String, t: DepositTopUp) = viewModelScope.launch {
         repo.deleteTopUp(t.id)
         undo.offer("Пополнение удалено", restore = { repo.addTopUp(depositId, t) })
-    }
-
-    private fun batchNotice(added: Int, skipped: Int): String? = when {
-        added > 0 && skipped > 0 -> "Добавили ${RuPlural.deposits(added)} · ${skipped} ${if (skipped % 10 == 1 && skipped % 100 != 11) "уже был" else "уже были"}"
-        added > 0 -> "Добавили ${RuPlural.deposits(added)}"
-        skipped > 0 -> "${RuPlural.deposits(skipped)} ${if (skipped % 10 == 1 && skipped % 100 != 11) "уже был" else "уже были"}"
-        else -> null
     }
 }

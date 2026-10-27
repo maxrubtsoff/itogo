@@ -34,4 +34,13 @@ class RuPluralTest {
         assertEquals("11 дубликатов", RuPlural.duplicatesSkipped(11))
         assertEquals("21 дубликат", RuPlural.duplicatesSkipped(21))
     }
+
+    @Test fun depositScan() {
+        assertEquals("Добавили 2 вклада · 1 уже был", RuPlural.depositScan(2, 1))
+        assertEquals("Добавили 1 вклад · 3 уже были", RuPlural.depositScan(1, 3))
+        assertEquals("Добавили 3 вклада", RuPlural.depositScan(3, 0))
+        assertEquals("3 вклада уже были", RuPlural.depositScan(0, 3))
+        assertEquals("1 вклад уже был", RuPlural.depositScan(0, 1))
+        assertEquals(null, RuPlural.depositScan(0, 0))
+    }
 }
