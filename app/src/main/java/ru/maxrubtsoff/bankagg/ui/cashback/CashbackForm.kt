@@ -95,8 +95,8 @@ fun CashbackLineRow(
     onPercentDone: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Two stable rows (category + «×», then percent + note), so the height is the same
-    // before and after a pick, at any font scale.
+    // One row: icon, name, percent, «×». The note, when there is one, goes under
+    // the name so the row's own height stays the same before and after a pick.
     Column(
         modifier
             .keepVisibleWhenFocused()
@@ -104,7 +104,11 @@ fun CashbackLineRow(
             .padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            Modifier.heightIn(min = 40.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Row(
                 Modifier.weight(1f).clickable(onClick = onPickCategory),
                 verticalAlignment = Alignment.CenterVertically,
@@ -121,24 +125,18 @@ fun CashbackLineRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            PercentField(percentText, onPercentChange, percentState, percentFocus, onPercentDone)
             IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Filled.Close, contentDescription = "Убрать категорию", tint = Slitok.Faint, modifier = Modifier.size(18.dp))
             }
         }
-        Row(
-            Modifier.padding(start = 48.dp).heightIn(min = 40.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            PercentField(percentText, onPercentChange, percentState, percentFocus, onPercentDone)
-            if (note != null) {
-                Text(
-                    note,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (percentState == PercentState.Error) Slitok.Coral else Slitok.Brass2,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        if (note != null) {
+            Text(
+                note,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (percentState == PercentState.Error) Slitok.Coral else Slitok.Brass2,
+                modifier = Modifier.padding(start = 48.dp)
+            )
         }
     }
 }
