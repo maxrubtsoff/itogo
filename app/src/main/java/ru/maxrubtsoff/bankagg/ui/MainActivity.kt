@@ -191,12 +191,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.maxrubtsoff.bankagg.ui.cashback.CashbackBatchScreen
 import ru.maxrubtsoff.bankagg.ui.deposits.DepositBatchScreen
 import ru.maxrubtsoff.bankagg.ui.common.UndoSnackbarEffect
-import androidx.compose.material3.Snackbar
+import ru.maxrubtsoff.bankagg.ui.common.SlitokSnackbarHost
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.remember
 import androidx.compose.material3.SnackbarHostState
 
@@ -694,9 +693,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
         contentWindowInsets = WindowInsets(0),
         snackbarHost = {
             // Above the bottom bar on tabs; above the system bar on detail screens.
-            SnackbarHost(snackbar, if (showBottomBar) Modifier else Modifier.navigationBarsPadding()) { data ->
-                Snackbar(data, containerColor = Slitok.PanelTop, contentColor = Slitok.Fg, actionColor = Slitok.Brass2)
-            }
+            SlitokSnackbarHost(snackbar, if (showBottomBar) Modifier else Modifier.navigationBarsPadding())
         },
         bottomBar = {
             if (showBottomBar) {

@@ -28,6 +28,8 @@ class DesignSystemGuardTest {
         "Card(" to Regex("""(?<![A-Za-z])Card\("""),
         "AlertDialog(" to Regex("""(?<![A-Za-z])AlertDialog\("""),
         "DatePickerDialog(" to Regex("""(?<![A-Za-z])DatePickerDialog\("""),
+        // U-72: snackbars are swipeable — screens use SlitokSnackbarHost.
+        "SnackbarHost(" to Regex("""(?<![A-Za-z])SnackbarHost\("""),
         "Switch(" to Regex("""(?<![A-Za-z])Switch\("""),
         "TextButton(" to Regex("""(?<![A-Za-z])TextButton\("""),
         // U-57: every title sits at one height — only ScreenHeader draws the top of a screen.

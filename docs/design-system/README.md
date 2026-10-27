@@ -79,6 +79,7 @@
 | `SheetList` + `SheetRow` (`ui/common/SheetList.kt`) | список выбора в шторке: копии, месяц, сортировка, банк (U-49) | свои `Row` + `clickable` + `HorizontalDivider` в шторке |
 | `SlitokDialog` | только подтверждение необратимого | выбор из двух — шторкой; `AlertDialog` |
 | `SlitokDatePicker` | дата | `DatePickerDialog` |
+| `SlitokSnackbarHost` | снекбар приложения; смахивается вбок и вниз (U-72); сообщения — через `UndoCenter.offer/say` или этот хост | `SnackbarHost`, `Snackbar` |
 | `ScreenHeader` | шапка любого экрана: заголовок на одной высоте везде (U-57) | `TopAppBar`, свой `Row` с заголовком |
 | `SectionActions` | строка действий раздела под шапкой и переключателем: что показано, управление списком, «+» (U-58) | `AddButton`, месяц, вид, сортировка в шапке; свой `Row` со счётчиком и «+» |
 | `PendingShotsPlate` (`ui/common/PendingShotsPlate.kt`) | плашка «N скринов ждут проверки» под `SectionActions` во Вкладах и Кэшбэке; касание открывает экран пакета (F-38, U-64) | своя плашка со счётчиком скринов, карусель скринов внизу раздела |
