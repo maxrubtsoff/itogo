@@ -1,0 +1,289 @@
+<title>Подписи на графике капитала</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mock.css">
+
+<div class="page">
+  <header>
+    <h1>B-108 · подписи сумм на графике</h1>
+    <p>Третья попытка. Четыре <b>разных</b> подхода, у каждого — латунь («Всё»), фиолет («Вклады») и тесный случай: две крупные сделки подряд у верхнего края (небо, «Валюта»). Ниже каждого — та же подпись на всех четырёх цветах частей. Телефон 390 dp, график 150 dp, 1 px = 1 dp.</p>
+  </header>
+
+  <div class="why">
+    <div><b>1. Буквы полые</b>Код рисует подпись дважды одним <code>TextLayoutResult</code>: сначала обводкой (<code>drawStyle = Stroke</code>), потом без <code>drawStyle</code>. В Compose <code>drawStyle = null</code> значит «как у макета текста», а кисть макета после первого вызова так и осталась обводкой. Второй проход рисует ещё один контур, заливки нет — на скрине «+1,3 млн ₽» именно контурная. Это вероятная главная причина (проверит device-check), и правки цвета и прозрачности её не задевали.</div>
+    <div><b>2. Цвет тихий по смыслу</b><code>Muted</code> 11 sp на фиолетовой заливке 18 % со свечением героя даёт около 4,5:1 — на грани даже для залитых букв. Тусклый цвет нужен для второстепенного, а подпись крупной операции — это то, ради чего на точку смотрят.</div>
+    <div><b>3. Ореол не набирается</b>Обводка 0,75 dp лежит по контуру буквы: наружу выходит ≈0,4 dp, ореола нет при любой прозрачности. Если сделать 2–3 dp, у 11 sp слипаются внутренние просветы («е», «₽»). Тёмный ореол на тёмной панели не решает задачу.</div>
+    <div><b>4. На «Всё» подписей нет — так задумано</b>На скрине b-109 герой свёрнут в полосу 64 dp (U-67), а в полосе подписи выключены. Скрин показывает другое: без подписей одни точки ничего не говорят.</div>
+  </div>
+
+  <div class="vtabs" role="tablist">
+    <button data-v="now">Сейчас</button>
+    <button data-v="a">А · Плашка <span class="rec">советую</span></button>
+    <button data-v="b">Б · Строка над графиком</button>
+    <button data-v="c">В · Только у выбранной</button>
+    <button data-v="d">Г · Без подписей, в герое</button>
+  </div>
+
+  <section class="variant" id="now">
+    <h2>Сейчас</h2>
+    <p class="about">Так это выглядит на устройстве: полые буквы <b>Muted</b> по заливке. В тесном случае второй подписи не нашлось места, и у второй точки суммы нет.</p>
+    <div class="frames" data-set="now"></div>
+  </section>
+
+  <section class="variant" id="a" hidden>
+    <h2>А · Подпись на плашке</h2>
+    <p class="about">Подпись лежит на сплошной плашке цвета панели (<b>PanelTop</b>, рамка <b>Line</b>, радиус 8 — как у метки). Сумма — цветом суммы: <b>Mint</b> на «+», <b>Fg</b> на «−», как в строках истории. Фон под буквами всегда один и тот же, поэтому контраст не зависит ни от ветки, ни от заливки, ни от свечения. Место ищет тот же <code>placeLabels</code>, только прямоугольник шире и добавлены две диагонали: плашка может лечь на заливку — она непрозрачная, но линию и чужие точки не накрывает.</p>
+    <div class="pros">
+      <div class="gain"><b>Что даёт</b>Читается всегда: Mint на PanelTop ≈ 11:1, Fg ≈ 14:1. Подпись остаётся рядом со своей точкой. Код меняется в одном месте: рисование подписи и размер её прямоугольника.</div>
+      <div class="loss"><b>Что теряет</b>Плашки тяжелее голого текста: три штуки на графике заметно «шумят». Прямоугольник шире на 12 dp, поэтому в тесноте подпись пропадает чаще (точка остаётся). Плашка закрывает кусок заливки.</div>
+    </div>
+    <div class="frames" data-set="a"></div>
+    <h3>Та же плашка на четырёх цветах</h3>
+    <div class="frames" data-strip="a"></div>
+  </section>
+
+  <section class="variant" id="b" hidden>
+    <h2>Б · Строка подписей над графиком</h2>
+    <p class="about">Сверху у графика своя строка 24 dp, куда линия не заходит (график по-прежнему 150 dp, сама линия на 24 dp ниже). Подпись стоит в этой строке над своей точкой, к точке ведёт пунктир <b>Faint</b>. Под буквами нет ни заливки, ни линии — только панель. Соседние подписи раздвигаются по строке, пунктир делает излом.</p>
+    <div class="pros">
+      <div class="gain"><b>Что даёт</b>Подписи не пересекаются с линией и заливкой в принципе — не нужно искать место. Сумм читается больше: подпись выпадает, только когда их больше, чем влезает в строку.</div>
+      <div class="loss"><b>Что теряет</b>Линия по высоте на 24 dp ниже: рисунок становится площе, мелкие движения хуже видны. Подпись дальше от точки, связь держится на пунктире. Изломы пунктира в тесноте читаются хуже, чем подпись рядом с точкой. В полосе (U-67) строки нет.</div>
+    </div>
+    <div class="frames" data-set="b"></div>
+    <h3>Та же строка на четырёх цветах</h3>
+    <div class="frames" data-strip="b"></div>
+  </section>
+
+  <section class="variant" id="c" hidden>
+    <h2>В · Сумма только у выбранной точки</h2>
+    <p class="about">В покое на графике только точки, без подписей. Палец ведёт по графику или касается точки — у выбранной точки появляется одна плашка (как в варианте А) с суммой действия. Дата и изменение за день, как и раньше, — в герое. Плашка одна, поэтому место для неё есть почти всегда.</p>
+    <div class="pros">
+      <div class="gain"><b>Что даёт</b>График в покое чистый. Одна плашка всегда находит место, даже у края. Тесного случая нет.</div>
+      <div class="loss"><b>Что теряет</b>В покое не видно, какая операция крупная: точки одинаковые, чтобы узнать сумму, надо коснуться. Пропадает то, ради чего делали F-49, — сразу видеть крупное. Сумма дублирует то, что уже есть в герое.</div>
+    </div>
+    <div class="frames" data-set="c"></div>
+    <h3>Та же плашка у выбранной точки на четырёх цветах</h3>
+    <div class="frames" data-strip="c"></div>
+  </section>
+
+  <section class="variant" id="d" hidden>
+    <h2>Г · Подписей нет — значение в герое</h2>
+    <p class="about">На графике только точки. Касание точки (с привязкой F-49, 12 dp) выбирает её день, герой показывает сумму на дату, изменение за день и третьей тихой строкой — что за действие: «Новый вклад · Т-Банк». На графике текста нет вообще.</p>
+    <div class="pros">
+      <div class="gain"><b>Что даёт</b>Проблема читаемости исчезает: на графике нет текста. Меньше всего кода — убрать подписи и <code>placeLabels</code>. Герой уже умеет показывать выбранный день.</div>
+      <div class="loss"><b>Что теряет</b>То же, что В, и больше: даже при касании сумма стоит далеко от точки, глаз прыгает вверх. Герою нужна третья строка. Отметки становятся просто точками — их размер говорит «крупное», но не «сколько».</div>
+    </div>
+    <div class="frames" data-set="d"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const C = { bg: '#0A0F0E', top: '#18211F', line: 'rgba(255,255,255,.08)', fg: '#EEF3F0', muted: '#8EA39B', faint: '#56655F',
+    brass2: '#F0C878', mint: '#59E2A6', violet: '#9A86F5', sky: '#6CC4E8', sand: '#CBB89A' };
+  const glowOf = { [C.brass2]: 'rgba(215,167,74,.20)', [C.violet]: 'rgba(154,134,245,.20)', [C.sky]: 'rgba(108,196,232,.20)', [C.sand]: 'rgba(203,184,154,.20)' };
+  const back = '<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
+  const down = '<svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px;vertical-align:-2px;color:var(--muted)"><path d="M6 9l6 6 6-6"/></svg>';
+  const kop = t => t.replace(/,(\d\d)/, '<span class="k">,$1</span>');
+
+  const ctx = document.createElement('canvas').getContext('2d');
+  const textW = s => { ctx.font = '600 11px "Golos Text"'; return ctx.measureText(s).width + s.length * 0.6; };
+
+  // ---- данные ----
+  function series(n, base, steps, drift) { const a = []; let v = base; for (let i = 0; i < n; i++) { v += steps[i] != null ? steps[i] : drift(i); a.push(v); } return a; }
+  const N = 31;
+  const brassPts = series(N, 7180000, { 3: 95000, 10: -62000, 17: -12000, 23: 140000 }, i => (i % 3 ? -2500 : 1500));
+  const brassMarks = [
+    { i: 3, shape: 'big', label: '+95 тыс ₽', amt: 95000 },
+    { i: 10, shape: 'big', label: '−62 тыс ₽', amt: -62000 },
+    { i: 17, shape: 'small', color: C.sky },
+    { i: 23, shape: 'big', label: '+140 тыс ₽', amt: 140000 },
+    { i: 27, shape: 'small', color: C.violet },
+  ];
+  const violetPts = series(N, 2720000, { 5: 1300000, 8: 270000, 13: 60000, 22: 80000 }, () => 1400);
+  const violetMarks = [
+    { i: 5, shape: 'big', label: '+1,3 млн ₽', amt: 1300000 },
+    { i: 8, shape: 'big', label: '+270 тыс ₽', amt: 270000 },
+    { i: 13, shape: 'small' },
+    { i: 22, shape: 'big', label: '+80 тыс ₽', amt: 80000 },
+  ];
+  const skyPts = series(N, 1100000, { 26: 540000, 27: 310000 }, i => ((i * 7) % 5 - 2) * 1500);
+  const skyMarks = [
+    { i: 12, shape: 'small' },
+    { i: 26, shape: 'big', label: '+6 000 $', amt: 540000 },
+    { i: 27, shape: 'big', label: '+3 300 €', amt: 310000 },
+  ];
+  const axis = ['26 сен', '3 окт', '11 окт', '18 окт', '26 окт'];
+
+  // ---- CapitalChart ----
+  function plot(pts, W, H, top, bot) {
+    const padX = 6, n = pts.length; let lo = Math.min(...pts), hi = Math.max(...pts);
+    const avg = pts.reduce((a, b) => a + b, 0) / n;
+    if (hi - lo < avg * 0.02) { const m = (hi + lo) / 2; lo = m - avg * 0.01; hi = m + avg * 0.01; }
+    const w = W - 2 * padX, h = H - top - bot;
+    return { xs: pts.map((_, i) => padX + w * i / (n - 1)), ys: pts.map(p => top + h * (1 - (p - lo) / (hi - lo))) };
+  }
+  function place(P, marks, items, W, H) {
+    const n = P.xs.length, seg = P.xs[1] - P.xs[0], dotR = 7, pad = 2;
+    const lineY = x => { const k = Math.min(n - 2, Math.max(0, Math.floor((x - P.xs[0]) / seg))); const t = Math.min(1, Math.max(0, (x - P.xs[k]) / seg)); return P.ys[k] + (P.ys[k + 1] - P.ys[k]) * t; };
+    const hitsLine = r => { let x = Math.max(r.l, P.xs[0]); const end = Math.min(r.r, P.xs[n - 1]); if (x > end) return false; let prev = lineY(x);
+      while (x < end) { x = Math.min(x + 2, end); const cur = lineY(x); if (Math.max(prev, cur) >= r.t - pad && Math.min(prev, cur) <= r.b + pad) return true; prev = cur; } return false; };
+    const dots = marks.map(m => [P.xs[m.i], P.ys[m.i]]);
+    const hitsDot = (r, [dx, dy]) => { const nx = Math.min(r.r, Math.max(r.l, dx)), ny = Math.min(r.b, Math.max(r.t, dy)); return (nx - dx) ** 2 + (ny - dy) ** 2 < dotR * dotR; };
+    const placed = [], out = [];
+    items.slice().sort((a, b) => Math.abs(b.m.amt) - Math.abs(a.m.amt)).forEach(it => {
+      const cx = P.xs[it.m.i], cy = P.ys[it.m.i], w = it.w, h = it.h, g = it.gap, dg = 6;
+      let cands = [[cx - w / 2, cy - g - h], [cx - w / 2, cy + g], [cx - g - w, cy - h / 2], [cx + g, cy - h / 2], [cx - dg - w, cy - dg - h], [cx + dg, cy + dg]];
+      if (it.extra) cands = cands.concat([[cx - dg - w, cy + dg], [cx + dg, cy - dg - h]]);
+      for (const [x, y] of cands) {
+        const r = { l: x, t: y, r: x + w, b: y + h };
+        if (r.l < 0 || r.t < 0 || r.r > W || r.b > H) continue;
+        if (hitsLine(r) || dots.some(d => hitsDot(r, d))) continue;
+        if (placed.some(p => !(p.r + pad < r.l || r.r + pad < p.l || p.b + pad < r.t || r.b + pad < p.t))) continue;
+        placed.push(r); out.push({ m: it.m, x, y, w, h }); return;
+      }
+    });
+    return out;
+  }
+  const sumColor = m => (m.amt < 0 ? C.fg : C.mint);
+  const plaque = (s) => `<rect x="${s.x.toFixed(1)}" y="${s.y.toFixed(1)}" width="${s.w.toFixed(1)}" height="${s.h}" rx="8" fill="${C.top}" stroke="${C.line}"/>` +
+    `<text x="${(s.x + s.w / 2).toFixed(1)}" y="${(s.y + 14).toFixed(1)}" text-anchor="middle" fill="${sumColor(s.m)}" style="font:600 11px 'Golos Text';letter-spacing:.6px">${s.m.label}</text>`;
+
+  let gid = 0;
+  function chart(o) {
+    const W = o.W || 316, H = o.H || 150, v = o.v, color = o.color;
+    const band = v === 'b' ? 24 : 0;
+    const P = plot(o.pts, W, H, 12 + band, 12), n = o.pts.length;
+    const d = P.xs.map((x, i) => (i ? 'L' : 'M') + x.toFixed(1) + ' ' + P.ys[i].toFixed(1)).join(' ');
+    const id = 'g' + (gid++);
+    let s = `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${H}"><stop offset="0" stop-color="${color}" stop-opacity=".18"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>`;
+    s += `<path d="${d} L${P.xs[n - 1]} ${H} L${P.xs[0]} ${H} Z" fill="url(#${id})"/>`;
+    s += `<path d="${d}" fill="none" stroke="${color}" stroke-opacity=".22" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const marks = o.marks || [];
+    marks.forEach(m => {
+      const x = P.xs[m.i], y = P.ys[m.i], t = m.color || color;
+      if (m.shape === 'small') s += `<circle cx="${x}" cy="${y}" r="4.5" fill="${C.bg}"/><circle cx="${x}" cy="${y}" r="3" fill="${t}"/>`;
+      else s += `<circle cx="${x}" cy="${y}" r="7" fill="${C.bg}"/><circle cx="${x}" cy="${y}" r="5" fill="${t}"/>`;
+    });
+    const labeled = marks.filter(m => m.label);
+    if (v === 'now') {
+      place(P, marks, labeled.map(m => ({ m, w: textW(m.label), h: 14, gap: 8 })), W, H).forEach(p => {
+        s += `<text x="${p.x.toFixed(1)}" y="${(p.y + 11).toFixed(1)}" fill="none" stroke="${C.muted}" stroke-width=".75" style="font:600 11px 'Golos Text';letter-spacing:.6px">${p.m.label}</text>`;
+      });
+    } else if (v === 'a') {
+      place(P, marks, labeled.map(m => ({ m, w: textW(m.label) + 12, h: 20, gap: 10, extra: true })), W, H).forEach(p => { s += plaque(p); });
+    } else if (v === 'b') {
+      const its = labeled.map(m => { const w = textW(m.label); return { m, w, cx: P.xs[m.i], x: Math.min(W - w, Math.max(0, P.xs[m.i] - w / 2)) }; }).sort((a, b) => a.cx - b.cx);
+      for (let k = 1; k < its.length; k++) if (its[k].x < its[k - 1].x + its[k - 1].w + 8) its[k].x = its[k - 1].x + its[k - 1].w + 8;
+      for (let k = its.length - 1; k >= 0; k--) { const lim = k === its.length - 1 ? W : its[k + 1].x - 8; if (its[k].x + its[k].w > lim) its[k].x = lim - its[k].w; }
+      its.forEach(it => {
+        const lx = it.x + it.w / 2, cy = P.ys[it.m.i];
+        s += `<polyline points="${lx.toFixed(1)},18 ${it.cx.toFixed(1)},${band + 4} ${it.cx.toFixed(1)},${(cy - 9).toFixed(1)}" fill="none" stroke="${C.faint}" stroke-width="1" stroke-dasharray="2 3"/>`;
+        s += `<text x="${lx.toFixed(1)}" y="13" text-anchor="middle" fill="${sumColor(it.m)}" style="font:600 11px 'Golos Text';letter-spacing:.6px">${it.m.label}</text>`;
+      });
+    }
+    const last = n - 1;
+    if (o.sel == null) s += `<circle cx="${P.xs[last]}" cy="${P.ys[last]}" r="8" fill="${color}" fill-opacity=".25"/><circle cx="${P.xs[last]}" cy="${P.ys[last]}" r="4" fill="${color}"/>`;
+    else {
+      const x = P.xs[o.sel], y = P.ys[o.sel];
+      s += `<circle cx="${P.xs[last]}" cy="${P.ys[last]}" r="8" fill="${color}" fill-opacity=".25"/><circle cx="${P.xs[last]}" cy="${P.ys[last]}" r="4" fill="${color}"/>`;
+      s += `<line x1="${x}" x2="${x}" y1="0" y2="${H}" stroke="${C.faint}" stroke-width="1"/><circle cx="${x}" cy="${y}" r="6" fill="${C.bg}"/><circle cx="${x}" cy="${y}" r="4" fill="${color}"/>`;
+      if (v === 'c') {
+        const m = marks.find(mm => mm.i === o.sel && mm.label);
+        if (m) place(P, marks, [{ m, w: textW(m.label) + 12, h: 20, gap: 10, extra: true }], W, H).forEach(p => { s += plaque(p); });
+      }
+    }
+    return s + '</svg>';
+  }
+
+  // ---- экран «История капитала» ----
+  const parts = ['Всё', 'Счета', 'Вклады', 'Валюта', 'Наличные'];
+  function screen(o) {
+    const hero = o.sel == null
+      ? `<div class="amt hero">${kop(o.sum)} ₽</div><div style="margin-top:6px;font:500 14px/20px var(--text)"><span class="amt inl" style="color:var(--mint)">${kop(o.delta)}</span> <span style="color:var(--muted);font-weight:400">${o.since}</span></div>`
+      : `<div class="amt hero">${kop(o.selSum)} ₽</div><div style="margin-top:6px;font:500 14px/20px var(--text);color:var(--brass2)">${o.selDate}</div>` +
+        `<div style="font:500 14px/20px var(--text)"><span class="amt inl" style="color:${o.selDelta.startsWith('+') ? 'var(--mint)' : 'var(--fg)'}">${o.selDelta}</span> <span style="color:var(--muted);font-weight:400">за день</span></div>` +
+        (o.selWhat ? `<div style="font:400 12px/16px var(--text);color:var(--muted)">${o.selWhat}</div>` : '');
+    const touch = o.touch ? `<span class="touch" style="left:${o.touch[0]}px;top:${o.touch[1]}px"></span>` : '';
+    return `<div class="ph short">
+      <div class="sbar"><span>21:44</span><span class="ic"><i></i><i></i><i style="width:8px"></i></span></div>
+      <div class="hdr"><span class="back">${back}</span><h1>История капитала</h1></div>
+      <div class="scr">
+        <div class="tabs" style="margin-top:4px">${parts.map(p => `<span class="${p === o.tab ? 'on' : ''}">${p}</span>`).join('')}</div>
+        <div class="panel glow" style="--gc:${glowOf[o.color]};border-radius:22px"><div style="padding:20px">
+          ${hero}
+          <div style="margin-top:14px">${chart(o)}</div>
+          <div class="axis">${axis.map(a => `<span>${a}</span>`).join('')}</div>
+          <div class="chips" style="margin-top:12px">${['Неделя', 'Месяц', 'Год', 'Всё'].map((t, i) => `<span class="chip sm ${i === 1 ? 'on' : ''}">${t}</span>`).join('')}</div>
+        </div></div>
+        <div class="daycap">Сегодня</div>
+        <div class="panel"><div class="hl"><span class="dot" style="background:${o.color}"></span><div class="tx"><b>${o.row[0]}</b><span>${o.row[1]} ${down}</span></div><span class="amt small inc">${kop(o.row[2])}</span></div></div>
+      </div>
+      ${touch}
+      <div class="gbar"></div></div>`;
+  }
+  const base = {
+    brass: { tab: 'Всё', color: C.brass2, pts: brassPts, marks: brassMarks, sum: '7 384 210,55', delta: '+204 210,55 ₽ · +2,8 %', since: 'с 26 сентября', row: ['Проценты', '6 вкладов', '+1 398,25 ₽'] },
+    violet: { tab: 'Вклады', color: C.violet, pts: violetPts, marks: violetMarks, sum: '4 527 798,80', delta: '+1 806 590,81 ₽ · +66,4 %', since: 'с 26 сентября', row: ['Проценты', '6 вкладов', '+1 398,25 ₽'] },
+    sky: { tab: 'Валюта', color: C.sky, pts: skyPts, marks: skyMarks, sum: '1 951 420,10', delta: '+851 420,10 ₽ · +77,4 %', since: 'с 26 сентября', row: ['Переоценка', '3 валюты', '+2 140,30 ₽'] },
+  };
+  // точка выбора: x в координатах телефона = 1 (рамка) + 16 + 20 + x графика
+  const px = (i, pts) => 37 + 6 + 304 * i / 30;
+  const frame = (cap, ph, note) => `<div class="fr"><div class="cap">${cap}</div>${ph}${note ? `<div class="note">${note}</div>` : ''}</div>`;
+
+  const build = () => ({
+    now: [
+      frame('<i>1</i>Латунь · «Всё»', screen({ ...base.brass, v: 'now' }), 'Контур Muted на латунной заливке — цифры распадаются.'),
+      frame('<i>2</i>Фиолет · «Вклады» (как на скрине)', screen({ ...base.violet, v: 'now' }), 'То же, что на b-108-chart-labels.jpg: «+1,3 млн ₽» и «+270 тыс ₽» контуром.'),
+      frame('<i>3</i>Тесно у края · «Валюта»', screen({ ...base.sky, v: 'now' }), 'Две сделки подряд у верхнего края.'),
+    ],
+    a: [
+      frame('<i>1</i>Латунь · «Всё»', screen({ ...base.brass, v: 'a' }), 'Плюс — Mint, минус — Fg, как суммы в строках ниже. Мелкие точки (сделка, пополнение) — без подписи, как и сейчас.'),
+      frame('<i>2</i>Фиолет · «Вклады»', screen({ ...base.violet, v: 'a' }), 'Плашка у «+270 тыс ₽» стоит над точкой, у «+1,3 млн ₽» — слева, на свободном месте.'),
+      frame('<i>3</i>Тесно у края · «Валюта»', screen({ ...base.sky, v: 'a' }), 'Сверху места нет — плашки встают слева от точек: одна на заливке, другая у края. Обе читаются. Не нашлось бы места — точка без подписи, как сейчас.'),
+    ],
+    b: [
+      frame('<i>1</i>Латунь · «Всё»', screen({ ...base.brass, v: 'b' }), 'Строка подписей над линией; пунктир Faint от подписи к точке.'),
+      frame('<i>2</i>Фиолет · «Вклады»', screen({ ...base.violet, v: 'b' }), 'Подписи «+1,3 млн ₽» и «+270 тыс ₽» близко — раздвинуты по строке, пунктир с изломом.'),
+      frame('<i>3</i>Тесно у края · «Валюта»', screen({ ...base.sky, v: 'b' }), 'У правого края подписи прижаты влево, к точкам идут наклонные пунктиры.'),
+    ],
+    c: [
+      frame('<i>1</i>Латунь · «Всё», в покое', screen({ ...base.brass, v: 'c' }), 'Только точки. Какая из них крупнее по деньгам — не видно.'),
+      frame('<i>2</i>Фиолет · палец на точке', screen({ ...base.violet, v: 'c', sel: 5, selSum: '4 021 400', selDate: '1 октября, среда', selDelta: '+1 300 000 ₽' }), 'Одна плашка у выбранной точки. В герое — сумма и изменение за день (без изменений относительно F-41).'),
+      frame('<i>3</i>Тесно · выбрана вторая сделка', screen({ ...base.sky, v: 'c', sel: 27, selSum: '1 951 120,40', selDate: '22 октября, среда', selDelta: '+310 000 ₽' }), 'Плашка одна — встаёт слева у края.'),
+    ],
+    d: [
+      frame('<i>1</i>Латунь · «Всё», в покое', screen({ ...base.brass, v: 'd' }), 'Только точки.'),
+      frame('<i>2</i>Фиолет · выбрана точка', screen({ ...base.violet, v: 'd', sel: 5, selSum: '4 021 400', selDate: '1 октября, среда', selDelta: '+1 300 000 ₽', selWhat: 'Новый вклад · Т-Банк' }), 'Сумма — в герое, третья тихая строка называет действие.'),
+      frame('<i>3</i>Тесно · выбрана вторая сделка', screen({ ...base.sky, v: 'd', sel: 27, selSum: '1 951 120,40', selDate: '22 октября, среда', selDelta: '+310 000 ₽', selWhat: 'Купили 3 300 € · Т-Банк' }), 'На графике текста нет, теснота неважна.'),
+    ],
+  });
+
+  // полоса на четырёх цветах
+  const miniPts = series(16, 100, { 6: 30, 11: -14 }, () => 0.4);
+  const miniMarks = [{ i: 6, shape: 'big', label: '+48 тыс ₽', amt: 48000 }, { i: 11, shape: 'big', label: '−14 тыс ₽', amt: -14000 }];
+  const cols = [['Счета · латунь', C.brass2], ['Вклады · фиолет', C.violet], ['Валюта · небо', C.sky], ['Наличные · песок', C.sand]];
+  function render() {
+    gid = 0;
+    const sets = build();
+    document.querySelectorAll('[data-set]').forEach(el => { el.innerHTML = sets[el.dataset.set].join(''); });
+    document.querySelectorAll('[data-strip]').forEach(el => {
+      const v = el.dataset.strip;
+      el.innerHTML = cols.map(([t, c]) => `<div class="fr" style="width:244px"><div class="cap">${t}</div><div class="panel glow" style="--gc:${glowOf[c]};padding:14px;width:244px">${chart({ v, color: c, pts: miniPts, marks: miniMarks, W: 214, H: 110, sel: v === 'c' ? 6 : null })}</div></div>`).join('');
+    });
+  }
+  render();
+
+  // вкладки
+  const bar = document.querySelector('.vtabs'); const btns = [...bar.querySelectorAll('button')];
+  const show = id => { btns.forEach(b => { b.setAttribute('aria-selected', String(b.dataset.v === id)); document.getElementById(b.dataset.v).hidden = b.dataset.v !== id; }); };
+  btns.forEach(b => b.addEventListener('click', () => show(b.dataset.v)));
+  const h = location.hash.slice(1); show(btns.some(b => b.dataset.v === h) ? h : 'now');
+
+  // шрифты загрузились — перемерить подписи
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+})();
+</script>

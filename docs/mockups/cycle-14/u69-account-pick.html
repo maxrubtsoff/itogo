@@ -1,0 +1,141 @@
+<title>Выбор счёта в истории</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mock.css">
+<style>
+  .scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 5; }
+  .scrim.deep { background: rgba(5,8,7,.55); z-index: 7; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom)); border-radius: 28px 28px 0 0; border-top: 1px solid var(--line); padding: 10px 20px 30px; display: flex; flex-direction: column; gap: 14px; }
+  .sheet.top { z-index: 8; }
+  .sheet .handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(238,243,240,.25); align-self: center; }
+  .sheet h4 { font: 600 18px/22px var(--display); margin: 0; }
+  .sl { border-radius: 16px; background: var(--inset); border: 1px solid var(--line); overflow: hidden; }
+  .sl > * + * { border-top: 1px solid var(--line); }
+  .srow { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; }
+  .srow .st { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .srow .st b { font: 400 16px/22px var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .srow .st small { font: 400 12px/16px var(--text); color: var(--muted); }
+  .srow.on .st b { color: var(--brass2); }
+  .sel { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; }
+  .sel .t { flex: 1; min-width: 0; font: 400 16px/22px var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash { width: 36px; height: 36px; border-radius: 50%; border: 1.5px dashed var(--faint); flex: none; }
+  .datef { padding: 15px 13px; border-radius: 13px; background: var(--inset); border: 1px solid var(--line); font: 600 16px/20px var(--display); }
+  .chipfull { justify-content: center; width: 100%; height: 48px; border-radius: 16px; font-size: 15px; }
+  .btn.plate { background: linear-gradient(180deg, var(--panel-top), var(--inset)); color: var(--brass2); border: 1px solid var(--line); }
+  .faded { opacity: .55; }
+  .bk.s28 { width: 28px; height: 28px; font-size: 10px; }
+</style>
+
+<div class="page">
+  <header>
+    <h1>U-69 · банк в шторке «Изменить»</h1>
+    <p>Простыню плашек заменяем той же строкой выбора, что в кэшбэке и вкладах (<b>SelectRow</b>), и той же шторкой <b>«Банк»</b> (<b>BankPickSheet</b>). <b>Новый компонент не нужен.</b> Готовой шторке не хватает одного: показывать только переданные банки, а не все мои.</p>
+  </header>
+
+  <div class="why">
+    <div><b>Несколько счетов у одного банка здесь не бывает</b>Счёт в Itogo — это <code>банк:валюта</code> (<code>RecordNotification.kt:69</code>, <code>accountId = "${brand.key}:${op.currency}"</code>). Шторка правки показывает только счета в валюте операции (<code>HistoryOperations.kt:98</code>, <code>filter { it.currency == tx.currency }</code>). Значит, в этом списке на каждый банк приходится ровно один счёт, и выбрать банк — то же самое, что выбрать счёт.</div>
+    <div><b>Поэтому — BankPickSheet с ограничением, а не AccountPickSheet</b>Добавляем в <code>BankPickSheet</code> параметр <code>banks: List&lt;BankBrand&gt;? = null</code>: если он передан, шторка показывает только эти банки, а не <code>LocalMyBanks</code>. Экран переводит выбранный бренд обратно в <code>accountId</code>. Вид, заголовок, поиск, галочка — те же, что в кэшбэке и вкладах. Человек видит «тот же выбор банка», и это правда.</div>
+    <div><b>Что меняется рядом</b>Подпись поля — «Банк» (как заголовок шторки), а не «Счёт». Дата сейчас стоит голой плашкой «24.10.2026» без подписи. Предлагаю то же поле «Дата», что во вкладах (<code>DateField</code>). Для этого его нужно вынести из <code>ui/deposits</code> в <code>ui/common</code>. Это отдельный шаг, можно не делать.</div>
+  </div>
+
+  <div class="vtabs" role="tablist">
+    <button data-v="flow">Шторка и выбор <span class="rec">предлагаю</span></button>
+    <button data-v="states">Состояния строки</button>
+    <button data-v="future">Если счетов у банка станет несколько</button>
+  </div>
+
+  <section class="variant" id="flow">
+    <h2>«Изменить» → «Банк» → обратно</h2>
+    <div class="frames" id="flowFrames"></div>
+  </section>
+
+  <section class="variant" id="states" hidden>
+    <h2>Строка «Банк» — SelectRow как есть</h2>
+    <p class="about">Готовый <code>SelectRow</code> в двух состояниях. В шторке правки строка всегда заполнена: у операции счёт есть всегда. Пустое состояние — для полноты, оно такое же, как в кэшбэке. Строка «Банк» видна, только если счетов в этой валюте больше одного (как сейчас).</p>
+    <div class="frames" id="stateFrames"></div>
+  </section>
+
+  <section class="variant" id="future" hidden>
+    <h2>Не сейчас: когда счёт станет «банк + маска»</h2>
+    <p class="about">B-107 разбирает маску счёта (<code>*4863</code>), но в <code>accountId</code> она не попадает. Если однажды счета начнут различаться по маске, у одного банка появится несколько строк. Тогда понадобится <code>AccountPickSheet</code>: тот же <code>SlitokSheet</code> + <code>SheetList</code>, строка — <code>SheetRow(title = банк, subtitle = "счёт *4863 · 48 210,00 ₽")</code>. Различают маска (её видно в приложении банка и на карте) и остаток (его человек узнаёт сразу). Название не подходит: у обоих счетов оно одинаковое, «Т-Банк». Это на будущее, в этот цикл не входит.</p>
+    <div class="frames" id="futureFrames"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const I = {
+    back: '<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+    chev: '<svg class="i" viewBox="0 0 24 24" style="width:20px;height:20px;color:var(--faint)"><path d="M9 6l6 6-6 6"/></svg>',
+    check: '<svg class="i" viewBox="0 0 24 24" style="width:20px;height:20px;color:var(--brass2)"><path d="M5 12l5 5 9-10"/></svg>',
+  };
+  const bk = (t, bg, fg = '#fff', cls = '') => `<span class="bk ${cls}" style="background:${bg};color:${fg}">${t}</span>`;
+  const banks = [
+    ['Альфа-Банк', 'А', 'linear-gradient(160deg,#F04A3A,#C8251A)', '#fff'],
+    ['Альфа-Бизнес', 'А', 'linear-gradient(160deg,#3A3F47,#1E2228)', '#fff'],
+    ['Ozon Банк', 'oz', 'linear-gradient(160deg,#2F6BFF,#0B3FD6)', '#fff'],
+    ['Сбербанк', 'СБ', 'linear-gradient(160deg,#2FC25B,#138A36)', '#fff'],
+    ['Т-Банк', 'Т', 'linear-gradient(160deg,#FFE14D,#F2C200)', '#14120E'],
+    ['Яндекс Пэй', 'П', 'linear-gradient(160deg,#3A1030,#120610)', '#fff'],
+  ];
+  const icon = (name, cls = '') => { const b = banks.find(x => x[0] === name); return bk(b[1], b[2], b[3], cls); };
+  const sbar = () => `<div class="sbar"><span>18:58</span><span class="ic"><i></i><i></i><i style="width:8px"></i></span></div>`;
+  const under = () => `<div class="hdr"><span class="back">${I.back}</span><h1>История капитала</h1></div>`;
+  const phone = inner => `<div class="ph">${sbar()}${under()}${inner}<div class="gbar"></div></div>`;
+  const frame = (cap, ph, note) => `<div class="fr"><div class="cap">${cap}</div>${ph}${note ? `<div class="note">${note}</div>` : ''}</div>`;
+  const arrow = t => `<div class="arrowbox">${t}<br>→</div>`;
+  const selectRow = (name, touch) => `<div class="panel sel" style="position:relative">${name ? icon(name) : '<span class="dash"></span>'}<span class="t" style="color:${name ? 'var(--fg)' : 'var(--muted)'}">${name || 'Выберите банк'}</span>${I.chev}${touch ? '<span class="touch" style="left:50%;top:50%"></span>' : ''}</div>`;
+  const edit = (bank, touch) => `<div class="scrim"></div><div class="sheet"><span class="handle"></span>
+      <h4>Изменить</h4>
+      <div class="chips"><span class="chip on" style="height:44px;font-size:15px">Приход</span><span class="chip" style="height:44px;font-size:15px">Расход</span></div>
+      <div><span class="flabel">Сумма</span><div class="field amount">2 000<span class="sfx">₽</span></div></div>
+      <div><span class="flabel">Дата</span><div class="datef">24.10.2026</div></div>
+      <div><span class="flabel">Банк</span>${selectRow(bank, touch)}</div>
+      <div class="btn brass full">Сохранить</div>
+      <div class="btn plate full">Отмена</div></div>`;
+  const pick = (sel, touchOn) => `<div class="scrim deep"></div><div class="sheet top"><span class="handle"></span><h4>Банк</h4>
+      <div class="sl">${banks.map(b => `<div class="srow ${b[0] === sel ? 'on' : ''}" style="position:relative">${icon(b[0])}<div class="st"><b>${b[0]}</b></div>${b[0] === sel ? I.check : ''}${b[0] === touchOn ? '<span class="touch" style="left:50%;top:50%"></span>' : ''}</div>`).join('')}</div></div>`;
+
+  const now = `<div class="scrim"></div><div class="sheet"><span class="handle"></span><h4>Изменить</h4>
+      <div class="chips"><span class="chip on" style="height:44px;font-size:15px">Приход</span><span class="chip" style="height:44px;font-size:15px">Расход</span></div>
+      <div><span class="flabel">Сумма</span><div class="field amount">2 000<span class="sfx">₽</span></div></div>
+      <div><span class="chip" style="height:40px">24.10.2026</span></div>
+      <span class="flabel" style="margin:0">Счёт</span>
+      ${banks.map(b => `<span class="chip chipfull ${b[0] === 'Т-Банк' ? 'on' : ''}">${icon(b[0], 's28')}${b[0]}</span>`).join('')}
+      <div class="btn brass full">Сохранить</div></div>`;
+
+  document.getElementById('flowFrames').innerHTML = [
+    frame('<i>0</i>Сейчас', phone(now), 'Шесть плашек во всю ширину. «Сохранить» уезжает вниз, «Отмена» под край (B-110). С каждым новым банком хуже.'),
+    frame('<i>1</i>«Изменить» — после', phone(edit('Т-Банк', true)), 'Банк — одна строка: логотип, название, стрелка. Шторка короче, кнопки на месте при любом числе банков.'),
+    arrow('касание'),
+    frame('<i>2</i>Шторка «Банк» поверх', phone(edit('Т-Банк') + pick('Т-Банк', 'Сбербанк')), 'Тот же <code>BankPickSheet</code>, что в кэшбэке и вкладах: <code>SheetList</code> + <code>SheetRow</code>, логотип 36, выбранный — <code>Brass2</code> с галочкой. В списке только банки, у которых есть счёт в валюте операции. Банков больше 6 — сверху поиск «Найти банк», как везде.'),
+    arrow('выбран<br>Сбербанк'),
+    frame('<i>3</i>Обратно в «Изменить»', phone(edit('Сбербанк')), 'Шторка выбора закрылась сама, в строке новое значение. «Сохранить» запишет <code>accountId</code> этого банка.'),
+  ].join('');
+
+  const pad = c => `<div style="background:linear-gradient(180deg,var(--panel-top),var(--panel-bottom));padding:20px;border-radius:24px;border:1px solid var(--line);width:390px">${c}</div>`;
+  document.getElementById('stateFrames').innerHTML = [
+    frame('Выбран', pad(`<span class="flabel">Банк</span>${selectRow('Т-Банк')}`), 'Логотип 36, название <code>bodyLarge</code> <code>Fg</code>, стрелка <code>Faint</code>.'),
+    frame('Не выбран', pad(`<span class="flabel">Банк</span>${selectRow(null)}`), 'Пунктирный круг, «Выберите банк» <code>Muted</code>. В шторке правки не встречается.'),
+    frame('Длинное название', pad(`<span class="flabel">Банк</span><div class="panel sel">${icon('Альфа-Бизнес')}<span class="t">Альфа-Бизнес · расчётный счёт ИП</span>${I.chev}</div>`), 'Не влезает — многоточие, строка не растёт.'),
+  ].join('');
+
+  const fut = `<div class="scrim"></div><div class="sheet"><span class="handle"></span><h4>Счёт</h4>
+      <div class="sl">
+        <div class="srow">${icon('Альфа-Банк')}<div class="st"><b>Альфа-Банк</b><small>счёт *1029 · 3 079,36 ₽</small></div></div>
+        <div class="srow on">${icon('Т-Банк')}<div class="st"><b>Т-Банк</b><small>счёт *4863 · 48 210,00 ₽</small></div>${I.check}</div>
+        <div class="srow">${icon('Т-Банк')}<div class="st"><b>Т-Банк</b><small>счёт *7710 · 312 540,15 ₽</small></div></div>
+        <div class="srow">${icon('Сбербанк')}<div class="st"><b>Сбербанк</b><small>счёт *0058 · 96 400,00 ₽</small></div></div>
+      </div></div>`;
+  document.getElementById('futureFrames').innerHTML = [
+    frame('AccountPickSheet — если понадобится', `<div class="faded">${phone(fut)}</div>`, 'Подпись — маска и остаток. Тогда же строка в «Изменить» покажет «Т-Банк · *4863».'),
+  ].join('');
+
+  const bar = document.querySelector('.vtabs'); const btns = [...bar.querySelectorAll('button')];
+  const show = id => btns.forEach(b => { b.setAttribute('aria-selected', String(b.dataset.v === id)); document.getElementById(b.dataset.v).hidden = b.dataset.v !== id; });
+  btns.forEach(b => b.addEventListener('click', () => show(b.dataset.v)));
+  const h = location.hash.slice(1); show(btns.some(b => b.dataset.v === h) ? h : 'flow');
+})();
+</script>

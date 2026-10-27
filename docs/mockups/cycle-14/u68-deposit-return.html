@@ -1,0 +1,239 @@
+<title>Возврат после скана вклада</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mock.css">
+<style>
+  .layer { position: absolute; inset: 0; }
+  .slide { box-shadow: -18px 0 40px rgba(0,0,0,.6); border-left: 1px solid var(--line); background: var(--bg); }
+  .motion { position: absolute; right: 22px; z-index: 11; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--brass2); font: 600 11px/14px var(--text); letter-spacing: .06em; text-transform: uppercase; }
+  .motion svg { width: 22px; height: 40px; }
+  .play { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 12px; background: var(--brass-pill); border: 1px solid var(--brass-line); color: var(--brass2); font: 500 14px/18px var(--text); }
+  .live .list { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  .live .snack { transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .2s; }
+  .live .scanl { transition: none; }
+  .slide.live { transition: transform .3s cubic-bezier(.4,0,.2,1); }
+  .timeline { display: flex; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 13px; line-height: 18px; max-width: 390px; }
+  .timeline span { padding: 3px 9px; border-radius: 8px; background: var(--inset); border: 1px solid var(--line); }
+  .timeline span.on { color: var(--brass2); border-color: var(--brass-line); background: var(--brass-pill); }
+</style>
+
+<div class="page">
+  <header>
+    <h1>U-68 · что стало со скрином вклада</h1>
+    <p>Сейчас после скана экран сам закрывается, и ничего не сказано. Предлагаю один и тот же ответ на оба исхода: <b>вернуться во «Вклады», доехать до вклада и подсветить его полосой</b> (та же, что у строки истории капитала, F-46), а внизу одной строкой сказать, что случилось. Уже был — «Такой вклад уже есть» и одно касание на исправление, если приложение ошиблось. Новый — «Вклад добавлен».</p>
+  </header>
+
+  <div class="why">
+    <div><b>Чем говорим — снекбаром</b>Шторка остановила бы человека ради новости, которая ничего не требует. Снекбар уже есть в приложении (тот же <code>SnackbarHost</code>, что у «Вернуть»): панель <code>PanelTop</code>, текст <code>Fg</code>, действие <code>Brass2</code>. Он не закрывает список и уходит сам через 4 с.</div>
+    <div><b>Главное говорит сам список</b>Подсвеченная карточка отвечает на вопрос «где он» без слов. Строка внизу отвечает на вопрос «что случилось». Отдельного экрана «Такой вклад уже есть» нет, лишнего касания тоже.</div>
+    <div><b>Приложение может ошибиться — исправляем в одно касание</b><code>DepositMatch</code> мог принять за дубль второй такой же вклад (тот же банк, сумма, даты). «Это другой» в снекбаре открывает «Проверьте вклад» с прочитанными полями, дальше — «Сохранить вклад».</div>
+  </div>
+
+  <div class="vtabs" role="tablist">
+    <button data-v="dup">Вклад уже есть</button>
+    <button data-v="ok">Вклад новый</button>
+    <button data-v="batch">Пакет скринов</button>
+    <button data-v="lit">Подсветка крупно</button>
+  </div>
+
+  <section class="variant" id="dup">
+    <h2>Вклад уже есть</h2>
+    <p class="about">Кадры по времени. Кнопка ниже проигрывает их на одном телефоне. Скан не задерживается: как только понятно, что это дубль, экран уезжает вправо («Назад» — тот же жест), список уже стоит на нужном месте.</p>
+    <div class="frames" id="dupFrames"></div>
+    <h3>Вживую</h3>
+    <div class="frames"><div class="fr"><button class="play" data-play="dup">▶ Проиграть</button><div id="dupLive"></div><div class="timeline" id="dupTl"></div></div></div>
+  </section>
+
+  <section class="variant" id="ok" hidden>
+    <h2>Вклад новый</h2>
+    <p class="about">Сейчас после «Сохранить вклад» тоже молча возвращаемся к списку, и новую строку надо искать глазами. Делаем так же, как с дублем: доезжаем, подсвечиваем, «Вклад добавлен». Счётчик в строке действий уже показывает новое число.</p>
+    <div class="frames" id="okFrames"></div>
+  </section>
+
+  <section class="variant" id="batch" hidden>
+    <h2>Пакет скринов</h2>
+    <p class="about">«Проверьте вклады» → «Сохранить»: подсвечены все вклады пакета — и новые, и те, что уже были (дубли, которые не стали «Возвращать»). Список доезжает до первого из них. Одна строка считает и те и другие.</p>
+    <div class="frames" id="batchFrames"></div>
+  </section>
+
+  <section class="variant" id="lit" hidden>
+    <h2>Подсветка — тот же приём, что в истории</h2>
+    <p class="about">В истории капитала (<code>HistoryLine(highlighted)</code>) — полоса <b>Brass2</b> 3 dp по левому краю строки во всю её высоту, без заливки, появляется за <code>Motion.NORMAL</code>. Для вклада берём её же без изменений: выносим в <code>Modifier.highlightBar(on)</code> в <code>ui/common</code> и ставим и туда, и туда, чтобы это была одна вещь, а не похожая копия. Разница одна: в истории полоса стоит, пока выбрана точка, а у вклада гаснет сама через 3 с (за <code>Motion.FAST</code>).</p>
+    <div class="frames" id="litFrames"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const I = {
+    back: '<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+    eye: '<svg class="i" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    more: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>',
+    plus: '<svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+    sort: '<svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M8 5v14M4 15l4 4 4-4"/></svg>',
+    chev: '<svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--faint)"><path d="M9 6l6 6-6 6"/></svg>',
+    down: '<svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px;vertical-align:-2px;color:var(--muted)"><path d="M6 9l6 6 6-6"/></svg>',
+    gochev: '<svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px;vertical-align:-2px;color:var(--muted)"><path d="M9 6l6 6-6 6"/></svg>',
+  };
+  const kop = t => t.replace(/,(\d\d)/, '<span class="k">,$1</span>');
+  const bk = (t, bg, fg = '#fff') => `<span class="bk" style="background:${bg};color:${fg}">${t}</span>`;
+  const B = {
+    sber: () => bk('СБ', 'linear-gradient(160deg,#2FC25B,#138A36)'),
+    tb: () => bk('Т', 'linear-gradient(160deg,#FFE14D,#F2C200)', '#14120E'),
+    alfa: () => bk('А', 'linear-gradient(160deg,#F04A3A,#C8251A)'),
+    vtb: () => bk('ВТБ', 'linear-gradient(160deg,#2C6BEE,#1340B8)'),
+  };
+  const deposits = [
+    { id: 'sb1', bank: 'sber', name: 'Лучший %', sum: '1 250 000,00', left: 'ещё 12 дн.', inc: '+38 410,22', p: 94 },
+    { id: 'tb1', bank: 'tb', name: 'Вклад «Копилка»', sum: '850 000,00', left: 'ещё 45 дн.', inc: '+21 300,10', p: 72 },
+    { id: 'al1', bank: 'alfa', name: 'Альфа-Вклад', sum: '700 000,00', left: 'ещё 61 дн.', inc: '+17 845,90', p: 64 },
+    { id: 'vt1', bank: 'vtb', name: 'Новое время', sum: '600 000,00', left: 'ещё 98 дн.', inc: '+9 120,44', p: 45 },
+    { id: 'al2', bank: 'alfa', name: 'Альфа-Вклад 6 мес.', sum: '520 000,00', left: 'ещё 152 дн.', inc: '+2 106,30', p: 14 },
+    { id: 'tb2', bank: 'tb', name: 'Т-Банк', sum: '400 000,00', left: 'ещё 180 дн.', inc: '+1 220,05', p: 6 },
+    { id: 'sb2', bank: 'sber', name: 'Сбер', sum: '207 798,80', left: 'с 1 ноября', inc: '+0', p: 0, up: true },
+  ];
+  const fresh = { id: 'new', bank: 'alfa', name: 'Альфа-Вклад 1 год', sum: '300 000,00', left: 'ещё 365 дн.', inc: '+0', p: 0 };
+  const okList = [...deposits.slice(0, 6), fresh, deposits[6]];
+
+  const sbar = () => `<div class="sbar"><span>12:24</span><span class="ic"><i></i><i></i><i style="width:8px"></i></span></div>`;
+  const row = (d, lit) => `<div class="dr ${lit != null ? 'lit' : ''}" style="${lit != null ? `--lit:${lit}` : ''}" data-id="${d.id}">${B[d.bank]()}<div class="tx">
+      <div class="l1"><b>${d.name}</b><span class="amt rowa">${kop(d.sum)} ₽</span></div>
+      <div class="l2"><span style="${d.up ? 'color:var(--brass2)' : ''}">${d.left}</span>${d.inc === '+0' ? '' : `<span class="amt small inc" style="flex:none">${kop(d.inc)} ₽</span>`}</div>
+      <div class="bar"><i style="width:${d.p}%"></i></div></div></div>`;
+  const spark = '<svg width="72" height="24" viewBox="0 0 72 24"><path d="M1 20 L14 19 L18 9 L30 8 L34 6 L58 5 L71 4" fill="none" stroke="#59E2A6" stroke-width="1.5" stroke-linejoin="round"/><circle cx="71" cy="4" r="2.5" fill="#59E2A6"/></svg>';
+  const hero = () => `<div class="panel glow" style="--gc:rgba(154,134,245,.20);border-radius:22px"><div style="padding:20px">
+      <div class="amt hero">${kop('4 527 798,80')} ₽</div>
+      <div style="margin-top:6px"><span class="amt inl" style="color:var(--mint)">${kop('+1 398,25')} ₽</span> <span style="color:var(--muted);font-size:12px">сегодня</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px"><span style="flex:1;font:500 14px/20px var(--text)"><span class="amt inl" style="color:var(--mint)">+1 806 590 ₽</span> <span style="color:var(--muted);font-weight:400">за месяц</span></span>${spark}${I.chev}</div>
+      <div style="margin-top:10px;color:var(--muted);font-size:12px;line-height:16px">вложено 4,3 млн ₽ · к выдаче 4,8 млн ₽</div></div></div>`;
+  const bbar = () => `<div class="bbar">${['Обзор', 'Капитал', 'Платежи', 'Настройки'].map((t, i) => `<span class="${i === 1 ? 'on' : ''}"><i></i>${t}</span>`).join('')}</div>`;
+  const snack = (text, act, o = {}) => `<div class="snack" style="bottom:${92}px;${o.style || ''}"><span>${text}</span>${act ? `<b>${act}</b>` : ''}</div>`;
+
+  // Экран «Капитал → Вклады». o.scroll — сдвиг списка вверх, o.lit — {id: яркость}, o.list — свой список
+  function depositsScreen(o = {}) {
+    const list = o.list || deposits;
+    const count = o.count || '7 вкладов';
+    return `
+      <div class="hdr tab"><h1>Капитал</h1><span class="ib">${I.eye}</span><span class="ib">${I.more}</span></div>
+      <div class="scr" style="position:relative;z-index:2;background:var(--bg)"><div class="tabs" style="margin-top:4px">${['Счета', 'Вклады', 'Валюта', 'Наличные'].map((t, i) => `<span class="${i === 1 ? 'on' : ''}">${t}</span>`).join('')}</div></div>
+      <div style="position:absolute;left:0;right:0;top:${64 + 50}px;bottom:84px;overflow:hidden">
+        <div class="scr list" style="padding-top:12px;transform:translateY(${-(o.scroll || 0)}px)">
+          <div class="sact"><span class="s">${count}</span><span class="sort">${I.sort}по закрытию</span><span class="add">${I.plus}</span></div>
+          ${hero()}
+          <div class="panel clip">${list.map(d => row(d, o.lit && o.lit[d.id] != null ? o.lit[d.id] : null)).join('')}</div>
+          <div style="color:var(--muted);font:600 16px/22px var(--display);padding:8px 0">Завершённые · 3 · доход +184 тыс ₽</div>
+        </div>
+      </div>
+      ${o.snack || ''}
+      ${bbar()}`;
+  }
+  const thumbLines = () => [14, 26, 34, 48, 58, 66, 80, 90].map((t, i) => `<span class="ln" style="top:${t}%;right:${[20, 40, 28, 50, 22, 36, 30, 46][i]}%"></span>`).join('');
+  function scanScreen() {
+    return `<div class="hdr"><span class="back">${I.back}</span><h1>Проверьте вклад</h1></div>
+      <div class="scr" style="gap:14px;padding-top:8px">
+        <div class="thumb big">${thumbLines()}<span class="trail" style="top:22%"></span><span class="scanl" style="top:42%"></span></div>
+        <div class="status" style="color:var(--brass2);justify-content:center"><i></i>Читаем скрин</div>
+        <div class="skel"></div><div class="skel"></div><div class="skel" style="width:60%"></div>
+      </div>`;
+  }
+  function formScreen(touch) {
+    return `<div class="hdr"><span class="back">${I.back}</span><h1>Проверьте вклад</h1></div>
+      <div class="scr" style="gap:14px;padding-top:4px">
+        <div class="panel shot"><div class="thumb" style="width:52px;height:84px">${thumbLines()}</div><div style="min-width:0">
+          <div class="status" style="color:var(--mint)"><i></i>Распознано</div>
+          <div style="color:var(--muted);font-size:12px;line-height:16px;margin-top:4px">Альфа-Банк · вклад на 6 месяцев</div></div></div>
+        <div><span class="flabel">Банк</span><div class="field" style="min-height:56px"><span class="bk" style="width:28px;height:28px;font-size:10px;background:linear-gradient(160deg,#F04A3A,#C8251A);color:#fff">А</span><span style="flex:1">Альфа-Банк</span>${I.chev}</div></div>
+        <div><span class="flabel">Сумма</span><div class="field amount">520 000<span class="sfx">₽</span></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><span class="flabel">Ставка</span><div class="field amount">18,5<span class="sfx">%</span></div></div>
+          <div><span class="flabel">Срок</span><div class="field">6 мес.</div></div></div>
+        <div><span class="flabel">Даты</span><div class="field">27 окт 2026 — 27 апр 2027</div></div>
+      </div>
+      <div style="position:absolute;left:16px;right:16px;bottom:30px"><div class="btn brass full">Сохранить вклад</div></div>
+      ${touch ? '<span class="touch" style="left:195px;top:744px"></span>' : ''}`;
+  }
+  const phone = (inner, cls = '') => `<div class="ph ${cls}">${sbar()}${inner}<div class="gbar"></div></div>`;
+  const frame = (cap, ph, note) => `<div class="fr"><div class="cap">${cap}</div>${ph}${note ? `<div class="note">${note}</div>` : ''}</div>`;
+  const arrow = t => `<div class="arrowbox">${t}<br>→</div>`;
+  const motion = (top, label) => `<div class="motion" style="top:${top}px"><svg viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 38V4M4 11l7-7 7 7"/></svg>${label}</div>`;
+
+  // прокрутка: строка «Альфа-Вклад 6 мес.» встаёт в верхнюю треть видимого списка
+  const SCROLL = 300;
+
+  document.getElementById('dupFrames').innerHTML = [
+    frame('<i>1</i>Скан', phone(scanScreen()), 'Как сейчас: полоса по скрину, «Читаем скрин». Длится, сколько читает OCR.'),
+    arrow('дубль<br>найден'),
+    frame('<i>2</i>Сразу — назад и к вкладу', phone(`<div class="layer" style="top:32px">${depositsScreen({ scroll: 180 })}</div><div class="layer slide" style="transform:translateX(62%)">${sbar()}${scanScreen()}</div>${motion(420, 'список<br>едет')}`),
+      'Экран скана уезжает вправо (как «Назад», <code>Motion.NORMAL</code>). Одновременно список «Вкладов» доезжает до нужной карточки — <code>animateScrollTo</code>, <code>Motion.NORMAL</code>, <code>Calm</code>.'),
+    arrow('+300 мс'),
+    frame('<i>3</i>Подсветка и строка', phone(`<div class="layer" style="top:32px">${depositsScreen({ scroll: SCROLL, lit: { al2: 1 }, snack: snack('Такой вклад уже есть', 'Это другой') })}</div>`),
+      'Полоса Brass2 у карточки проявляется за <code>Motion.NORMAL</code>. Снизу — «Такой вклад уже есть», действие «Это другой». Счётчик «7 вкладов» не изменился.'),
+    arrow('через 3 с'),
+    frame('<i>4</i>Гаснет', phone(`<div class="layer" style="top:32px">${depositsScreen({ scroll: SCROLL, lit: { al2: 0 } })}</div>`),
+      'Полоса гаснет за <code>Motion.FAST</code>, снекбар ушёл сам (4 с). Список остаётся на месте — человек уже видит свой вклад.'),
+  ].join('');
+
+  document.getElementById('okFrames').innerHTML = [
+    frame('<i>1</i>«Сохранить вклад»', phone(formScreen(true)), 'Как сейчас: скрин прочитан, поля на местах.'),
+    arrow('касание'),
+    frame('<i>2</i>Назад и к новому вкладу', phone(`<div class="layer" style="top:32px">${depositsScreen({ scroll: 386, count: '8 вкладов', list: okList, lit: { new: 1 }, snack: snack('Вклад добавлен') })}</div>`),
+      'Новый вклад встал на своё место по сортировке, список доехал до него, полоса проявилась. «Вклад добавлен» — без действия: открыть его можно касанием по самой карточке.'),
+    arrow('через 3 с'),
+    frame('<i>3</i>Гаснет', phone(`<div class="layer" style="top:32px">${depositsScreen({ scroll: 386, count: '8 вкладов', list: okList, lit: { new: 0 } })}</div>`), 'Как у дубля.'),
+  ].join('');
+
+  const nb1 = { id: 'nb1', bank: 'vtb', name: 'ВТБ Сейф', sum: '300 000,00', left: 'ещё 30 дн.', inc: '+0', p: 0 };
+  const nb2 = { id: 'nb2', bank: 'sber', name: 'СберВклад', sum: '150 000,00', left: 'ещё 75 дн.', inc: '+0', p: 0 };
+  const batchList = [deposits[0], deposits[1], nb1, deposits[2], nb2, deposits[3], deposits[4], deposits[5], deposits[6]];
+  document.getElementById('batchFrames').innerHTML = [
+    frame('<i>1</i>После «Сохранить» в «Проверьте вклады»', phone(`<div class="layer" style="top:32px">${depositsScreen({ scroll: 320, count: '9 вкладов', list: batchList, lit: { nb1: 1, al2: 1, nb2: 1 }, snack: snack('Добавили 2 вклада · 1 уже был') })}</div>`),
+      'Подсвечены все три вклада пакета. Список доехал до первого (ВТБ Сейф). Остальные ниже — видны или рядом.'),
+    arrow('через 3 с'),
+    frame('<i>2</i>Гаснет', phone(`<div class="layer" style="top:32px">${depositsScreen({ scroll: 320, count: '9 вкладов', list: batchList, lit: { nb1: 0, al2: 0, nb2: 0 } })}</div>`), ''),
+  ].join('');
+
+  // крупно: строка истории и строка вклада рядом
+  const histRow = `<div class="panel clip" style="width:358px"><div class="hl lit" style="--lit:1">${B.alfa()}<div class="tx"><b>Новый вклад</b><span>Альфа-Банк · 27 октября ${I.gochev}</span></div><span class="amt small inc">${kop('+520 000')} ₽</span></div>
+    <div class="hl"><span class="dot" style="background:var(--violet)"></span><div class="tx"><b>Проценты</b><span>6 вкладов ${I.down}</span></div><span class="amt small inc">${kop('+1 398,25')} ₽</span></div></div>`;
+  const depRow = `<div class="panel clip" style="width:358px">${row(deposits[3])}${row(deposits[4], 1)}${row(deposits[5])}</div>`;
+  const depFirst = `<div class="panel clip" style="width:358px">${row(deposits[4], 1)}${row(deposits[5])}</div>`;
+  const pad = c => `<div style="background:var(--bg);padding:16px;border-radius:24px;border:1px solid rgba(255,255,255,.12)">${c}</div>`;
+  document.getElementById('litFrames').innerHTML = [
+    frame('История капитала · <code>HistoryLine(highlighted)</code>', pad(histRow), 'Как сейчас (F-46).'),
+    frame('Вклады · <code>DepositRow</code> + <code>highlightBar</code>', pad(depRow), 'Та же полоса: 3 dp, Brass2, во всю высоту строки, от левого края панели. Ни заливки, ни рамки, строка не двигается.'),
+    frame('Первая строка в панели', pad(depFirst), 'Сверху полосу срезает скругление панели — как у первой строки в истории.'),
+  ].join('');
+
+  // вживую: дубль
+  const live = document.getElementById('dupLive');
+  const tl = document.getElementById('dupTl');
+  const steps = ['скан', 'назад + прокрутка', 'полоса + строка', 'гаснет'];
+  function setup() {
+    live.innerHTML = phone(`<div class="layer live" style="top:32px">${depositsScreen({ scroll: 0, lit: { al2: 0 }, snack: snack('Такой вклад уже есть', 'Это другой', { style: 'transform:translateY(160px);opacity:0' }) })}</div><div class="layer slide live">${sbar()}${scanScreen()}</div>`);
+    tl.innerHTML = steps.map((s, i) => `<span data-s="${i}" class="${i === 0 ? 'on' : ''}">${s}</span>`).join('');
+  }
+  const mark = i => tl.querySelectorAll('span').forEach(s => s.classList.toggle('on', +s.dataset.s === i));
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let timers = [];
+  function play() {
+    timers.forEach(clearTimeout); timers = []; setup();
+    const at = (ms, f) => timers.push(setTimeout(f, reduce ? 0 : ms));
+    const q = s => live.querySelector(s);
+    let y = 42; at(0, () => { const tick = () => { y = (y + 2) % 100; const l = q('.scanl'); if (l) { l.style.top = y + '%'; q('.trail').style.top = (y - 20) + '%'; } }; for (let k = 0; k < 40; k++) at(k * 30, tick); });
+    at(1300, () => { mark(1); q('.slide').style.transform = 'translateX(100%)'; q('.list').style.transform = `translateY(${-SCROLL}px)`; });
+    at(1650, () => { mark(2); q('[data-id="al2"]').style.setProperty('--lit', 1); const s = q('.snack'); s.style.transform = 'none'; s.style.opacity = 1; });
+    at(4650, () => { mark(3); q('[data-id="al2"]').style.setProperty('--lit', 0); });
+    at(5650, () => { const s = q('.snack'); s.style.transform = 'translateY(160px)'; s.style.opacity = 0; });
+  }
+  setup();
+  document.querySelector('[data-play="dup"]').addEventListener('click', play);
+
+  // вкладки
+  const bar = document.querySelector('.vtabs'); const btns = [...bar.querySelectorAll('button')];
+  const show = id => btns.forEach(b => { b.setAttribute('aria-selected', String(b.dataset.v === id)); document.getElementById(b.dataset.v).hidden = b.dataset.v !== id; });
+  btns.forEach(b => b.addEventListener('click', () => show(b.dataset.v)));
+  const h = location.hash.slice(1); show(btns.some(b => b.dataset.v === h) ? h : 'dup');
+})();
+</script>
