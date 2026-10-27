@@ -16,7 +16,7 @@ android {
         // F-28: the number grows with every CI build (RuStore and updates need it); 1 locally.
         val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
         versionCode = run ?: 1
-        versionName = "0.6.${run ?: 0}"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Real phones (64/32-bit ARM) + the x86_64 emulator. Dropping 32-bit x86
         // keeps the native OCR/ONNX libraries from bloating the APK.

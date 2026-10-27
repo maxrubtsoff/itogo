@@ -123,15 +123,15 @@ jobs:
             echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/publish.keystore" >> "$GITHUB_ENV"
           fi
 
-      - name: Build release APK
+      - name: Build release APK and AAB
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           set -o pipefail
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log || true
-          if [ ! -f app/build/outputs/apk/release/app-release.apk ]; then
+          ./gradlew assembleRelease bundleRelease --no-daemon --stacktrace 2>&1 | tee build.log || true
+          if [ ! -f app/build/outputs/apk/release/app-release.apk ] || [ ! -f app/build/outputs/bundle/release/app-release.aab ]; then
             { grep -E "^e: |error:|AAPT|Execution failed|Caused by|> " build.log | grep -v "> Task "; echo "----- tail -----"; tail -40 build.log; } | head -70 | while IFS= read -r line; do
               echo "::error::$line"
             done
@@ -143,4 +143,12 @@ jobs:
         with:
           name: bank-aggregator
           path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      # F-54: AAB про запас (в RuStore загружаем APK, см. docs/publishing.md).
+      - name: Upload AAB
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: itogo-aab
+          path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error

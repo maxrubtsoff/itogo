@@ -22,3 +22,10 @@
 -dontwarn org.slf4j.**
 -dontwarn javax.annotation.**
 -dontwarn com.google.errorprone.annotations.**
+
+# F-54: no debug/info logging in release (Log.w with failure types stays).
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}

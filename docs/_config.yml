@@ -1,0 +1,12 @@
+# GitHub Pages для политики конфиденциальности (F-54).
+# Максиму: Settings -> Pages -> Source: "Deploy from a branch", Branch: main, папка /docs.
+# Политика откроется по адресу https://<логин>.github.io/<репозиторий>/privacy
+# Остальные файлы docs/ тоже станут доступны по ссылкам; в них нет секретов.
+theme: jekyll-theme-minimal
+title: Itogo
+exclude:
+  - archive
+  - cycles
+  - mockups
+  - design
+  - superpowers
