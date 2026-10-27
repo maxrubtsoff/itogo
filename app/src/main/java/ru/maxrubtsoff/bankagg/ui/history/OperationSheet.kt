@@ -200,7 +200,7 @@ private fun EditBody(d: OperationDetail, today: LocalDate, vm: CapitalHistoryVie
                 acc?.brand,
                 onPick = { b -> d.accounts.firstOrNull { it.brand.key == b.key }?.let { accountId = it.id } },
                 onDismiss = { pickingBank = false },
-                banks = d.accounts.map { it.brand }
+                banks = d.accounts.map { it.brand }.distinctBy { it.key }
             )
         }
     }
