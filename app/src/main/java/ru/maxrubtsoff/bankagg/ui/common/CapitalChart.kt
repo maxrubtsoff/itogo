@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
@@ -61,8 +63,9 @@ import ru.maxrubtsoff.bankagg.ui.theme.Slitok
  *
  * [range] (indexes of points) is a band under the line for the days the picked point
  * stands for (F-46). [marks] are dots of the significant actions in the colour of their
- * part ([markColor]); the biggest carry a sum, set where it touches neither the line, a dot,
- * another sum nor the edge — nowhere to put it, no sum, the dot stays (F-49). A touch within
+ * part ([markColor]); all dots are one size (B-113). At rest there is no text; the picked dot shows its
+ * sum on a plate, set where it touches neither the line, another dot nor the edge —
+ * nowhere to put it, no sum (F-49). A touch within
  * 12 dp of a dot picks the dot's day.
  */
 @Composable
@@ -111,12 +114,16 @@ fun CapitalChart(
     val labelStyle = MaterialTheme.typography.labelSmall
     val hidden = LocalAmountsHidden.current
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    // Where each sum goes is worked out once per data and size, not in every frame.
-    val spots = remember(points, marks, canvasSize, hidden, density, minSpanFraction, labels) {
-        if (hidden || !labels || points.size < 2 || canvasSize.width <= 0) emptyList() else {
-            val layouts = marks.mapIndexedNotNull { i, m -> m.label?.let { i to measurer.measure(it, labelStyle, maxLines = 1, softWrap = false) } }.toMap()
+    // The plate of the picked point's sum is worked out once per pick, data and size, not in every frame.
+    val spot = remember(points, marks, selected, canvasSize, hidden, density, minSpanFraction, labels) {
+        val mark = selected?.let { s -> marks.firstOrNull { it.index == s && it.label != null } }
+        if (mark == null || hidden || !labels || points.size < 2 || canvasSize.width <= 0) null else {
+            val layout = measurer.measure(mark.label!!, labelStyle, maxLines = 1, softWrap = false)
             val plot = plotOf(points, canvasSize.width.toFloat(), canvasSize.height.toFloat(), density, minSpanFraction)
-            placeLabels(plot, marks, layouts, canvasSize.width.toFloat(), canvasSize.height.toFloat(), density)
+            val size = Size(layout.size.width + 2 * LABEL_PAD_DP * density, LABEL_HEIGHT_DP * density)
+            val dots = marks.filter { it.index in points.indices }.map { Offset(plot.xs[it.index], plot.ys[it.index]) }
+            placeLabel(plot, mark.index, size, dots, canvasSize.width.toFloat(), canvasSize.height.toFloat(), density)
+                ?.let { LabelSpot(layout, it, mark.amountMinor < 0) }
         }
     }
 
@@ -176,10 +183,6 @@ fun CapitalChart(
                         MarkShape.RING -> { drawCircle(Slitok.Bg, 7.dp.toPx(), c); drawCircle(tint, 5.dp.toPx(), c); drawCircle(Slitok.Bg, 3.dp.toPx(), c) }
                     }
                 }
-                spots.forEach { s ->
-                    drawText(s.layout, color = Slitok.Bg.copy(alpha = 0.7f), topLeft = s.topLeft, drawStyle = Stroke(0.75.dp.toPx(), join = StrokeJoin.Round))
-                    drawText(s.layout, color = Slitok.Muted, topLeft = s.topLeft)
-                }
             }
             val last = points.size - 1
             if (grow.value >= 1f) {
@@ -189,8 +192,19 @@ fun CapitalChart(
             selected?.let { i ->
                 val s = i.coerceIn(0, last)
                 drawLine(Slitok.Faint, Offset(x(s), 0f), Offset(x(s), size.height), strokeWidth = 1.dp.toPx())
-                drawCircle(Slitok.Bg, 6.dp.toPx(), Offset(x(s), y(s)))
-                drawCircle(color, 4.dp.toPx(), Offset(x(s), y(s)))
+                drawCircle(Slitok.Bg, 7.dp.toPx(), Offset(x(s), y(s)))
+                drawCircle(color, 5.dp.toPx(), Offset(x(s), y(s)))
+            }
+            // The sum of the picked point on a plate; Fill is explicit, or the glyphs come out as outlines.
+            if (grow.value >= 1f) spot?.let { sp ->
+                val r = sp.plate
+                drawRoundRect(Slitok.PanelTop, r.topLeft, r.size, CornerRadius(8.dp.toPx()))
+                drawRoundRect(Slitok.Line, r.topLeft, r.size, CornerRadius(8.dp.toPx()), style = Stroke(1.dp.toPx()))
+                drawText(
+                    sp.layout, color = if (sp.negative) Slitok.Fg else Slitok.Mint,
+                    topLeft = Offset(r.left + LABEL_PAD_DP.dp.toPx(), r.top + (r.height - sp.layout.size.height) / 2),
+                    drawStyle = Fill
+                )
             }
         }
         if (axis.isNotEmpty()) {
@@ -204,7 +218,7 @@ fun CapitalChart(
 }
 
 /** Where the points of the line fall on a canvas of [width] × [height] pixels. */
-private class Plot(val xs: FloatArray, val ys: FloatArray)
+internal class Plot(val xs: FloatArray, val ys: FloatArray)
 
 private fun plotOf(points: List<Long>, width: Float, height: Float, dp: Float, minSpanFraction: Float): Plot {
     val padX = 6 * dp
@@ -220,23 +234,29 @@ private fun plotOf(points: List<Long>, width: Float, height: Float, dp: Float, m
     )
 }
 
-/** A sum set on the chart: [topLeft] of the measured text. */
-private class LabelSpot(val layout: TextLayoutResult, val topLeft: Offset)
+private const val LABEL_PAD_DP = 6
+private const val LABEL_HEIGHT_DP = 20
+
+/** The plate of a sum set on the chart: [plate] is its rectangle in pixels. */
+private class LabelSpot(val layout: TextLayoutResult, val plate: Rect, val negative: Boolean)
 
 /**
- * Sets the sums of [marks] (those in [layouts], by position) biggest first. A place is taken when the text
- * would cross the line (sampled every ~2 dp), any dot (~7 dp round), another sum or the edge. Tries above,
- * below, left, right, left-above, right-below; none free — the mark goes without a sum.
+ * Where the plate of [size] for the dot at [index] goes: above, below, left, right, then the four corners;
+ * the first place where it crosses neither the line (sampled every ~2 dp), another of [dots] (~7 dp round)
+ * nor the edge. None free — null, no sum.
  */
-private fun placeLabels(plot: Plot, marks: List<ChartMark>, layouts: Map<Int, TextLayoutResult>, width: Float, height: Float, dp: Float): List<LabelSpot> {
+internal fun placeLabel(plot: Plot, index: Int, size: Size, dots: List<Offset>, width: Float, height: Float, dp: Float): Rect? {
     val n = plot.xs.size
+    if (n < 2 || index !in 0 until n) return null
     val segW = plot.xs[1] - plot.xs[0]
     val dotR = 7 * dp
     val pad = 2 * dp
-    val gap = 8 * dp
+    val gap = 10 * dp
     val diag = 6 * dp
-    val edge = Rect(0f, 0f, width, height)
-    val dots = marks.filter { it.index in 0 until n }.map { Offset(plot.xs[it.index], plot.ys[it.index]) }
+    val cx = plot.xs[index]
+    val cy = plot.ys[index]
+    val own = Offset(cx, cy)
+    val others = dots.filter { it != own }
 
     fun lineY(x: Float): Float {
         val seg = ((x - plot.xs[0]) / segW).toInt().coerceIn(0, n - 2)
@@ -264,28 +284,16 @@ private fun placeLabels(plot: Plot, marks: List<ChartMark>, layouts: Map<Int, Te
         return (nx - d.x) * (nx - d.x) + (ny - d.y) * (ny - d.y) < dotR * dotR
     }
 
-    val placed = ArrayList<Rect>()
-    val out = ArrayList<LabelSpot>()
-    layouts.entries.sortedByDescending { kotlin.math.abs(marks[it.key].amountMinor) }.forEach { (i, layout) ->
-        val m = marks[i]
-        if (m.index !in 0 until n) return@forEach
-        val cx = plot.xs[m.index]
-        val cy = plot.ys[m.index]
-        val tw = layout.size.width.toFloat()
-        val th = layout.size.height.toFloat()
-        val candidates = listOf(
-            Offset(cx - tw / 2, cy - gap - th), Offset(cx - tw / 2, cy + gap),
-            Offset(cx - gap - tw, cy - th / 2), Offset(cx + gap, cy - th / 2),
-            Offset(cx - diag - tw, cy - diag - th), Offset(cx + diag, cy + diag)
-        )
-        val at = candidates.firstOrNull { tl ->
-            val r = Rect(tl, Size(tw, th))
-            r.left >= edge.left && r.top >= edge.top && r.right <= edge.right && r.bottom <= edge.bottom &&
-                !hitsLine(r) && dots.none { hitsDot(r, it) } &&
-                placed.none { it.inflate(pad).overlaps(r) }
-        } ?: return@forEach
-        placed += Rect(at, Size(tw, th))
-        out += LabelSpot(layout, at)
+    val w = size.width
+    val h = size.height
+    val candidates = listOf(
+        Offset(cx - w / 2, cy - gap - h), Offset(cx - w / 2, cy + gap),
+        Offset(cx - gap - w, cy - h / 2), Offset(cx + gap, cy - h / 2),
+        Offset(cx - diag - w, cy - diag - h), Offset(cx + diag, cy + diag),
+        Offset(cx - diag - w, cy + diag), Offset(cx + diag, cy - diag - h)
+    )
+    return candidates.map { Rect(it, size) }.firstOrNull { r ->
+        r.left >= 0f && r.top >= 0f && r.right <= width && r.bottom <= height &&
+            !hitsLine(r) && !hitsDot(r, own) && others.none { hitsDot(r, it) }
     }
-    return out
 }

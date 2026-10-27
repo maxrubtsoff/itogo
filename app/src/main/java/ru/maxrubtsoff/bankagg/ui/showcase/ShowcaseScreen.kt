@@ -313,7 +313,7 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                 points = listOf(10L, 12, 11, 15, 14, 18, 17, 21, 20, 24), axis = listOf("1 окт", "8 окт", "15 окт", "25 окт"),
                 selected = marked, onScrub = { marked = it }, onRelease = {},
                 range = marked?.takeIf { it > 0 }?.let { (it - 1)..it },
-                // Significant actions (F-49): a big dot with a sum, a small one, a ring (a deposit closed).
+                // Significant actions (F-49), one size: solid, muted, a ring (a deposit closed); the sum shows on the picked one.
                 marks = listOf(
                     ChartMark(2, CapitalPart.ACCOUNTS, MarkShape.BIG, 1_500_000L, "+15 000 ₽"),
                     ChartMark(5, CapitalPart.DEPOSITS, MarkShape.SMALL, 300_000L, null),
