@@ -177,10 +177,12 @@ fun CapitalChart(
                     if (m.index !in points.indices) return@forEach
                     val c = Offset(x(m.index), y(m.index))
                     val tint = markColor(m.part)
+                    // One size for all: the kind is told by the fill (B-113).
+                    drawCircle(Slitok.Bg, 6.dp.toPx(), c)
                     when (m.shape) {
-                        MarkShape.BIG -> { drawCircle(Slitok.Bg, 7.dp.toPx(), c); drawCircle(tint, 5.dp.toPx(), c) }
-                        MarkShape.SMALL -> { drawCircle(Slitok.Bg, 4.5.dp.toPx(), c); drawCircle(tint, 3.dp.toPx(), c) }
-                        MarkShape.RING -> { drawCircle(Slitok.Bg, 7.dp.toPx(), c); drawCircle(tint, 5.dp.toPx(), c); drawCircle(Slitok.Bg, 3.dp.toPx(), c) }
+                        MarkShape.BIG -> drawCircle(tint, 4.dp.toPx(), c)
+                        MarkShape.SMALL -> drawCircle(tint.copy(alpha = 0.55f), 4.dp.toPx(), c)
+                        MarkShape.RING -> { drawCircle(tint, 4.dp.toPx(), c); drawCircle(Slitok.Bg, 2.dp.toPx(), c) }
                     }
                 }
             }
