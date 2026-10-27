@@ -129,6 +129,7 @@ dependencies {
 
     // Coil — async image loading for shot previews/thumbnails
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("androidx.palette:palette-ktx:1.0.0")
 
     // Glance — home-screen app widget (кэшбэк по категориям с процентами)
     implementation("androidx.glance:glance-appwidget:1.1.0")

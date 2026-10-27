@@ -495,6 +495,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
     val hidden by container.settings.amountsHidden.collectAsStateWithLifecycle(initialValue = false)
     val swipeOn by container.settings.hideBySwipe.collectAsStateWithLifecycle(initialValue = true)
     val toggleHidden = { scope.launch { container.settings.setAmountsHidden(!hidden) }; Unit }
+    // F-53: «Платежи» opened from a bank's sheet show only that bank until the chip is cleared.
+    var paymentsBank by rememberSaveable { mutableStateOf<String?>(null) }
     val reveal = { scope.launch { container.settings.setAmountsHidden(false) }; Unit }
     val swipeDistance = with(LocalDensity.current) { 120.dp.toPx() }
 
@@ -749,7 +751,9 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                         newBanks = newBanks,
                         onOpenNewBanks = { nav.navigate(Routes.NEW_BANKS) },
                         onToggleHidden = toggleHidden,
-                        activeSubscriptions = subscriptionsState.active.size
+                        activeSubscriptions = subscriptionsState.active.size,
+                        onOpenBankSubscriptions = { paymentsBank = it; jumpTo("cashback?section=1") },
+                        onOpenBankCashback = { paymentsBank = it; jumpTo("cashback?section=0") }
                     ) }
                 }
             }
@@ -770,6 +774,7 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                                 byCategory = byCategory,
                                 onMonthOffset = onMonthOffset,
                                 onByCategory = onByCategory,
+                                bankKey = paymentsBank,
                                 onOpenShot = { id -> nav.navigate(Routes.cashbackShot(id)) },
                                 onOpenBatch = { ids -> nav.navigate(Routes.cashbackBatch(ids)) },
                                 onEditBank = { month, brand -> nav.navigate(Routes.cashbackBankEdit(month, brand.key)) },
@@ -780,14 +785,17 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                             SubscriptionsSection(
                                 subscriptionsVm,
                                 onOpen = { nav.navigate(Routes.subscription(it.id)) },
-                                onCreate = { nav.navigate(Routes.SUBSCRIPTION_EDIT) }
+                                onCreate = { nav.navigate(Routes.SUBSCRIPTION_EDIT) },
+                                bankKey = paymentsBank
                             )
                         },
                         startSection = entry.arguments?.getInt("section") ?: 0,
                         initialOffset = entry.arguments?.getInt("offset") ?: 0,
                         showCashback = features.showCashback,
                         showSubscriptions = features.showSubscriptions,
-                        showNotifAccess = features.showNotifAccessOnPayments
+                        showNotifAccess = features.showNotifAccessOnPayments,
+                        bankKey = paymentsBank,
+                        onClearBank = { paymentsBank = null }
                     )
                 }
             }

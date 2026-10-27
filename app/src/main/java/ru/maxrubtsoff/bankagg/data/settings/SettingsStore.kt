@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.data.settings
 
+import ru.maxrubtsoff.bankagg.domain.model.SliceMode
 import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.coroutines.flow.Flow
@@ -232,6 +233,13 @@ class SettingsStore(context: Context) : SettingsRepository {
         prefs.edit().putString(KEY_LAST_CURRENCY, code).apply()
     }
 
+    override suspend fun sliceMode(): SliceMode =
+        SliceMode.entries.firstOrNull { it.name == prefs.getString(KEY_SLICE_MODE, null) } ?: SliceMode.BY_PARTS
+
+    override suspend fun setSliceMode(mode: SliceMode) {
+        prefs.edit().putString(KEY_SLICE_MODE, mode.name).apply()
+    }
+
     override suspend fun ratesLastAttemptAt(): Long = prefs.getLong(KEY_RATES_ATTEMPT, 0L)
 
     override suspend fun ratesLastSuccessDay(): Long? =
@@ -253,6 +261,7 @@ class SettingsStore(context: Context) : SettingsRepository {
         const val KEY_CAPITAL_PARTS = "capital_parts"
         const val KEY_CAPITAL_SECTION = "capital_section"
         const val KEY_LAST_CURRENCY = "last_currency"
+        const val KEY_SLICE_MODE = "slice_mode"
         const val KEY_DEPOSIT_SORT = "deposit_sort"
         const val KEY_LAST_BACKUP = "last_backup_at"
         const val KEY_DEPOSIT_SORT_REVERSED = "deposit_sort_reversed"

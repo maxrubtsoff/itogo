@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.domain.repository
 
+import ru.maxrubtsoff.bankagg.domain.model.SliceMode
 import kotlinx.coroutines.flow.Flow
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.domain.model.DepositOrder
@@ -85,6 +86,10 @@ interface SettingsRepository : PinStore {
     /** The currency used in the last purchase or sale (form default). */
     suspend fun lastCurrency(): String?
     suspend fun setLastCurrency(code: String)
+
+    /** How the Overview cuts the capital: by parts or by banks (F-53). */
+    suspend fun sliceMode(): SliceMode
+    suspend fun setSliceMode(mode: SliceMode)
 
     /** Rates refresh bookkeeping (epoch ms / epoch day of the Moscow date fetched). */
     suspend fun ratesLastAttemptAt(): Long

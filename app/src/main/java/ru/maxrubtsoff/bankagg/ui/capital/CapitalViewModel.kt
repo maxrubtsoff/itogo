@@ -10,7 +10,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
+import ru.maxrubtsoff.bankagg.domain.model.BankSlice
+import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
+import ru.maxrubtsoff.bankagg.domain.model.SliceMode
+import ru.maxrubtsoff.bankagg.domain.repository.CashbackRepository
+import ru.maxrubtsoff.bankagg.domain.repository.SubscriptionRepository
+import ru.maxrubtsoff.bankagg.domain.usecase.CapitalByBank
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.Account
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
@@ -46,7 +54,9 @@ class CapitalViewModel(
     private val today: Today,
     private val undo: UndoCenter,
     private val ledger: LedgerRepository,
-    history: CapitalHistoryRepository
+    history: CapitalHistoryRepository,
+    subscriptions: SubscriptionRepository,
+    cashback: CashbackRepository
 ) : ViewModel() {
 
     /** Leaves accounts out of the capital or brings them back (U-18). */
@@ -75,6 +85,23 @@ class CapitalViewModel(
     val days: StateFlow<List<CapitalPoint>> =
         history.observeDays().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** The capital cut by bank, for «По банкам» on the Overview (F-53). */
+    val banksSlice: StateFlow<List<BankSlice>> =
+        combine(
+            snapshot.filterNotNull(), subscriptions.observeAll(),
+            cashback.observeMonth(CashbackMonth.currentKey())
+        ) { snap, subs, cb -> CapitalByBank.slice(snap, subs, cb) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _sliceMode = MutableStateFlow(SliceMode.BY_PARTS)
+    /** The chosen cut; kept between launches. */
+    val sliceMode: StateFlow<SliceMode> = _sliceMode.asStateFlow()
+
+    fun setSliceMode(mode: SliceMode) {
+        _sliceMode.value = mode
+        viewModelScope.launch { settings.setSliceMode(mode) }
+    }
+
     val operations: StateFlow<List<FxOperation>> =
         fx.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -98,6 +125,7 @@ class CapitalViewModel(
         viewModelScope.launch {
             _lastSection.value = settings.lastCapitalSection()
             settings.lastCurrency()?.let { _lastCurrency.value = it }
+            _sliceMode.value = settings.sliceMode()
         }
     }
 

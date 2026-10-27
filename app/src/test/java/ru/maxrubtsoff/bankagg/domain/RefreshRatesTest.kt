@@ -54,6 +54,8 @@ class RefreshRatesTest {
         override suspend fun setLastBackupAt(at: Long) {}
         override suspend fun lastCurrency(): String? = null
         override suspend fun setLastCurrency(code: String) {}
+        override suspend fun sliceMode() = ru.maxrubtsoff.bankagg.domain.model.SliceMode.BY_PARTS
+        override suspend fun setSliceMode(mode: ru.maxrubtsoff.bankagg.domain.model.SliceMode) {}
         override suspend fun ratesLastAttemptAt(): Long = attempt
         override suspend fun ratesLastSuccessDay(): Long? = success
         override suspend fun setRatesAttempt(at: Long) { attempt = at }

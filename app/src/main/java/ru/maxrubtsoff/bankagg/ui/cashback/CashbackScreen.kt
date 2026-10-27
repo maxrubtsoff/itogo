@@ -148,7 +148,9 @@ fun CashbackScreen(
     onOpenBatch: (List<String>) -> Unit,
     onEditBank: (monthKey: String, BankBrand) -> Unit,
     onAddManual: (monthKey: String) -> Unit = {},
-    onByCategory: (Boolean) -> Unit = {}
+    onByCategory: (Boolean) -> Unit = {},
+    /** F-53: only this bank's cashback. */
+    bankKey: String? = null
 ) {
     val anchor = remember { CashbackMonth.currentKey() }
     val currentKey = CashbackMonth.keyForOffset(anchor, monthOffset)
@@ -162,6 +164,7 @@ fun CashbackScreen(
     val loaded by remember(currentKey) { vm.monthItems(currentKey).map { currentKey to it } }
         .collectAsStateWithLifecycle(initialValue = null)
     val monthItems = loaded?.takeIf { it.first == currentKey }?.second
+        ?.let { items -> if (bankKey == null) items else items.filter { it.brand.key == bankKey } }
 
     // Photo picker — adds a shot to the month in view, then opens it for review.
     // One screenshot opens for review; several go to the batch check.

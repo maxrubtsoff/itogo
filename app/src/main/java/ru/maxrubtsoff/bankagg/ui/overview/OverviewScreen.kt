@@ -96,6 +96,12 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalBar
 import ru.maxrubtsoff.bankagg.domain.model.CapitalSnapshot
 import ru.maxrubtsoff.bankagg.domain.model.Currencies
 import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.domain.model.BankSlice
+import ru.maxrubtsoff.bankagg.domain.model.SliceMode
+import ru.maxrubtsoff.bankagg.domain.usecase.CapitalByBank
+import ru.maxrubtsoff.bankagg.ui.common.BankSheet
+import ru.maxrubtsoff.bankagg.ui.common.BankShareRow
+import ru.maxrubtsoff.bankagg.ui.common.PagerTabsStatic
 import ru.maxrubtsoff.bankagg.ui.capital.CapitalViewModel
 import ru.maxrubtsoff.bankagg.ui.capital.PartDot
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
@@ -140,9 +146,14 @@ fun OverviewScreen(
     newBanks: List<BankCandidate> = emptyList(),
     onOpenNewBanks: () -> Unit = {},
     onToggleHidden: () -> Unit = {},
-    activeSubscriptions: Int = 0
+    activeSubscriptions: Int = 0,
+    onOpenBankSubscriptions: (bankKey: String) -> Unit = {},
+    onOpenBankCashback: (bankKey: String) -> Unit = {}
 ) {
     val snapshot by vm.snapshot.collectAsStateWithLifecycle()
+    val slices by vm.banksSlice.collectAsStateWithLifecycle()
+    val sliceMode by vm.sliceMode.collectAsStateWithLifecycle()
+    var openBank by rememberSaveable { mutableStateOf<String?>(null) }
     val days by vm.days.collectAsStateWithLifecycle()
     val glance = remember(days, snapshot?.today) { snapshot?.let { CapitalHistory.glance(days, it.today) } }
     val notifAccess by rememberNotificationAccess()
@@ -193,12 +204,25 @@ fun OverviewScreen(
                 glance = glance,
                 onOpenHistory = onOpenHistory,
                 onToggleIncluded = { part -> vm.setPartIncluded(part.part, !part.included) },
-                onToggleHidden = onToggleHidden
+                onToggleHidden = onToggleHidden,
+                slices = slices,
+                sliceMode = sliceMode,
+                onSliceMode = vm::setSliceMode,
+                onOpenBank = { openBank = it.key }
             )
         }
 
         if (features.showCashback) CashbackCard(cashbackVm, onOpen = onOpenCashback, onOpenNextMonth = onOpenCashbackNext)
         Spacer(Modifier.height(8.dp))
+    }
+
+    slices.firstOrNull { it.key == openBank }?.let { slice ->
+        BankSheet(
+            slice,
+            onDismiss = { openBank = null },
+            onOpenSubscriptions = { openBank = null; onOpenBankSubscriptions(slice.key) },
+            onOpenCashback = { openBank = null; onOpenBankCashback(slice.key) }
+        )
     }
 
     if (tuning) {
@@ -310,8 +334,15 @@ private fun CapitalHero(
     glance: CapitalHistory.Glance?,
     onOpenHistory: () -> Unit = {},
     onToggleIncluded: (CapitalSnapshot.Part) -> Unit,
-    onToggleHidden: () -> Unit
+    onToggleHidden: () -> Unit,
+    slices: List<BankSlice>,
+    sliceMode: SliceMode,
+    onSliceMode: (SliceMode) -> Unit,
+    onOpenBank: (BankSlice) -> Unit
 ) {
+    // F-53: the cut by banks is offered only when there are two banks to compare.
+    val canSlice = remember(slices) { CapitalByBank.worthShowing(slices) }
+    val byBanks = canSlice && sliceMode == SliceMode.BY_BANKS
     val shown = snap.parts.filter { it.hasData }
     Panel(Modifier.fillMaxWidth(), radius = 22.dp) {
         Box(Modifier.fillMaxWidth().heroGlow()) {
@@ -347,11 +378,29 @@ private fun CapitalHero(
                     DeltaLine(Money.ofMinor(it.change.deltaMinor), "за месяц", it.spark, Modifier.padding(end = 12.dp), onClick = onOpenHistory)
                 }
                 Spacer(Modifier.height(if (glance == null) 14.dp else 6.dp))
-                CompositionBar(snap, Modifier.padding(end = 12.dp))
-                Spacer(Modifier.height(6.dp))
-                shown.forEachIndexed { i, part ->
-                    if (i > 0) HorizontalDivider(Modifier.padding(start = 22.dp, end = 12.dp), color = Slitok.Line)
-                    PartRow(snap, part, onLongToggle = { onToggleIncluded(part) }) { onOpenPart(part.part) }
+                if (canSlice) {
+                    Box(Modifier.padding(end = 12.dp, bottom = 10.dp)) {
+                        PagerTabsStatic(listOf("По частям", "По банкам"), if (byBanks) 1 else 0) {
+                            onSliceMode(if (it == 1) SliceMode.BY_BANKS else SliceMode.BY_PARTS)
+                        }
+                    }
+                }
+                if (byBanks) {
+                    slices.forEachIndexed { i, slice ->
+                        if (i > 0) HorizontalDivider(Modifier.padding(start = 22.dp, end = 12.dp), color = Slitok.Line)
+                        BankShareRow(
+                            slice,
+                            onClick = if (slice.brand != null) ({ onOpenBank(slice) }) else null,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                    }
+                } else {
+                    CompositionBar(snap, Modifier.padding(end = 12.dp))
+                    Spacer(Modifier.height(6.dp))
+                    shown.forEachIndexed { i, part ->
+                        if (i > 0) HorizontalDivider(Modifier.padding(start = 22.dp, end = 12.dp), color = Slitok.Line)
+                        PartRow(snap, part, onLongToggle = { onToggleIncluded(part) }) { onOpenPart(part.part) }
+                    }
                 }
             }
         }

@@ -1,5 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.subscriptions
 
+import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
+import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeaderGap
 import androidx.compose.foundation.layout.Box
@@ -37,7 +39,10 @@ fun PaymentsScreen(
     initialOffset: Int = 0,
     showCashback: Boolean = true,
     showSubscriptions: Boolean = true,
-    showNotifAccess: Boolean = false
+    showNotifAccess: Boolean = false,
+    /** F-53: only this bank's cashback and subscriptions; the chip clears it. */
+    bankKey: String? = null,
+    onClearBank: () -> Unit = {}
 ) {
     val notifAccess by rememberNotificationAccess()
     // F-30: only the kept sections; with one of them there is no switch at all.
@@ -52,6 +57,10 @@ fun PaymentsScreen(
         Box(Modifier.height(ScreenHeaderGap))
         if (sections.size > 1) {
             PagerTabs(sections.map { if (it == 0) "Кэшбэк" else "Подписки" }, pager) { scope.launch { pager.animateScrollToPage(it) } }
+            Box(Modifier.height(12.dp))
+        }
+        if (bankKey != null) {
+            SlitokChip("Банк: ${BankBrand.fromKey(bankKey).title}  ✕", selected = true, onClick = onClearBank)
             Box(Modifier.height(12.dp))
         }
         SectionPager(pager, Modifier.fillMaxWidth().weight(1f)) { page ->

@@ -67,8 +67,14 @@ import java.time.LocalDate
  * top, the monthly total, then the list by the nearest payment.
  */
 @Composable
-fun SubscriptionsSection(vm: SubscriptionsViewModel, onOpen: (Subscription) -> Unit, onCreate: () -> Unit) {
-    val state by vm.state.collectAsStateWithLifecycle()
+fun SubscriptionsSection(vm: SubscriptionsViewModel, onOpen: (Subscription) -> Unit, onCreate: () -> Unit, bankKey: String? = null) {
+    val all by vm.state.collectAsStateWithLifecycle()
+    // F-53: from a bank's sheet only its subscriptions are shown.
+    val state = if (bankKey == null) all else all.copy(
+        active = all.active.filter { it.brand?.key == bankKey },
+        findings = emptyList(),
+        perMonth = Subscriptions.perMonth(all.active.filter { it.brand?.key == bankKey })
+    )
     var finding by remember { mutableStateOf<Finding?>(null) }
 
     Column(

@@ -69,6 +69,10 @@ class SampleSettings(features: Features) : SettingsRepository {
     override suspend fun lastCurrency(): String? = lastCurrency
     override suspend fun setLastCurrency(code: String) { lastCurrency = code }
 
+    private var sliceMode = ru.maxrubtsoff.bankagg.domain.model.SliceMode.BY_PARTS
+    override suspend fun sliceMode() = sliceMode
+    override suspend fun setSliceMode(mode: ru.maxrubtsoff.bankagg.domain.model.SliceMode) { sliceMode = mode }
+
     override suspend fun ratesLastAttemptAt(): Long = 0L
     override suspend fun ratesLastSuccessDay(): Long? = null
     override suspend fun setRatesAttempt(at: Long) {}
