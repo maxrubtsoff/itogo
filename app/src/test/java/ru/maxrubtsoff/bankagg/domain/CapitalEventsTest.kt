@@ -293,6 +293,7 @@ class CapitalEventsTest {
 
     private fun eventsOf(vararg t: Transaction) =
         CapitalEvents.build(t.toList(), kotlin.collections.listOf(accA, accB), emptyList(), emptyList(), null, emptyList(), today, ZoneOffset.UTC)
+            .filter { it.kind != HistoryKind.ACCOUNT_OPEN }
 
     @Test fun ownTransferPairIsHidden() {
         val e = eventsOf(op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "b", 5000, TransactionKind.TRANSFER))
@@ -437,7 +438,7 @@ class CapitalEventsTest {
     }
 
     // B-86: operations of a foreign-currency account.
-    private val uzs = Account("u", BankBrand.SBER, "Сбер UZS", Money.ofMinor(0), "UZS", 0L)
+    private val uzs = Account("u", BankBrand.SBER, "Сбер UZS", Money.ofMinor(-2_026_300_000L), "UZS", 0L)
     private val uzsRate = 7_500L // 0,0075 ₽ for 1 UZS, micro-rubles
 
     private fun uzsPay(minor: Long = -2_026_300_000L, day: LocalDate = d1) = Transaction(
@@ -474,7 +475,7 @@ class CapitalEventsTest {
         val list = CapitalEvents.build(
             listOf(rub, uzsPay()), listOf(accA, uzs), emptyList(), emptyList(), null, emptyList(), today,
             ZoneOffset.UTC, listOf(FxRate("UZS", d0, uzsRate))
-        )
+        ).filter { it.kind != HistoryKind.ACCOUNT_OPEN }
         val expected = -100_000L + ru.maxrubtsoff.bankagg.domain.model.FxMath.rubOf(-2_026_300_000L, uzsRate)
         assertEquals(expected, list.sumOf { it.amountMinor ?: 0L })
     }
@@ -520,5 +521,15 @@ class CapitalEventsTest {
         val list = events(listOf(pointFx(a, 0), pointFx(b, 9_200_000)), listOf(buy("USD", today.minusDays(15), 100_000, rub)),
             listOf(FxRate("USD", a, 90_000_000), FxRate("USD", today.minusDays(15), 90_000_000), FxRate("USD", b, 92_000_000)))
         assertEquals(200_000L, list.single { it.kind == HistoryKind.REVALUATION }.amountMinor)
+    }
+
+    @Test fun foreignAccountOpen_isNotRevaluation() {
+        val acc = Account("u", BankBrand.SBER, "UZS", Money.ofMinor(1_000_000L), "UZS", 0L)
+        val rates = listOf(FxRate("UZS", d0, uzsRate))
+        val pts = listOf(pointFx(d0, 0), pointFx(d1, ru.maxrubtsoff.bankagg.domain.model.FxMath.rubOf(1_000_000L, uzsRate)))
+        val e = CapitalEvents.build(emptyList(), listOf(acc.copy(updatedAt = d1.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli())),
+            emptyList(), emptyList(), null, pts, today, ZoneOffset.UTC, rates)
+        assertTrue(e.none { it.kind == HistoryKind.REVALUATION })
+        assertTrue(e.any { it.kind == HistoryKind.ACCOUNT_OPEN })
     }
 }

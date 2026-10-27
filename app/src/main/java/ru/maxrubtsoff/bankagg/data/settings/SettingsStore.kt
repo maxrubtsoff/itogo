@@ -40,6 +40,14 @@ class SettingsStore(context: Context) : SettingsRepository {
         prefs.edit().putBoolean(KEY_PARTS_BACKFILLED, true).apply()
     }
 
+    // ---- saved days cut down where an account was not yet known (B-109) ----
+
+    override suspend fun accountsPastRepaired(): Boolean = prefs.getBoolean(KEY_ACCOUNTS_PAST_REPAIRED, false)
+
+    override suspend fun markAccountsPastRepaired() {
+        prefs.edit().putBoolean(KEY_ACCOUNTS_PAST_REPAIRED, true).apply()
+    }
+
     // ---- the parser the log was read with (B-45, B-46) ----
 
     override suspend fun repairedParserVersion(): Int = prefs.getInt(KEY_PARSER_VERSION, 0)
@@ -267,5 +275,6 @@ class SettingsStore(context: Context) : SettingsRepository {
         const val KEY_PARSER_VERSION = "parser_version"
         const val KEY_INTRO_SHOWN = "intro_shown"
         const val KEY_PARTS_BACKFILLED = "parts_backfilled"
+        const val KEY_ACCOUNTS_PAST_REPAIRED = "accounts_past_repaired"
     }
 }

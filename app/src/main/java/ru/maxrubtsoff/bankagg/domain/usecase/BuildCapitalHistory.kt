@@ -48,6 +48,7 @@ class BuildCapitalHistory(
         val included = settings.capitalParts.first() intersect settings.features.first().capitalParts
         val points = CapitalReconstruction.build(accounts, transactions, allDeposits, ops, rates.all(), balance, included, day)
         history.upsertAll(points)
+        settings.markAccountsPastRepaired()
     }
 }
 

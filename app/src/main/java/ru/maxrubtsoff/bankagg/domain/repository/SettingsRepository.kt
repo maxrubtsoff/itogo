@@ -66,6 +66,11 @@ interface SettingsRepository : PinStore {
 
     suspend fun markPartsBackfilled() {}
 
+    /** Saved days stated an account before it was known; cut down once (B-109). */
+    suspend fun accountsPastRepaired(): Boolean = true
+
+    suspend fun markAccountsPastRepaired() {}
+
     val toursDone: Flow<Set<String>> get() = kotlinx.coroutines.flow.flowOf(emptySet())
     suspend fun markTourDone(key: String) {}
 

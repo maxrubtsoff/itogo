@@ -42,7 +42,7 @@ object ChartMarks {
     private fun candidate(series: List<DayValue>, e: HistoryEvent, page: CapitalPart?, avg: Long): Candidate? {
         val amount = e.amountMinor?.takeIf { it != 0L } ?: return null
         val shape: MarkShape = when (e.kind) {
-            HistoryKind.INCOME, HistoryKind.SPEND, HistoryKind.TRANSFER, HistoryKind.TRANSACTION ->
+            HistoryKind.INCOME, HistoryKind.SPEND, HistoryKind.TRANSFER, HistoryKind.TRANSACTION, HistoryKind.ACCOUNT_OPEN ->
                 if (e.part == CapitalPart.ACCOUNTS && (page == null || page == CapitalPart.ACCOUNTS) && avg > 0 && abs(amount) > avg / ACCOUNTS_SHARE) MarkShape.BIG else return null
             // On the total a deposit is a small dot or a ring, never a sum: only the deposits page labels them.
             HistoryKind.DEPOSIT_OPEN -> if (page == CapitalPart.DEPOSITS) MarkShape.BIG else if (page == null) MarkShape.SMALL else return null

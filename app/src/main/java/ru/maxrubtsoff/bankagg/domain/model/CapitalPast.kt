@@ -69,7 +69,7 @@ object CapitalPast {
     fun withShifts(points: List<CapitalPoint>, shifts: List<CapitalShift>, included: Set<CapitalPart>, today: LocalDate): List<CapitalPoint> {
         if (points.isEmpty() || shifts.isEmpty()) return emptyList()
         val sorted = points.sortedBy { it.date }
-        val added = newDays(sorted, shifts.map { it.from }, today)
+        val added = newDays(sorted, shifts.map { it.from }.filter { !it.isBefore(sorted.first().date) }, today)
         return (sorted.filter { inWindow(it.date, today) } + added).mapNotNull { p ->
             val mine = shifts.filter { !it.from.isAfter(p.date) }
             val byPart = mine.groupBy { it.part }.mapValues { (_, l) -> l.sumOf { it.deltaMinor } }
@@ -84,11 +84,11 @@ object CapitalPast {
     private fun inWindow(day: LocalDate, today: LocalDate) =
         day.isBefore(today) && !day.isBefore(today.minusDays(CapitalReconstruction.MAX_DAYS.toLong()))
 
-    /** Points for [days] that have none: the other parts as on the last day before (a day before the history — as on its first). */
+    /** Points for [days] that have none: the other parts as on the last day before (a day before the history — nothing: no account was known yet, B-109). */
     private fun newDays(sorted: List<CapitalPoint>, days: List<LocalDate>, today: LocalDate): List<CapitalPoint> {
         val have = sorted.map { it.date }.toSet()
         return days.distinct().filter { inWindow(it, today) && it !in have }.map { day ->
-            val from = sorted.lastOrNull { it.date.isBefore(day) } ?: sorted.first()
+            val from = sorted.lastOrNull { it.date.isBefore(day) } ?: return@map CapitalPoint(day, 0L, emptyMap())
             from.copy(date = day)
         }
     }

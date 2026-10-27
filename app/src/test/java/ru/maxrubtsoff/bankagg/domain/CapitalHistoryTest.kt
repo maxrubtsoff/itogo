@@ -98,7 +98,7 @@ class CapitalHistoryTest {
 
     @Test fun events_listOperationsAndInterestOncePerDay() {
         val brand = BankBrand.SBER
-        val acc = Account("a", brand, "Сбер", Money.ofMinor(100_000), "RUB", 0L)
+        val acc = Account("a", brand, "Сбер", Money.ofMinor(5000), "RUB", 0L)
         val at = today.minusDays(1).atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
         val tx = Transaction("t", brand, "a", Money.ofMinor(5000), "RUB", TransactionKind.INCOME, null, "Работа", at)
         val events = CapitalEvents.build(
@@ -121,7 +121,7 @@ class CapitalHistoryTest {
             CapitalPart.entries.toSet(), today, ZoneOffset.UTC
         )
         assertEquals(4, pts.size)
-        assertEquals(70_000L, pts[0].totalMinor)        // before the income
+        assertEquals(0L, pts[0].totalMinor)             // before the account was known
         assertEquals(100_000L, pts[1].totalMinor)       // the day it came
         assertEquals(100_000L, pts.last().totalMinor)
     }

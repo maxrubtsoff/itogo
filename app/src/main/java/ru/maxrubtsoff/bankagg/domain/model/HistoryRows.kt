@@ -171,6 +171,7 @@ object HistoryRows {
             HistoryKind.FX_BUY -> if (page == CapitalPart.CURRENCY) "Покупки · $n" else "Покупки валюты · $n"
             HistoryKind.FX_SELL -> if (page == CapitalPart.CURRENCY) "Продажи · $n" else "Продажи валюты · $n"
             HistoryKind.CASH -> if (page == CapitalPart.CASH) "Изменения · $n" else "Наличные · $n"
+            HistoryKind.ACCOUNT_OPEN -> "Остатки счетов · $n"
             HistoryKind.INTEREST -> "Проценты"
             HistoryKind.REVALUATION -> if (page == CapitalPart.CURRENCY) "Переоценка" else "Переоценка валюты"
         }

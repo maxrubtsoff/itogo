@@ -58,7 +58,7 @@ class CapitalPastTest {
         val pts = listOf(pt(LocalDate.of(2026, 6, 10), acc = 321L))
         val out = CapitalPast.withDeposits(pts, listOf(dep(start)), all, today)
         assertEquals(0L, out.on(start.minusDays(1))!!.parts[CapitalPart.DEPOSITS])
-        assertEquals(321L, out.on(start.minusDays(1))!!.parts[CapitalPart.ACCOUNTS])
+        assertEquals(0L, out.on(start.minusDays(1))!!.parts[CapitalPart.ACCOUNTS] ?: 0L)
         assertEquals(1_000_000L, out.on(start)!!.parts[CapitalPart.DEPOSITS])
     }
 
@@ -124,5 +124,13 @@ class CapitalPastTest {
     @Test fun fx_shift_never_touches_today() {
         val out = CapitalPast.withFxChange(daily(today.minusDays(14), today), emptyList(), listOf(buy(today.minusDays(7))), usd, all, today)
         assertNull(out.on(today))
+    }
+
+    @Test fun withDeposits_dayBeforeHistory_hasNoAccounts() {
+        val first = LocalDate.of(2026, 5, 1)
+        val start = first.minusDays(10)
+        val made = CapitalPast.withDeposits(daily(first, today), listOf(dep(start)), all, today).on(start)!!
+        assertEquals(0L, made.parts[CapitalPart.ACCOUNTS] ?: 0L)
+        assertEquals(1_000_000L, made.parts[CapitalPart.DEPOSITS])
     }
 }

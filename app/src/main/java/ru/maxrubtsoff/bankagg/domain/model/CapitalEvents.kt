@@ -45,7 +45,9 @@ enum class HistoryKind {
     OWN_TRANSFER,
     /** To another person. */
     TRANSFER,
-    FX_BUY, FX_SELL, DEPOSIT_OPEN, DEPOSIT_TOPUP, DEPOSIT_CLOSE, INTEREST, REVALUATION, CASH
+    FX_BUY, FX_SELL, DEPOSIT_OPEN, DEPOSIT_TOPUP, DEPOSIT_CLOSE, INTEREST, REVALUATION, CASH,
+    /** What an account held on the day it became known (B-109). */
+    ACCOUNT_OPEN
 }
 
 /**
@@ -224,7 +226,20 @@ object CapitalEvents {
         if (cash != null && cash.updatedAt > 0L && cashChanges.none { it.atMs == cash.updatedAt }) {
             out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", null, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH))
         }
-        out += moved(points, fxOps, deposits, rates, transactions, zone)
+        accounts.filterNot { it.excluded }.forEach { a ->
+            val opening = CapitalReconstruction.openingOf(a, transactions)
+            if (opening == 0L) return@forEach
+            val from = CapitalReconstruction.knownFrom(a, transactions, zone)
+            val rub = a.currency == Currencies.RUB
+            out += HistoryEvent(
+                from, if (rub) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY, "Остаток на начало", a.title,
+                if (rub) opening else CapitalReconstruction.rateAt(rates, a.currency, from)?.let { FxMath.rubOf(opening, it) },
+                kind = HistoryKind.ACCOUNT_OPEN, bank = a.brand,
+                foreign = if (rub) null else ForeignAmount(a.currency, opening),
+                target = if (rub) null else HistoryTarget.Currency(a.currency)
+            )
+        }
+        out += moved(points, fxOps, deposits, rates, transactions, zone, accounts)
         return out.filter { !it.date.isAfter(today) }.sortedByDescending { it.date }
     }
 
@@ -253,7 +268,7 @@ object CapitalEvents {
     /** «Проценты» and «Переоценка валюты»: what a part moved from one day to the next beyond the deals themselves. */
     private fun moved(
         points: List<CapitalPoint>, fxOps: List<FxOperation>, deposits: List<Deposit>, rates: List<FxRate>,
-        transactions: List<Transaction>, zone: ZoneId
+        transactions: List<Transaction>, zone: ZoneId, accounts: List<Account>
     ): List<HistoryEvent> {
         val sorted = points.sortedBy { it.date }
         val out = ArrayList<HistoryEvent>()
@@ -292,7 +307,11 @@ object CapitalEvents {
             // Operations of foreign-currency accounts are listed in rubles on their own (B-86): not a revaluation.
             val booked = transactions.filter { it.currency != Currencies.RUB && dayOf(it.postedAt, zone).inStep(prev.date, cur.date) }
                 .sumOf { rubOf(it, rates, zone) ?: 0L }
-            val revalued = cur.valueOf(CapitalPart.CURRENCY) - prev.valueOf(CapitalPart.CURRENCY) - dealt - booked
+            // A foreign account that became known in the step is listed as its opening (B-109): not a revaluation.
+            val opened = accounts.filter { !it.excluded && it.currency != Currencies.RUB && CapitalReconstruction.knownFrom(it, transactions, zone).inStep(prev.date, cur.date) }
+                .sumOf { a -> CapitalReconstruction.rateAt(rates, a.currency, CapitalReconstruction.knownFrom(a, transactions, zone))
+                    ?.let { FxMath.rubOf(CapitalReconstruction.openingOf(a, transactions), it) } ?: 0L }
+            val revalued = cur.valueOf(CapitalPart.CURRENCY) - prev.valueOf(CapitalPart.CURRENCY) - dealt - booked - opened
             if (revalued != 0L) {
                 val reason = reasonOf(prev.date, cur.date, revalued, fxOps, rates)
                 val parts = reason.legs.map { l ->

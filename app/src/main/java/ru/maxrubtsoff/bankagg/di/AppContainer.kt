@@ -44,6 +44,7 @@ import ru.maxrubtsoff.bankagg.data.rates.CbrRatesSource
 import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.FxRepository
 import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
+import ru.maxrubtsoff.bankagg.domain.usecase.RepairAccountsPast
 import ru.maxrubtsoff.bankagg.domain.usecase.GetCapital
 import ru.maxrubtsoff.bankagg.domain.usecase.BackfillCapitalParts
 import ru.maxrubtsoff.bankagg.domain.usecase.CapitalDaysScope
@@ -206,12 +207,17 @@ class AppContainer(context: Context) {
         BackfillCapitalParts(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today, historyLock)
     }
 
+    val repairAccountsPast by lazy {
+        RepairAccountsPast(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, cashRepository, settings, today, historyLock)
+    }
+
     val syncCapitalPast by lazy { SyncCapitalPast(capitalHistory, depositRepository, fxRepository, ratesRepository, settings, today, historyLock) }
 
     /** Rebuilds the past once when the history is empty, then keeps today's point up to date. */
     suspend fun trackCapitalHistory() {
         runCatching { buildCapitalHistory() }
         runCatching { backfillCapitalParts() }
+        runCatching { repairAccountsPast() }
         coroutineScope {
             launch { syncCapitalPast.track() }
             recordCapitalDay.track()
