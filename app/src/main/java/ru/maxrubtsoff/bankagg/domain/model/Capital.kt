@@ -56,6 +56,15 @@ data class CapitalSnapshot(
         val currencyCount: Int
             get() = (shownPositions.map { it.currency } + holdings.map { it.account.currency }).distinct().size
         val isEmpty: Boolean get() = shownPositions.isEmpty() && holdings.isEmpty()
+
+        /** What is held per currency (cash + accounts), biggest first; empty balances left out (U-74). */
+        fun amountsByCurrency(): List<ForeignAmount> =
+            (positions.map { ForeignAmount(it.currency, it.qtyMinor) } +
+                holdings.filterNot { it.account.excluded }.map { ForeignAmount(it.account.currency, it.account.balance.minor) })
+                .groupBy { it.currency }
+                .map { (code, list) -> ForeignAmount(code, list.sumOf { it.minor }) }
+                .filter { it.minor != 0L }
+                .sortedByDescending { kotlin.math.abs(it.minor) }
     }
 
     fun part(p: CapitalPart): Part = parts.first { it.part == p }

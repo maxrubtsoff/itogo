@@ -94,6 +94,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.maxrubtsoff.bankagg.domain.model.CapitalPart
 import ru.maxrubtsoff.bankagg.domain.model.CapitalBar
 import ru.maxrubtsoff.bankagg.domain.model.CapitalSnapshot
+import ru.maxrubtsoff.bankagg.domain.model.Currencies
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.ui.capital.CapitalViewModel
 import ru.maxrubtsoff.bankagg.ui.capital.PartDot
@@ -437,14 +438,17 @@ private fun secondLine(snap: CapitalSnapshot, part: CapitalSnapshot.Part): Pair<
     if (!part.included) return "не в итоге" to Slitok.Faint
     return when (part.part) {
         CapitalPart.DEPOSITS -> snap.depositsAccruedMinor.takeIf { it != 0L }
-            ?.let { "${signedRub(it)} накоплено" to Slitok.Mint }
+            ?.let { "${signedRub(it)} накоплено" to Slitok.Faint }
         CapitalPart.CURRENCY -> {
             val c = snap.currency
             when {
                 c.missingRates.isNotEmpty() -> "нет курса для ${c.missingRates.joinToString(", ")} — ↻" to Slitok.Brass2
-                c.costMinor > 0L -> ("наличные ${signedRub(c.unrealizedMinor)}" +
-                    (c.unrealizedPct?.let { RuText.DOT + signedPct(it) } ?: "")) to gainColor(c.unrealizedMinor)
-                else -> null
+                else -> c.amountsByCurrency().takeIf { it.isNotEmpty() }?.let { list ->
+                    // U-74: the sums themselves, whole units, rubles left out.
+                    list.joinToString(RuText.DOT) {
+                        "${Currencies.symbolOf(it.currency)} ${Money.ofMinor(it.minor / 100 * 100).formatNumber()}"
+                    } to Slitok.Faint
+                }
             }
         }
         CapitalPart.CASH, CapitalPart.ACCOUNTS -> null
