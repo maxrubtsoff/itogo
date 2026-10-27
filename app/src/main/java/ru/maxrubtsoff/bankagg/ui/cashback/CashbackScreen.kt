@@ -2,6 +2,7 @@
 
 package ru.maxrubtsoff.bankagg.ui.cashback
 
+import ru.maxrubtsoff.bankagg.ui.theme.Amounts
 import ru.maxrubtsoff.bankagg.domain.model.TourSample
 import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 import ru.maxrubtsoff.bankagg.ui.common.tourTarget
@@ -426,7 +427,7 @@ private fun MoreBadge(count: Int) {
             .padding(horizontal = 5.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text("+$count", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = Slitok.Fg)
+        Text("+$count", style = Amounts.Caption, color = Slitok.Fg)
     }
 }
 
@@ -447,9 +448,7 @@ private fun BankStack(banks: List<BankBrand>) {
 private fun PercentText(percent: Double, best: Boolean, small: Boolean = false) {
     Text(
         formatPercent(percent),
-        style = (if (small) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium)
-            .copy(fontFamily = ru.maxrubtsoff.bankagg.ui.theme.Unbounded),
-        fontWeight = FontWeight.SemiBold,
+        style = if (small) Amounts.Small else Amounts.Row,
         color = if (best) Slitok.Brass2 else Slitok.Brass2.copy(alpha = 0.55f),
         textAlign = TextAlign.End,
         maxLines = 1, overflow = TextOverflow.Ellipsis,

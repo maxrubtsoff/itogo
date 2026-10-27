@@ -278,12 +278,7 @@ class CashbackWidget : GlanceAppWidget() {
                     style = TextStyle(color = ColorProvider(Slitok.Fg), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 )
                 Spacer(GlanceModifier.width(CashbackWidgetLayout.NAME_GAP.dp))
-                Text(
-                    block.base ?: "",
-                    maxLines = 1,
-                    modifier = GlanceModifier.width(CashbackWidgetLayout.PERCENT_WIDTH.dp),
-                    style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 12.sp, textAlign = TextAlign.End)
-                )
+                FigureImage(block.base ?: "", 12f, Slitok.Muted, CashbackWidgetLayout.PERCENT_WIDTH)
             }
             block.rows.forEach { (name, pct) ->
                 Row(
@@ -319,12 +314,7 @@ class CashbackWidget : GlanceAppWidget() {
                     c.logos.take(3).forEachIndexed { i, l ->
                         LogoMark(l, 16, GlanceModifier.padding(start = if (i > 0) 2.dp else 0.dp))
                     }
-                    Text(
-                        c.percent,
-                        maxLines = 1,
-                        modifier = GlanceModifier.padding(start = 4.dp),
-                        style = TextStyle(color = ColorProvider(Slitok.Brass2), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    )
+                    FigureImage(c.percent, 12f, Slitok.Brass2, 34f, GlanceModifier.padding(start = 4.dp), alignEnd = false)
                 }
             }
         }
@@ -377,17 +367,7 @@ class CashbackWidget : GlanceAppWidget() {
 
     @androidx.compose.runtime.Composable
     private fun PercentText(percent: String) {
-        Text(
-            percent,
-            maxLines = 1,
-            modifier = GlanceModifier.width(CashbackWidgetLayout.PERCENT_WIDTH.dp),
-            style = TextStyle(
-                color = ColorProvider(Slitok.Brass2),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.End
-            )
-        )
+        FigureImage(percent, 14f, Slitok.Brass2, CashbackWidgetLayout.PERCENT_WIDTH)
     }
 }
 

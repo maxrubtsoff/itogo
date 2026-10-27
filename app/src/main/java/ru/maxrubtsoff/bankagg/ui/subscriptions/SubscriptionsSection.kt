@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.ui.subscriptions
 
+import ru.maxrubtsoff.bankagg.ui.theme.Amounts
 import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 import ru.maxrubtsoff.bankagg.ui.common.tourTarget
 import ru.maxrubtsoff.bankagg.ui.common.rememberTabScrollState
@@ -119,7 +120,7 @@ fun SubscriptionsSection(vm: SubscriptionsViewModel, onOpen: (Subscription) -> U
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
                         Text("В месяц", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
-                        MoneyText(Money.ofMinor(state.perMonth).format(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        MoneyText(Money.ofMinor(state.perMonth).format(), style = Amounts.Large)
                     }
                     MoneyText(
                         "${Money.ofMinor(state.perMonth * 12).format()} в год",
@@ -176,7 +177,7 @@ private fun SubscriptionRow(s: Subscription, today: LocalDate, onClick: () -> Un
                 maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
-        MoneyText(Money.ofMinor(s.priceMinor).format(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+        MoneyText(Money.ofMinor(s.priceMinor).format(), style = Amounts.Row, maxLines = 1, softWrap = false)
     }
 }
 
@@ -205,7 +206,7 @@ private fun FindingSheet(
                         Text(RuDays.relative(p.date, today).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium)
                         Text(p.brand.title, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
                     }
-                    MoneyText(Money.ofMinor(p.amountMinor).format(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+                    MoneyText(Money.ofMinor(p.amountMinor).format(), style = Amounts.Small, maxLines = 1, softWrap = false)
                 }
             }
         }
@@ -223,7 +224,7 @@ private fun FindingSheet(
                     ) {
                         BrandAvatar(s.look, squircle(30.dp), 30.dp)
                         Text(s.title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        MoneyText(Money.ofMinor(s.priceMinor).format(), style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, softWrap = false)
+                        MoneyText(Money.ofMinor(s.priceMinor).format(), style = Amounts.Small, color = Slitok.Muted, maxLines = 1, softWrap = false)
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Muted)
                     }
                 }

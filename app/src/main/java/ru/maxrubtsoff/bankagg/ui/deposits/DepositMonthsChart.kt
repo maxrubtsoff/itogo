@@ -41,7 +41,6 @@ import ru.maxrubtsoff.bankagg.domain.model.DepositMath
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.Motion
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter

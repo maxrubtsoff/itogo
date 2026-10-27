@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.ui.capital
 
+import ru.maxrubtsoff.bankagg.ui.theme.Amounts
 import androidx.compose.ui.text.style.TextOverflow
 import ru.maxrubtsoff.bankagg.ui.common.RollingAmount
 import androidx.compose.animation.animateColorAsState
@@ -119,7 +120,7 @@ fun SectionHeroText(caption: String, amount: String, color: Color = Slitok.Fg) {
         Text(caption, style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         // The sum rolls to a new value instead of jumping (U-19).
         RollingAmount(amount.filter { it.isDigit() }.toLongOrNull() ?: 0L) {
-            AmountText(amount, style = MaterialTheme.typography.displaySmall, color = color, minSize = 20.sp)
+            AmountText(amount, style = Amounts.Hero, color = color, minSize = 20.sp)
         }
     }
 }

@@ -1,5 +1,7 @@
 package ru.maxrubtsoff.bankagg.ui.subscriptions
 
+import ru.maxrubtsoff.bankagg.domain.model.Figures
+import ru.maxrubtsoff.bankagg.ui.theme.Amounts
 import ru.maxrubtsoff.bankagg.ui.common.SlitokField
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.SlitokDatePicker
@@ -225,7 +227,7 @@ fun SubscriptionCardScreen(vm: SubscriptionsViewModel, id: String, onEdit: () ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         BrandAvatar(s.look, squircle(48.dp), 48.dp, overlay = s.brand)
                         Column {
-                            MoneyText(Money.ofMinor(s.priceMinor).format(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            MoneyText(Money.ofMinor(s.priceMinor).format(), style = Amounts.Large)
                             Text(s.period.label(), style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
                             s.raisedBy?.let { MoneyText("подорожала на ${Money.ofMinor(it).format()}".nbsp(), style = MaterialTheme.typography.bodyMedium, color = Slitok.Coral) }
                         }
@@ -250,7 +252,7 @@ fun SubscriptionCardScreen(vm: SubscriptionsViewModel, id: String, onEdit: () ->
                         if (i > 0) HorizontalDivider(color = Slitok.Line)
                         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(RuDays.relative(p.date, today).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                            MoneyText(Money.ofMinor(p.amountMinor).format(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+                            MoneyText(Money.ofMinor(p.amountMinor).format(), style = Amounts.Small, maxLines = 1, softWrap = false)
                         }
                     }
                 }
@@ -265,6 +267,6 @@ fun SubscriptionCardScreen(vm: SubscriptionsViewModel, id: String, onEdit: () ->
 private fun Fact(label: String, value: String, modifier: Modifier = Modifier, quiet: Boolean = false) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
-        MoneyText(value.nbsp(), style = MaterialTheme.typography.bodyLarge, color = if (quiet) Slitok.Muted else Color.Unspecified, maxLines = 2)
+        MoneyText(value.nbsp(), style = if (Figures.isFigure(value)) Amounts.Row else MaterialTheme.typography.bodyLarge, color = if (quiet) Slitok.Muted else Color.Unspecified, maxLines = 2)
     }
 }

@@ -60,7 +60,6 @@ import ru.maxrubtsoff.bankagg.domain.model.FxRate
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.ui.common.AmountGrouping
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset

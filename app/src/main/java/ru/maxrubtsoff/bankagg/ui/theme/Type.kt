@@ -9,6 +9,8 @@ import androidx.compose.ui.unit.sp
 
 /**
  * Type scale: Unbounded for display/titles, Golos Text for everything else.
+ * Figures (U-73): a standalone value is Unbounded via [Amounts]; a figure inside a phrase
+ * or a date stays in the phrase's Golos style.
  * Body and label styles break lines by paragraph (balanced, no lone last word)
  * and never hyphenate.
  */
@@ -84,8 +86,10 @@ val AppTypography = Typography(
 )
 
 /**
- * The amount scale (F-31, U-40/A9): every sum on screen takes one of these four.
- * Unbounded with figures of one width, so columns of sums line up.
+ * The amount scale (F-31, U-40/A9, U-73): every standalone figure — sum, percent,
+ * rate, term, badge, axis label — takes one of these. Unbounded with figures of
+ * one width, so columns line up. A figure inside a phrase ("на 100 ₽", a date)
+ * stays in the phrase's text style (Golos).
  */
 object Amounts {
     private const val TABULAR = "tnum"
@@ -112,5 +116,11 @@ object Amounts {
     val Small = TextStyle(
         fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR,
         fontSize = 13.sp, lineHeight = 16.sp
+    )
+
+    /** Badges, chart labels. */
+    val Caption = TextStyle(
+        fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR,
+        fontSize = 11.sp, lineHeight = 14.sp
     )
 }

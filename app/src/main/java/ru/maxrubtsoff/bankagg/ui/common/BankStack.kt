@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.ui.common
 
+import ru.maxrubtsoff.bankagg.ui.theme.Amounts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,7 @@ fun BankStack(banks: List<BankBrand>, max: Int = 5, size: Dp = 38.dp, overlap: D
             Box(
                 Modifier.offset(x = -overlap * max).size(size + 4.dp).clip(CircleShape).background(Slitok.Inset),
                 contentAlignment = Alignment.Center
-            ) { Text("+${banks.size - max}", style = MaterialTheme.typography.labelMedium, color = Slitok.Muted) }
+            ) { Text("+${banks.size - max}", style = Amounts.Caption, color = Slitok.Muted) }
         }
     }
 }

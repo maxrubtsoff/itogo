@@ -1,12 +1,13 @@
 package ru.maxrubtsoff.bankagg.ui.deposits
 
+import ru.maxrubtsoff.bankagg.domain.model.Figures
 import androidx.compose.ui.text.withStyle
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Delete
-import ru.maxrubtsoff.bankagg.domain.model.MoneyMask
+
 import ru.maxrubtsoff.bankagg.domain.model.MoneyCompact
 import ru.maxrubtsoff.bankagg.ui.theme.Amounts
 import ru.maxrubtsoff.bankagg.ui.common.StatTile
@@ -64,7 +65,6 @@ import ru.maxrubtsoff.bankagg.ui.common.nbsp
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
@@ -254,7 +254,7 @@ private fun Fact(label: String, value: String, valueColor: Color, divider: Boole
             Spacer(Modifier.width(12.dp))
             AmountText(
                 value,
-                style = if (MoneyMask.hasMoney(value)) Amounts.Row else MaterialTheme.typography.bodyLarge,
+                style = if (Figures.isFigure(value)) Amounts.Row else MaterialTheme.typography.bodyLarge,
                 color = valueColor,
                 minSize = 11.sp,
                 textAlign = TextAlign.End,

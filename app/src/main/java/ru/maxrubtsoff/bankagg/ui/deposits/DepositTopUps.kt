@@ -32,7 +32,6 @@ import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 import java.time.LocalDate
 
 /** «Пополнить» and the list of top-ups under it (F-20); a long press removes one. */

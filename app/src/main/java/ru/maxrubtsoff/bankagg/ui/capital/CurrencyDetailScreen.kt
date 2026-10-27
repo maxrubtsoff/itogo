@@ -53,7 +53,6 @@ import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.RuText
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 import java.time.format.DateTimeFormatter
 
 private val DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")

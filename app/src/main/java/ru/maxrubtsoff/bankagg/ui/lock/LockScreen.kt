@@ -60,7 +60,6 @@ import ru.maxrubtsoff.bankagg.ui.common.errorShake
 import ru.maxrubtsoff.bankagg.ui.common.pressScale
 import ru.maxrubtsoff.bankagg.ui.common.rememberErrorShake
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 
 /**
  * The lock screen (F-10). With the fingerprint on, the system prompt opens by

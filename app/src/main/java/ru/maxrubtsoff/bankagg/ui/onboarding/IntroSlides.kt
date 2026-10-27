@@ -50,7 +50,6 @@ import ru.maxrubtsoff.bankagg.ui.common.BrassButton
 import ru.maxrubtsoff.bankagg.ui.common.Panel
 import ru.maxrubtsoff.bankagg.ui.common.nbsp
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 
 private class Slide(val title: String, val text: String, val picture: @Composable () -> Unit)
 

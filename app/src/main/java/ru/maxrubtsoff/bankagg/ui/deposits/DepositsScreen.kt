@@ -106,7 +106,6 @@ import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.ui.common.RuText
 import ru.maxrubtsoff.bankagg.ui.common.heroGlow
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 import java.time.LocalDate
 
 /**

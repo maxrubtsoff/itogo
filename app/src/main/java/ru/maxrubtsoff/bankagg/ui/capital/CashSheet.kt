@@ -52,7 +52,6 @@ import ru.maxrubtsoff.bankagg.domain.model.CashEdit
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.ui.common.AmountGrouping
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
-import ru.maxrubtsoff.bankagg.ui.theme.Unbounded
 
 /** A selectable chip. */
 @Composable

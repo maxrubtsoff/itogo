@@ -19,9 +19,7 @@ class DesignSystemGuardTest {
         // The compact percent box of a cashback row is part of the cashback-form pieces shared by three screens.
         "BasicTextField(" to setOf("CashbackForm.kt"),
         // The 3D pictures of the parts are drawings with their own shading, not interface colours.
-        "Color(0x" to setOf("PartArt.kt"),
-        // The home-screen widget runs on Glance: its own text, no Compose theme.
-        "fontFamily = Unbounded" to setOf("CashbackWidget.kt")
+        "Color(0x" to setOf("PartArt.kt")
     )
 
     private val forbidden = listOf(
@@ -36,7 +34,10 @@ class DesignSystemGuardTest {
         "TopAppBar(" to Regex("""(?<![A-Za-z])(CenterAligned|Medium|Large)?TopAppBar\("""),
         "BasicTextField(" to Regex("""(?<![A-Za-z.])BasicTextField\("""),
         "Color(0x" to Regex("""Color\(0x"""),
-        "fontFamily = Unbounded" to Regex("""fontFamily = Unbounded""")
+        // U-73: fonts are set in ui/theme only (also catches .copy(fontFamily = full.package.Name)).
+        "fontFamily =" to Regex("""fontFamily\s*="""),
+        // U-73: a big sum takes the Amounts scale, not a text style.
+        "sum in a text style" to Regex("""(MoneyText|AmountText)\([^)]*style = MaterialTheme\.typography\.(display|headline|title)""")
     )
 
     @Test fun screensUseTheDesignSystem() {

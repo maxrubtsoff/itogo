@@ -148,6 +148,7 @@ fun ShowcaseScreen(onBack: () -> Unit) {
                     MoneyText("1 000 000 ₽", style = Amounts.Large)
                     MoneyText("26 148,55 ₽", style = Amounts.Row)
                     MoneyText("+18 083,24 ₽", style = Amounts.Small, color = Slitok.Mint)
+                    MoneyText("+3", style = Amounts.Caption, color = Slitok.Muted)
                 }
             }
 
