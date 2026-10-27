@@ -246,4 +246,9 @@ class NotificationParserTest {
         assertEquals(OpDirection.IN, op.direction)
         assertEquals(100_000L, op.amount.minor)
     }
+
+    @Test fun oldFormatKeepsUnknownKind() {
+        val op = NotificationParser.parse(null, "Поступило 500 ₽. Доступно 1 000 ₽")
+        assertEquals(TransactionKind.UNKNOWN, op!!.kind)
+    }
 }

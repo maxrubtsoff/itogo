@@ -31,7 +31,9 @@ object NotificationParser {
      * 2 — direction apart from the kind, advertisements are not operations
      * (B-45, B-46).
      * 3 — amount only with a currency mark, card/phone masks (B-82…B-84).
-     * 4 — Альфа-Бизнес, списание по п/п без знака валюты (B-107).
+     * 4 — Альфа-Бизнес, списание по п/п без знака валюты (B-107): the amount is read
+     * right after "списано/зачислено" when our own "счет *dddd" follows; the kind then
+     * follows the direction.
      */
     const val VERSION = 4
 
@@ -167,10 +169,11 @@ object NotificationParser {
         val counterparty = counterparty(text)
         // No direction — no operation: a push without an operation sign is an
         // advertisement, a balance notice or something else (B-45, B-46).
-        val hits = hits(clean).ifEmpty { orderHit(blob) }
+        val plain = hits(clean)
+        val hits = plain.ifEmpty { orderHit(blob) }
         val direction = detectDirection(low, clean, detected, counterparty, hits) ?: return null
         val kind = when {
-            detected != TransactionKind.UNKNOWN -> detected
+            detected != TransactionKind.UNKNOWN || plain.isNotEmpty() -> detected
             direction == OpDirection.OUT -> TransactionKind.EXPENSE
             else -> TransactionKind.INCOME
         }
