@@ -49,7 +49,8 @@ object CapitalByBank {
                 accounts = a,
                 deposits = d,
                 hasSubscriptions = activeSubs.any { it.brand?.key == brand.key },
-                hasCashback = cashback.any { it.brand.key == brand.key }
+                hasCashback = cashback.any { it.brand.key == brand.key },
+                subscriptionsCount = activeSubs.count { it.brand?.key == brand.key }
             )
         }.filter { it.valueMinor != 0L }.sortedByDescending { it.valueMinor }
 

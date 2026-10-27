@@ -8,7 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -49,6 +51,31 @@ fun PagerTabs(labels: List<String>, pager: PagerState, onSelect: (Int) -> Unit) 
 fun PagerTabsStatic(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val position by androidx.compose.animation.core.animateFloatAsState(selected.toFloat(), label = "tabs")
     Tabs(labels, position, onSelect)
+}
+
+/** Light text tabs without a pill: the chosen one is brass with an underline, the rest are muted. */
+@Composable
+fun ThinTabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        labels.forEachIndexed { i, label ->
+            val active = i == selected
+            val tint by animateColorAsState(if (active) Slitok.Brass2 else Slitok.Muted, label = "thinTint")
+            Column(
+                Modifier.clip(RoundedCornerShape(6.dp)).clickable { onSelect(i) }.padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    label, style = MaterialTheme.typography.labelLarge, color = tint,
+                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Box(
+                    Modifier.padding(top = 4.dp).fillMaxWidth().height(2.dp)
+                        .background(if (active) Slitok.Brass2 else Color.Transparent)
+                )
+            }
+        }
+    }
 }
 
 @Composable

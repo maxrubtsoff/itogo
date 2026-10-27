@@ -55,15 +55,22 @@ fun BankShareRow(slice: BankSlice, onClick: (() -> Unit)? = null, modifier: Modi
                 Text(
                     brand?.title ?: "Не в банке", style = MaterialTheme.typography.bodyLarge,
                     color = if (brand != null) Slitok.Fg else Slitok.Muted,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(0.42f)
                 )
                 Spacer(Modifier.width(10.dp))
+                // The sum's box is fixed in share and aligned to the end, so sums line up on the right.
                 AmountText(
                     Money.ofMinor(slice.valueMinor).format(),
                     style = Amounts.Row,
                     minSize = 11.sp,
                     textAlign = TextAlign.End,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(0.58f)
+                )
+            }
+            slice.countersLine.takeIf { it.isNotEmpty() }?.let {
+                Text(
+                    it, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
             }
             Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(99.dp)).background(Slitok.Inset)) {

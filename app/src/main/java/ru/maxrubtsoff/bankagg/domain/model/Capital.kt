@@ -29,6 +29,10 @@ data class CapitalSnapshot(
     /** When the capital last changed by an event (F-37); null — never. Daily interest is not an event. */
     val lastChangedAt: Long? = null
 ) {
+    /** Average monthly income of the active deposits, in minor units. */
+    val depositsMonthlyMinor: Long
+        get() = activeDeposits.sumOf { DepositMath.project(it, today, seriesPoints = 2).monthlyAccrual.minor }
+
     data class Part(
         val part: CapitalPart,
         val valueMinor: Long,

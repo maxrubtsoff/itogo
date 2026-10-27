@@ -13,9 +13,21 @@ data class BankSlice(
     val accounts: List<Line> = emptyList(),
     val deposits: List<Line> = emptyList(),
     val hasSubscriptions: Boolean = false,
-    val hasCashback: Boolean = false
+    val hasCashback: Boolean = false,
+    val subscriptionsCount: Int = 0
 ) {
     data class Line(val title: String, val valueMinor: Long)
+
+    val accountsCount: Int get() = accounts.size
+    val depositsCount: Int get() = deposits.size
+
+    /** «2 счёта · 1 вклад · 3 подписки»; empty positions are skipped. */
+    val countersLine: String
+        get() = listOfNotNull(
+            plural(accountsCount, "счёт", "счёта", "счётов"),
+            plural(depositsCount, "вклад", "вклада", "вкладов"),
+            plural(subscriptionsCount, "подписка", "подписки", "подписок")
+        ).joinToString(" · ")
 
     /** Stable id of the row: the bank's key, or a fixed one for the rest. */
     val key: String get() = brand?.key ?: REST_KEY
@@ -23,6 +35,18 @@ data class BankSlice(
     companion object {
         const val REST_KEY = "rest"
     }
+}
+
+/** «N слов» in the right form; null for zero. */
+fun plural(n: Int, one: String, few: String, many: String): String? {
+    if (n <= 0) return null
+    val form = when {
+        n % 100 in 11..14 -> many
+        n % 10 == 1 -> one
+        n % 10 in 2..4 -> few
+        else -> many
+    }
+    return "$n $form"
 }
 
 /** How the capital is cut on the Overview (F-53). */

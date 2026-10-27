@@ -97,11 +97,12 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalSnapshot
 import ru.maxrubtsoff.bankagg.domain.model.Currencies
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.BankSlice
+import ru.maxrubtsoff.bankagg.domain.model.plural
 import ru.maxrubtsoff.bankagg.domain.model.SliceMode
 import ru.maxrubtsoff.bankagg.domain.usecase.CapitalByBank
 import ru.maxrubtsoff.bankagg.ui.common.BankSheet
 import ru.maxrubtsoff.bankagg.ui.common.BankShareRow
-import ru.maxrubtsoff.bankagg.ui.common.PagerTabsStatic
+import ru.maxrubtsoff.bankagg.ui.common.ThinTabs
 import ru.maxrubtsoff.bankagg.ui.capital.CapitalViewModel
 import ru.maxrubtsoff.bankagg.ui.capital.PartDot
 import ru.maxrubtsoff.bankagg.ui.common.SlitokSheet
@@ -381,7 +382,7 @@ private fun CapitalHero(
                 Spacer(Modifier.height(if (glance == null) 14.dp else 6.dp))
                 if (canSlice) {
                     Box(Modifier.padding(end = 12.dp, bottom = 10.dp)) {
-                        PagerTabsStatic(listOf("По частям", "По банкам"), if (byBanks) 1 else 0) {
+                        ThinTabs(listOf("По частям", "По банкам"), if (byBanks) 1 else 0) {
                             onSliceMode(if (it == 1) SliceMode.BY_BANKS else SliceMode.BY_PARTS)
                         }
                     }
@@ -487,8 +488,10 @@ private fun PartRow(snap: CapitalSnapshot, part: CapitalSnapshot.Part, onLongTog
 private fun secondLine(snap: CapitalSnapshot, part: CapitalSnapshot.Part): Pair<String, androidx.compose.ui.graphics.Color>? {
     if (!part.included) return "не в итоге" to Slitok.Faint
     return when (part.part) {
-        CapitalPart.DEPOSITS -> snap.depositsAccruedMinor.takeIf { it != 0L }
-            ?.let { "${signedRub(it)} накоплено" to Slitok.Faint }
+        CapitalPart.DEPOSITS -> plural(snap.activeDeposits.size, "вклад", "вклада", "вкладов")?.let { count ->
+            val monthly = snap.depositsMonthlyMinor
+            (if (monthly != 0L) "$count${RuText.DOT}${signedRub(monthly)} в месяц" else count) to Slitok.Faint
+        }
         CapitalPart.CURRENCY -> {
             val c = snap.currency
             when {
