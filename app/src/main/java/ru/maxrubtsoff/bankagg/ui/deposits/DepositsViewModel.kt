@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,7 @@ import ru.maxrubtsoff.bankagg.domain.model.DepositShot
 import ru.maxrubtsoff.bankagg.domain.model.DepositSort
 import ru.maxrubtsoff.bankagg.domain.model.DepositSorting
 import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import ru.maxrubtsoff.bankagg.domain.model.ShotStatus
 import ru.maxrubtsoff.bankagg.domain.repository.DepositRepository
 import ru.maxrubtsoff.bankagg.domain.repository.DepositShotRepository
@@ -108,6 +110,43 @@ class DepositsViewModel(
     private val stash = MutableStateFlow<List<DepositShot>>(emptyList())
     val pendingDuplicates: StateFlow<Int> =
         stash.map { it.size }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    /** U-68: which saved deposit each set-aside screen repeats. */
+    private val duplicateOf = HashMap<String, String>()
+
+    /** U-68: what the list shows after a scan — [ids] to light up (the first one is scrolled to). [at] tells one request from the next. */
+    data class DepositFocus(val ids: List<String>, val at: Long)
+
+    private val _focus = MutableStateFlow<DepositFocus?>(null)
+    val focus: StateFlow<DepositFocus?> = _focus
+
+    /** «Это другой»: the screen to open as a new deposit. */
+    val reopen = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    private fun focusOn(ids: List<String>) {
+        if (ids.isNotEmpty()) _focus.value = DepositFocus(ids, System.nanoTime())
+    }
+
+    fun consumeFocus(at: Long) {
+        if (_focus.value?.at == at) _focus.value = null
+    }
+
+    /**
+     * A single screen turned out to be a deposit already saved (U-68): the list goes to
+     * that deposit and says so; «Это другой» brings the screen back as a new one to check.
+     */
+    fun announceDuplicate(shotIds: List<String>) {
+        val shot = stash.value.firstOrNull { it.id in shotIds } ?: return
+        val depositId = duplicateOf[shot.id] ?: return
+        focusOn(listOf(depositId))
+        undo.say("Такой вклад уже есть", "Это другой") {
+            if (stash.value.any { it.id == shot.id }) {
+                stash.value = stash.value.filter { it.id != shot.id }
+                shotRepo.add(shot.copy(status = ShotStatus.NEEDS_INPUT))
+                reopen.emit(shot.id)
+            }
+        }
+    }
 
     /** The skipped duplicates return to the batch as screens to check. */
     fun restoreDuplicates() {
@@ -201,6 +240,7 @@ class DepositsViewModel(
     /** Saves every ready group as a deposit and drops its shots; then [onDone]. */
     fun saveGroups(groups: List<DepositBatch.Group>, onDone: () -> Unit) {
         viewModelScope.launch {
+            val added = mutableListOf<String>()
             for (g in groups) {
                 val brand = g.brand ?: continue
                 val d = g.draft
@@ -217,9 +257,13 @@ class DepositsViewModel(
                     createdAt = System.currentTimeMillis()
                 )
                 repo.add(deposit)
+                added += deposit.id
                 // U-66: the screens are not kept.
                 g.ids.forEach { shotRepo.delete(it) }
             }
+            val seen = stash.value.mapNotNull { duplicateOf[it.id] }.distinct()
+            focusOn(added + seen)
+            batchNotice(added.size, stash.value.size)?.let { undo.say(it) }
             onDone()
             dropStash()
         }
@@ -235,6 +279,7 @@ class DepositsViewModel(
             val draft = recognizeShot(shot, repo.observeAll().first())
             if (draft.duplicateOf != null) {
                 // U-66: a deposit that is already saved — set aside, not offered again.
+                duplicateOf[shot.id] = draft.duplicateOf.id
                 shotRepo.get(shot.id)?.let { stash.value = stash.value + it.copy(brand = draft.brand, status = draft.status, draft = draft.fields) }
                 shotRepo.deleteKeepingImage(shot.id)
             } else if (shotRepo.get(shot.id) != null) {
@@ -286,6 +331,10 @@ class DepositsViewModel(
                 createdAt = createdAt
             )
             if (existingId == null) repo.add(deposit) else repo.update(deposit)
+            if (existingId == null) {
+                focusOn(listOf(deposit.id))
+                undo.say("Вклад добавлен")
+            }
             if (shotIds.isNotEmpty()) shotIds.forEach { shotRepo.delete(it) }
             onDone()
         }
@@ -310,5 +359,12 @@ class DepositsViewModel(
     fun deleteTopUp(depositId: String, t: DepositTopUp) = viewModelScope.launch {
         repo.deleteTopUp(t.id)
         undo.offer("Пополнение удалено", restore = { repo.addTopUp(depositId, t) })
+    }
+
+    private fun batchNotice(added: Int, skipped: Int): String? = when {
+        added > 0 && skipped > 0 -> "Добавили ${RuPlural.deposits(added)} · ${skipped} ${if (skipped % 10 == 1 && skipped % 100 != 11) "уже был" else "уже были"}"
+        added > 0 -> "Добавили ${RuPlural.deposits(added)}"
+        skipped > 0 -> "${RuPlural.deposits(skipped)} ${if (skipped % 10 == 1 && skipped % 100 != 11) "уже был" else "уже были"}"
+        else -> null
     }
 }

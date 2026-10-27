@@ -25,7 +25,10 @@ class UndoCenter {
     class Action(
         val message: String,
         val restore: suspend () -> Unit,
-        val finish: suspend () -> Unit = {}
+        val finish: suspend () -> Unit = {},
+        /** false: a plain notice, optionally with its own [actionLabel] instead of «Вернуть». */
+        val undoable: Boolean = true,
+        val actionLabel: String? = null
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -36,6 +39,14 @@ class UndoCenter {
     }
 
     /**
+     * A notice about a result (U-68): no «Вернуть», a short snackbar; with [action] the
+     * snackbar has that button and [onAction] runs in the center's scope.
+     */
+    fun say(message: String, action: String? = null, onAction: suspend () -> Unit = {}) {
+        actions.tryEmit(Action(message, restore = onAction, undoable = false, actionLabel = action))
+    }
+
+    /**
      * Shows each action in [host]. A newer deletion replaces the snackbar of an
      * older one, which then counts as final.
      */
@@ -43,7 +54,8 @@ class UndoCenter {
         actions.collectLatest { a ->
             var restored = false
             try {
-                val r = host.showSnackbar(a.message, actionLabel = "Вернуть", duration = SnackbarDuration.Long)
+                val r = if (a.undoable) host.showSnackbar(a.message, actionLabel = "Вернуть", duration = SnackbarDuration.Long)
+                else host.showSnackbar(a.message, actionLabel = a.actionLabel, duration = SnackbarDuration.Short)
                 if (r == SnackbarResult.ActionPerformed) {
                     restored = true
                     scope.launch { a.restore() }

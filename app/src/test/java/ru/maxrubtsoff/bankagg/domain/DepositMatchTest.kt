@@ -55,5 +55,10 @@ class DepositMatchTest {
         assertEquals(target, DepositMatch.find(BankBrand.ALFA, draft, list))
     }
 
+    @Test fun matchIgnoresExitAmountAndTitle() {
+        val d = saved().copy(title = "Другое имя", exitAmount = Money.ofMajor(1.0))
+        assertEquals(d, DepositMatch.find(BankBrand.ALFA, draft.copy(exitAmount = Money.ofMajor(2.0)), listOf(d)))
+    }
+
     @Test fun emptyExistingNull() = assertNull(DepositMatch.find(BankBrand.ALFA, draft, emptyList()))
 }

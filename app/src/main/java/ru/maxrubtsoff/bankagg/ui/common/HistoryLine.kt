@@ -55,12 +55,11 @@ fun HistoryLine(
     lead: (@Composable () -> Unit)? = null,
     onClick: () -> Unit = {}
 ) {
-    val bar by animateColorAsState(if (highlighted) Slitok.Brass2 else Color.Transparent, Motion.tween(Motion.NORMAL), label = "bar")
     val guide = Slitok.Line
     Row(
         modifier.fillMaxWidth()
+            .accentBar(highlighted)
             .drawBehind {
-                if (bar.alpha > 0f) drawRect(bar, Offset.Zero, Size(3.dp.toPx(), size.height))
                 if (nested) drawRect(guide, Offset(20.dp.toPx(), 0f), Size(1.dp.toPx(), size.height))
             }
             .then(if (kind == RowKind.SUM) Modifier else Modifier.clickable(onClick = onClick))
@@ -103,4 +102,17 @@ fun signedSum(minor: Long): String = when {
     minor > 0L -> "+" + Money.ofMinor(minor).format()
     minor < 0L -> "−" + Money.ofMinor(-minor).format()
     else -> Money.ZERO.format()
+}
+
+/**
+ * A [Slitok.Brass2] bar, 3 dp, down the left edge — the one «look here» mark of the
+ * history line and the deposit row (U-68). Fades in over [Motion.NORMAL], out over [Motion.FAST].
+ */
+@Composable
+fun Modifier.accentBar(active: Boolean): Modifier {
+    val bar by animateColorAsState(
+        if (active) Slitok.Brass2 else Color.Transparent,
+        Motion.tween(if (active) Motion.NORMAL else Motion.FAST), label = "bar"
+    )
+    return drawBehind { if (bar.alpha > 0f) drawRect(bar, Offset.Zero, Size(3.dp.toPx(), size.height)) }
 }

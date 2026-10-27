@@ -29,6 +29,12 @@ import ru.maxrubtsoff.bankagg.ui.common.LongPressMenu
 import androidx.compose.foundation.combinedClickable
 import ru.maxrubtsoff.bankagg.ui.common.MoneyText
 import android.net.Uri
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.delay
+import ru.maxrubtsoff.bankagg.ui.common.accentBar
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -126,6 +132,22 @@ fun DepositsSection(
     val pickImages = rememberDepositShotsPicker(vm, onOpenShot, onOpenBatch)
     val onAdd = { adding = true }
 
+    // U-68: after a scan the list goes to the deposit, lights it for a moment.
+    val focus by vm.focus.collectAsStateWithLifecycle()
+    var spot by remember { mutableStateOf(Spot()) }
+    LaunchedEffect(focus) {
+        val f = focus ?: return@LaunchedEffect
+        val first = (state.active + state.completed).map { it.deposit.id }.firstOrNull { it in f.ids }
+        if (first == null) { vm.consumeFocus(f.at); return@LaunchedEffect }
+        val inDone = state.completed.any { it.deposit.id == first }
+        if (inDone) { showCompleted = true; delay(300) }
+        spot = Spot(f.ids.toSet(), first, f.at)
+        delay(3_000)
+        spot = Spot()
+        vm.consumeFocus(f.at)
+    }
+    LaunchedEffect(Unit) { vm.reopen.collect { onOpenShot(it) } }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -168,9 +190,9 @@ fun DepositsSection(
                         DepositGroups.byBank(state.active, { it.deposit }, { it.projection }, state.order.reversed)
                     }
                     val play = rememberCascade("deposit-groups")
-                    groups.forEachIndexed { i, g -> Box(Modifier.cascade(i, play)) { BankGroup(g, state.today, onOpenDeposit) } }
+                    groups.forEachIndexed { i, g -> Box(Modifier.cascade(i, play)) { BankGroup(g, state.today, spot, onOpenDeposit) } }
                 } else {
-                    DepositList(state.active, state.today, dimmed = false, onOpenDeposit)
+                    DepositList(state.active, state.today, dimmed = false, spot, onOpenDeposit)
                 }
             }
         }
@@ -182,7 +204,7 @@ fun DepositsSection(
                 onToggle = { showCompleted = !showCompleted }
             )
             AnimatedVisibility(showCompleted) {
-                DepositList(state.completed, state.today, dimmed = true, onOpenDeposit)
+                DepositList(state.completed, state.today, dimmed = true, spot, onOpenDeposit)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -274,12 +296,16 @@ private fun sortTitle(sort: DepositSort): String = when (sort) {
 
 // ---- list ----
 
+/** U-68: which deposits are lit and which one the list scrolls to. */
+private data class Spot(val lit: Set<String> = emptySet(), val scrollTo: String? = null, val at: Long = 0L)
+
 /** [withBank]: a list not grouped by bank shows each deposit's bank logo. */
 @Composable
 private fun DepositList(
     items: List<DepositsViewModel.Item>,
     today: LocalDate,
     dimmed: Boolean,
+    spot: Spot,
     onOpenDeposit: (String) -> Unit,
     withBank: Boolean = true
 ) {
@@ -295,7 +321,11 @@ private fun DepositList(
                 Column(Modifier.reorderable(this@LookaheadScope)) {
                 if (i > 0) HorizontalDivider(Modifier.padding(start = if (withBank) 62.dp else 16.dp), color = Slitok.Line)
                 // U-45: no long-press menu — changing, topping up and deleting live in the deposit's card.
-                Box(Modifier.cascade(i, play).tourTarget(TourTarget.LIST_ROW, active = id == TourSample.HOLIDAY_ID, radius = 16.dp)) { DepositRow(item, today, withBank) { onOpenDeposit(id) } }
+                val requester = remember { BringIntoViewRequester() }
+                if (spot.scrollTo == id) {
+                    LaunchedEffect(spot.at) { withFrameNanos { }; requester.bringIntoView() }
+                }
+                Box(Modifier.bringIntoViewRequester(requester).cascade(i, play).tourTarget(TourTarget.LIST_ROW, active = id == TourSample.HOLIDAY_ID, radius = 16.dp)) { DepositRow(item, today, withBank, id in spot.lit) { onOpenDeposit(id) } }
                 }
                 }
             }
@@ -309,6 +339,7 @@ private fun DepositList(
 private fun BankGroup(
     group: DepositGroups.BankGroup<DepositsViewModel.Item>,
     today: LocalDate,
+    spot: Spot,
     onOpenDeposit: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -325,7 +356,7 @@ private fun BankGroup(
             Spacer(Modifier.width(8.dp))
             MoneyText(money(group.value), style = Amounts.Small, color = Slitok.Fg, maxLines = 1)
         }
-        DepositList(group.items, today, dimmed = false, onOpenDeposit, withBank = false)
+        DepositList(group.items, today, dimmed = false, spot, onOpenDeposit, withBank = false)
     }
 }
 
@@ -334,12 +365,13 @@ private fun BankGroup(
  * far; a thin term bar. The rate lives in the card.
  */
 @Composable
-private fun DepositRow(item: DepositsViewModel.Item, today: LocalDate, withBank: Boolean, onClick: () -> Unit) {
+private fun DepositRow(item: DepositsViewModel.Item, today: LocalDate, withBank: Boolean, highlighted: Boolean, onClick: () -> Unit) {
     val deposit = item.deposit
     val projection = item.projection
     Row(
         Modifier
             .fillMaxWidth()
+            .accentBar(highlighted)
             .pressScale()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),

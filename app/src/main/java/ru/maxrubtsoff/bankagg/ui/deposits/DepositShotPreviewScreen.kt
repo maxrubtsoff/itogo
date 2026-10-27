@@ -53,7 +53,7 @@ fun DepositShotPreviewScreen(vm: DepositsViewModel, shotIds: List<String>, onBac
     val form = rememberDepositFormState(key = key)
 
     LaunchedEffect(loaded) {
-        val items = loaded?.let { it.ifEmpty { leave(); return@LaunchedEffect } } ?: return@LaunchedEffect
+        val items = loaded?.let { it.ifEmpty { vm.announceDuplicate(shotIds); leave(); return@LaunchedEffect } } ?: return@LaunchedEffect
         items.forEach { vm.resumeIfStuck(it) }
         if (!initialised && items.none { it.status == ShotStatus.PROCESSING }) {
             // B-70: the form shows what all the shots of the group add up to.

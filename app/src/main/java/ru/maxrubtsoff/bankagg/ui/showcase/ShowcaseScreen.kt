@@ -74,6 +74,7 @@ import ru.maxrubtsoff.bankagg.ui.common.BankNote
 import ru.maxrubtsoff.bankagg.ui.common.LinkLine
 import ru.maxrubtsoff.bankagg.ui.common.WasBecomeLine
 import ru.maxrubtsoff.bankagg.ui.common.HistoryLine
+import ru.maxrubtsoff.bankagg.ui.common.accentBar
 import ru.maxrubtsoff.bankagg.ui.common.collapseHeight
 import ru.maxrubtsoff.bankagg.domain.model.RowKind
 import ru.maxrubtsoff.bankagg.ui.common.EmptyState
@@ -341,6 +342,10 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             HistoryLine("Сбер", "Проценты", 21_000, RowKind.GO, nested = true)
             HistoryLine("Списания", "4 операции", -320_000, RowKind.SUM)
             HistoryLine("Пополнение", "Иван", 500_000, RowKind.SUM, highlighted = true)
+            Caption("Полоса «смотри сюда» (accentBar)")
+            Panel(Modifier.fillMaxWidth()) {
+                Text("Вклад после скана", Modifier.accentBar(true).fillMaxWidth().padding(16.dp), color = Slitok.Fg)
+            }
 
             Caption("Шторка операции")
             BankNote("Перевод 20 260 000 ₽ от Ивана. Баланс 5 000 ₽", 8..19, onOpen = {})
