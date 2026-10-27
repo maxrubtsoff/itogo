@@ -619,8 +619,14 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
             nav.popBackStack(startRoute, inclusive = false)
             return
         }
+        val pattern = topDests.first { it.route == route }.pattern
+        // B-115: the tab is already in this stack (Настройки under a bank's «Платежи»): back to its top.
+        if (nav.popBackStack(pattern, inclusive = false)) return
+        // A tab opened on top of another tab's screens (bank card → «Платежи») is a detour: not kept as a tab's stack.
+        val startDest = nav.graph.findStartDestination()
+        val detour = nav.previousBackStackEntry?.destination?.let { it.id != startDest.id } == true
         nav.navigate(route) {
-            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            popUpTo(startDest.id) { saveState = !detour }
             launchSingleTop = true
             restoreState = true
         }
@@ -962,7 +968,8 @@ private fun AppRoot(container: AppContainer, factory: ViewModelFactory, startFea
                     // B-37: on top of the bank card, so «Назад» comes back to it.
                     onOpenCapital = { nav.navigate(Routes.capital(it)) },
                     onOpenCashback = { nav.navigate(Routes.CASHBACK_BASE) },
-                    onOpenSubscriptions = { nav.navigate(Routes.CASHBACK_BASE + "?section=1") }
+                    onOpenSubscriptions = { nav.navigate(Routes.CASHBACK_BASE + "?section=1") },
+                    onOpenSubscription = { nav.navigate(Routes.subscription(it)) }
                 )
             }
             composable(Routes.SETTINGS_NOTIFICATIONS) {

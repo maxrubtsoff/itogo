@@ -86,6 +86,23 @@ class BankSummaryTest {
         assertEquals(Money.ofMinor(299_00 + 100_00), s.subscriptionsPerMonth)
     }
 
+    @Test fun oneSubscriptionOpensItself() {
+        val s = of(subscriptions = listOf(sub(sber, 299), sub(other, 500)))
+        assertEquals("s299MONTH", s.onlySubscriptionId)
+    }
+
+    @Test fun severalSubscriptionsOpenTheList() {
+        val s = of(subscriptions = listOf(sub(sber, 299), sub(sber, 500)))
+        assertEquals(null, s.onlySubscriptionId)
+        assertEquals(2, s.subscriptionIds.size)
+        assertEquals(s.subscriptionCount, s.subscriptionIds.size)
+    }
+
+    @Test fun pausedSubscriptionIsNotCounted() {
+        val s = of(subscriptions = listOf(sub(sber, 299), sub(sber, 777, status = SubscriptionStatus.ARCHIVED)))
+        assertEquals(s.subscriptionIds.single(), s.onlySubscriptionId)
+    }
+
     private fun full() = of(
         accounts = listOf(acc(sber, 100)),
         deposits = listOf(dep(sber, 1000, LocalDate.of(2027, 1, 1))),

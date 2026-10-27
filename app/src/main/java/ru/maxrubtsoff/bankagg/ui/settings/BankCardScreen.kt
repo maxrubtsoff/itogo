@@ -77,7 +77,8 @@ fun BankCardScreen(
     onEdit: (BankBrand) -> Unit,
     onOpenCapital: (CapitalPart) -> Unit,
     onOpenCashback: () -> Unit,
-    onOpenSubscriptions: () -> Unit
+    onOpenSubscriptions: () -> Unit,
+    onOpenSubscription: (String) -> Unit
 ) {
     val mine by vm.mine.collectAsStateWithLifecycle()
     val collected by vm.collected.collectAsStateWithLifecycle()
@@ -123,7 +124,7 @@ fun BankCardScreen(
                 }
             }
 
-            summary?.let { s -> Holdings(s, features, onOpenCapital, onOpenCashback, onOpenSubscriptions) }
+            summary?.let { s -> Holdings(s, features, onOpenCapital, onOpenCashback, onOpenSubscriptions, onOpenSubscription) }
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -140,7 +141,8 @@ private fun Holdings(
     features: Features,
     onOpenCapital: (CapitalPart) -> Unit,
     onOpenCashback: () -> Unit,
-    onOpenSubscriptions: () -> Unit
+    onOpenSubscriptions: () -> Unit,
+    onOpenSubscription: (String) -> Unit
 ) {
     data class Line(val dot: Color, val label: String, val money: ru.maxrubtsoff.bankagg.domain.model.Money?, val note: String?, val open: () -> Unit)
     // What the card lists and in what order is the domain's call (U-52); here only how each line looks.
@@ -153,7 +155,8 @@ private fun Holdings(
             BankHolding.CASHBACK ->
                 Line(Slitok.Mint, "Кэшбэк · " + CashbackMonth.shortLabel(CashbackMonth.currentKey()).lowercase(), null, RuPlural.categories(s.cashbackCount), onOpenCashback)
             BankHolding.SUBSCRIPTIONS ->
-                Line(Slitok.Coral, if (s.subscriptionCount == 1) "Подписка" else "Подписки · ${s.subscriptionCount}", s.subscriptionsPerMonth, "/ мес", onOpenSubscriptions)
+                Line(Slitok.Coral, if (s.subscriptionCount == 1) "Подписка" else "Подписки · ${s.subscriptionCount}", s.subscriptionsPerMonth, "/ мес",
+                    s.onlySubscriptionId?.let { id -> { onOpenSubscription(id) } } ?: onOpenSubscriptions)
         }
     }
     if (lines.isEmpty()) return

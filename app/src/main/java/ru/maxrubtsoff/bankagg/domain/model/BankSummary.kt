@@ -16,8 +16,12 @@ data class BankSummary(
     val depositCount: Int,
     val cashbackCount: Int,
     val subscriptionCount: Int = 0,
-    val subscriptionsPerMonth: Money = Money.ZERO
+    val subscriptionsPerMonth: Money = Money.ZERO,
+    val subscriptionIds: List<String> = emptyList()
 ) {
+    /** B-115: one subscription opens itself, several — the list of «Платежи». */
+    val onlySubscriptionId: String? get() = subscriptionIds.singleOrNull()
+
     /**
      * Subscriptions don't count here: they live on «Платежи» whatever banks are
      * kept, so taking a bank out never touches them.
@@ -54,6 +58,7 @@ data class BankSummary(
                 depositCount = dep.size,
                 cashbackCount = monthCashback.count { it.brand.key == bankKey },
                 subscriptionCount = subs.size,
+                subscriptionIds = subs.map { it.id },
                 subscriptionsPerMonth = Money.ofMinor(subs.sumOf { it.period.perMonth(it.priceMinor) })
             )
         }
