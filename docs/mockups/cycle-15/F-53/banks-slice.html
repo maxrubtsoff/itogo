@@ -1,0 +1,405 @@
+<title>Разрез по банкам F-53</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --page:#060908;
+  --bg:#0A0F0E; --panel-top:#18211F; --panel-bottom:#111917; --inset:#0C1211;
+  --fg:#EEF3F0; --muted:#8EA39B; --faint:#56655F; --line:rgba(255,255,255,.08);
+  --brass:#D7A74A; --brass2:#F0C878; --on-brass:#14120E;
+  --brass-tint:rgba(215,167,74,.12); --brass-pill:rgba(215,167,74,.15); --brass-line:rgba(215,167,74,.33); --brass-edge:rgba(215,167,74,.55);
+  --mint:#59E2A6; --coral:#FF8468; --violet:#9A86F5; --sky:#6CC4E8; --sand:#CBB89A;
+  --scrim:rgba(5,8,7,.72);
+  --note:#C9D3CE;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --text:"Golos Text","Segoe UI",system-ui,sans-serif;
+  --shadow:0 12px 28px rgba(0,0,0,.55),0 2px 6px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--fg);font-family:var(--text);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1500px;margin:0 auto}
+h1{font-family:var(--display);font-weight:600;font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);font-size:15px;max-width:860px;line-height:1.5;margin:0 0 20px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--page);padding:8px 0;z-index:5}
+.tab{font:500 14px var(--text);color:var(--muted);background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:10px 16px;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--on-brass);background:var(--brass);border-color:var(--brass)}
+.vhead{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-bottom:20px}
+@media (max-width:820px){.vhead{grid-template-columns:minmax(0,1fr)}}
+.box{background:linear-gradient(var(--panel-top),var(--panel-bottom));border:1px solid var(--line);border-radius:20px;padding:16px 20px;min-width:0}
+.box h3{font:600 15px var(--display);margin:0 0 8px}
+.box p,.box li{color:var(--note);font-size:14px;line-height:1.5}
+.box ul{margin:6px 0 0;padding-left:18px}
+.plus{color:var(--mint)} .minus{color:var(--coral)}
+.rec{border-color:var(--brass-edge);background:linear-gradient(var(--brass-tint),var(--panel-bottom))}
+.frames{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.fr{display:flex;flex-direction:column;gap:10px;max-width:100%}
+.cap{font-size:13px;color:var(--muted);max-width:390px;line-height:1.45}
+.cap b{color:var(--fg);font-weight:600}
+
+/* ===== phone ===== */
+.phone{width:390px;max-width:100%;height:844px;border-radius:44px;padding:10px;background:#1b1f1e;box-shadow:0 30px 60px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.06)}
+.scr{position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column;font-size:14px}
+.sb{height:34px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font:600 13px var(--text);color:var(--fg)}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 16px 16px;display:flex;flex-direction:column;gap:16px;scrollbar-width:none}
+.body::-webkit-scrollbar{display:none}
+.hdr{height:64px;flex:none;display:flex;align-items:center;gap:8px}
+.hdr .t{font:600 22px var(--display);flex:1}
+.hdr .t.s{font-size:18px}
+.ib{width:40px;height:40px;display:grid;place-items:center;color:var(--muted)}
+.ib svg{width:22px;height:22px}
+.nav{flex:none;height:72px;margin:0;border-radius:28px 28px 0 0;background:linear-gradient(var(--panel-top),var(--panel-bottom));display:flex;justify-content:space-around;align-items:center;border-top:1px solid var(--line)}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted)}
+.nav div i{width:22px;height:22px;border-radius:7px;border:2px solid currentColor;opacity:.8}
+.nav div.on{color:var(--brass2)}
+.nav div.on i{background:var(--brass-pill)}
+
+.panel{background:linear-gradient(var(--panel-top),var(--panel-bottom));border-radius:22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.glow::before{content:"";position:absolute;inset:-40% -20% auto auto;width:260px;height:220px;background:radial-gradient(closest-side,rgba(215,167,74,.22),transparent);pointer-events:none}
+.hero{padding:12px 20px 8px}
+.hrow{display:flex;align-items:center}
+.lbl{color:var(--muted);font-size:14px;flex:1}
+.amt{font-family:var(--display);font-weight:600;white-space:nowrap;color:var(--fg);font-variant-numeric:tabular-nums}
+.amt.hero{font-size:34px;letter-spacing:-.5px}
+.amt.large{font-size:22px}
+.amt.row{font-size:16px}
+.amt.small{font-size:13px}
+.amt.hero .k,.amt.large .k{font-size:70%;opacity:.55}
+.amt.row .k,.amt.small .k{opacity:.75}
+.amt.mint{color:var(--mint)}
+.amt.dim{color:var(--faint)}
+.delta{display:flex;align-items:center;gap:8px;margin:4px 0 0;font-size:13px}
+.spark{width:72px;height:24px;margin-left:auto}
+.bar{height:8px;border-radius:99px;background:var(--inset);display:flex;overflow:hidden;gap:0}
+.bar.thin{height:4px}
+.bar span{display:block;height:100%}
+.prow{display:flex;align-items:center;gap:12px;padding:10px 0;min-height:56px}
+.prow+.prow{border-top:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.pmid{flex:1;min-width:0}
+.ptop{display:flex;align-items:center;gap:10px}
+.pname{font-size:16px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pname.off{color:var(--muted)}
+.pamt{margin-left:auto}
+.sub{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{color:var(--faint);flex:none;width:20px;height:20px}
+.logo{border-radius:50%;display:grid;place-items:center;font:700 13px var(--display);flex:none}
+.logo.off{opacity:.45;filter:saturate(.4)}
+.stack{display:flex}
+.stack .logo{box-shadow:0 0 0 2px var(--panel-top)}
+.stack .logo+.logo{margin-left:-8px}
+
+.blockh{display:flex;align-items:center;gap:8px;padding:14px 20px 4px}
+.blockh .tt{font:600 16px var(--display);flex:1}
+.blockh .cnt{color:var(--muted);font-size:14px}
+.inner{padding:0 12px 6px 20px}
+.more{display:flex;align-items:center;gap:10px;padding:12px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+
+.ptabs{display:flex;background:var(--inset);border-radius:14px;padding:4px;gap:4px;margin-top:-12px}
+.ptabs div{flex:1;text-align:center;padding:9px 0;border-radius:11px;font:500 14px var(--text);color:var(--muted)}
+.ptabs div.on{background:var(--brass-pill);color:var(--brass2);box-shadow:inset 0 0 0 1px var(--brass-line)}
+.dots{display:flex;justify-content:center;gap:6px;padding:4px 0 2px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--faint)}
+.dots i.on{background:var(--brass2);width:16px;border-radius:3px}
+
+.cb{padding:16px 20px}
+.cb .t{font:600 16px var(--display)}
+.cb .s{color:var(--muted);font-size:13px;margin-top:4px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.vchip{border:1px solid var(--line);background:var(--inset);border-radius:12px;padding:6px 10px;font-size:13px;display:flex;gap:6px;align-items:center}
+.vchip b{color:var(--brass2);font-weight:600}
+
+.acts{height:44px;display:flex;align-items:center;gap:8px;margin-top:-12px}
+.acts .w{font:500 16px var(--display);flex:1;font-size:15px}
+.sortb{display:flex;align-items:center;gap:6px;background:var(--inset);border-radius:12px;padding:8px 12px;color:var(--muted);font-size:14px}
+.sortb svg{width:16px;height:16px}
+
+.bcard{padding:16px 16px 6px 20px}
+.bch{display:flex;align-items:center;gap:12px}
+.bch .nm{font:600 16px var(--display);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bcard .bar{margin:12px 4px 4px 0}
+.line2{display:flex;align-items:center;gap:10px;padding:10px 0;min-height:44px;border-top:1px solid var(--line);font-size:15px}
+.line2:first-of-type{border-top:0}
+.line2 .n{flex:1;color:var(--fg)}
+.line2 .n small{color:var(--muted);font-size:12px;display:block}
+.empty{color:var(--muted);font-size:14px;padding:6px 0 10px}
+
+.lrow{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px 8px 20px}
+
+/* sheet */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:3}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:4;background:linear-gradient(var(--panel-top),var(--panel-bottom));border-radius:28px 28px 0 0;padding:10px 16px 24px;box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--faint);margin:0 auto 16px}
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.sh .t{font:600 18px var(--display);flex:1}
+.slist{background:var(--inset);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:12px}
+.srow{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 14px}
+.srow+.srow{border-top:1px solid var(--line)}
+.srow .n{flex:1;font-size:16px;min-width:0}
+.srow .n small{display:block;font-size:12px;color:var(--muted)}
+.srow.sel .n{color:var(--brass2)}
+.tick{color:var(--brass2);width:20px;height:20px}
+
+.gest{display:flex;align-items:center;gap:8px;color:var(--brass2);font-size:13px}
+.gest svg{width:60px;height:20px}
+.note-s{font-size:12px;color:var(--faint)}
+table.cmp{width:100%;border-collapse:collapse;font-size:14px}
+.tw{overflow-x:auto;margin-bottom:24px}
+table.cmp th,table.cmp td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top;color:var(--note)}
+table.cmp th{color:var(--muted);font-weight:500;font-size:13px}
+table.cmp td:first-child{color:var(--fg);font-weight:600;white-space:nowrap}
+</style>
+
+<div class="wrap">
+  <h1>F-53 · Разрез по банкам</h1>
+  <p class="lead">Сколько денег в каждом банке. Сумма банка = счета + вклады этого банка (по курсу ЦБ для валютных счетов). Кэшбэк и подписки — не деньги в банке, в сумму не входят, но видны у банка. Валюта на руках и наличные ни к какому банку не привязаны — они идут строкой «Не в банке», чтобы строки складывались в «Общий капитал» без остатка. Три варианта места — вкладками ниже.</p>
+
+  <div class="tw"><table class="cmp">
+    <tr><th></th><th>Где</th><th>Касаний до разреза</th><th>Обзор</th><th>Подробности банка</th></tr>
+    <tr><td>А · Карточка</td><td>Панель «Банки» под героем, над кэшбэком</td><td>0, но ниже сгиба — прокрутка</td><td>длиннее на 5–6 строк</td><td>шторка банка</td></tr>
+    <tr><td>Б · Экран</td><td>Строка «По банкам» в герое → экран «Банки»</td><td>1 + назад</td><td>без изменений, +1 строка</td><td>прямо на карточках экрана</td></tr>
+    <tr><td>В · Свайп (рекомендую)</td><td>Тот же герой, переключатель «По частям · По банкам»</td><td>свайп, запоминается</td><td>не длиннее</td><td>шторка банка</td></tr>
+  </table></div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-v="a">А · Карточка в обзоре</button>
+    <button class="tab" role="tab" data-v="b">Б · Отдельный экран</button>
+    <button class="tab" role="tab" data-v="c" aria-selected="true">В · Свайп в герое</button>
+    <button class="tab" role="tab" data-v="s">Шторка банка (А и В)</button>
+  </div>
+
+  <section data-p="a" hidden>
+    <div class="vhead">
+      <div class="box"><h3>Как устроено</h3><ul>
+        <li>Под героем «Общий капитал» новая панель «Банки» (тот же <code>Panel</code>, без свечения — герой один).</li>
+        <li>Строка банка: логотип 36, название, сумма <code>Amounts.Row</code>; ниже — счётчики «2 счёта · 3 вклада · 2 подписки» и тонкая полоса доли (счета латунью, вклады фиалкой), длина — от самого крупного банка.</li>
+        <li>Сортировка фиксированная — по сумме, убывание. Видно 4 банка, остальные — строкой «Ещё 2 банка», раскрывается на месте.</li>
+        <li>Банк без операций — последним, приглушён, вместо суммы «Пока пусто». Последняя строка — «Не в банке» (валюта и наличные).</li>
+        <li>Касание банка — шторка банка (вкладка «Шторка банка»).</li>
+      </ul></div>
+      <div class="box"><h3>В ежедневном использовании</h3><ul>
+        <li class="plus">+ Ничего нажимать не надо, всё в одном месте.</li>
+        <li class="minus">− Обзор становится вдвое длиннее: разрез и кэшбэк уезжают под сгиб, каждый раз прокрутка.</li>
+        <li class="minus">− Две колонки одних и тех же денег подряд: части в герое и банки ниже — глаз сравнивает, какая сумма главная.</li>
+        <li class="minus">− Кэшбэк, на который смотрят чаще всего, опускается ниже.</li>
+      </ul></div>
+    </div>
+    <div class="frames" id="fa"></div>
+  </section>
+
+  <section data-p="b" hidden>
+    <div class="vhead">
+      <div class="box"><h3>Как устроено</h3><ul>
+        <li>В герое обзора после частей — строка «По банкам» со стопкой логотипов (<code>BankStack</code>) и шевроном. Касание — экран «Банки» въезжает справа.</li>
+        <li>Экран: <code>ScreenHeader</code> с «Назад», строка действий «5 банков» + сортировка (кнопка направления + шторка «По сумме / По названию»).</li>
+        <li>Герой «В банках» — сумма <code>Hero</code> и полоса долей по банкам.</li>
+        <li>Карточка банка — всё раскрыто сразу: Счета, Вклады, Кэшбэк в октябре, Подписки; каждая строка ведёт в свой раздел. Аккордеона нет — лишнее касание.</li>
+        <li>Банк без операций — в конце, карточка «Операций пока нет».</li>
+      </ul></div>
+      <div class="box"><h3>В ежедневном использовании</h3><ul>
+        <li class="plus">+ Обзор не меняется — привычный вид остаётся.</li>
+        <li class="plus">+ Есть место для всех подробностей банка без шторки.</li>
+        <li class="minus">− Каждый раз туда и обратно: 2 касания и анимация перехода. При 5–10 взглядах в день это заметно.</li>
+        <li class="minus">− Ещё один экран, который надо держать в голове. Строка в герое легко теряется среди частей.</li>
+      </ul></div>
+    </div>
+    <div class="frames" id="fb"></div>
+  </section>
+
+  <section data-p="c">
+    <div class="vhead">
+      <div class="box rec"><h3>Как устроено</h3><ul>
+        <li>Над героем — <code>PagerTabs</code> «По частям · По банкам». Свайп по обзору меняет только разложение: сумма «Общий капитал» и строка изменения стоят на месте.</li>
+        <li>Полоса состава на «По банкам» делится по банкам — в цвете бренда банка (цвет из <code>BankBrand</code>, как у логотипа), «Не в банке» — <code>Faint</code>.</li>
+        <li>Строка банка на месте строки части: логотип 24 вместо точки, название, сумма, подпись-счётчики «2 счёта · 3 вклада · 2 подписки». Касание — шторка банка.</li>
+        <li>Сортировка фиксированная — по сумме, убывание; банк без операций — последним, приглушён; «Не в банке» — последней строкой.</li>
+        <li>Выбранный разрез запоминается: открыл в последний раз «По банкам» — так и откроется.</li>
+        <li>Один банк — ряда вкладок нет (у <code>PagerTabs</code> один раздел — без ряда): разрез ничего не добавит к частям.</li>
+        <li>Кэшбэк ниже — без изменений, на обеих страницах.</li>
+      </ul></div>
+      <div class="box"><h3>В ежедневном использовании</h3><ul>
+        <li class="plus">+ Обзор не длиннее: на первом экране и капитал, и кэшбэк.</li>
+        <li class="plus">+ Один свайп, без перехода и «Назад»; запоминается — кто смотрит по банкам, смотрит сразу.</li>
+        <li class="plus">+ Та же механика, что в Капитале и Платежах (свайп разделов) — учить нечего.</li>
+        <li class="minus">− На обзоре появляется ряд вкладок (минус ~44 dp высоты).</li>
+        <li class="minus">− Подробности банка — через шторку, а не сразу на экране.</li>
+      </ul></div>
+    </div>
+    <div class="frames" id="fc"></div>
+  </section>
+
+  <section data-p="s" hidden>
+    <div class="vhead">
+      <div class="box"><h3>Шторка банка</h3><ul>
+        <li><code>SlitokSheet</code>: логотип 40 и название (<code>titleLarge</code>), сумма банка <code>Amounts.Large</code>, полоса «счета / вклады».</li>
+        <li>Деньги — первый <code>SheetList</code>: «Счета · 2», «Вклады · 3» с суммами и шевроном; ведут в Капитал → Счета / Вклады к этому банку.</li>
+        <li>Не деньги — второй <code>SheetList</code>: «Кэшбэк в октябре» (мята, со знаком «+»), «Подписки» — «2 · 798 ₽ в месяц»; ведут в Платежи.</li>
+        <li>Строки без данных не показываются. Банк без операций — шторка с одной строкой «Операций пока нет» и переходом в настройки банка.</li>
+      </ul></div>
+      <div class="box"><h3>Почему шторка, а не раскрытие строки</h3><p>Раскрытие внутри героя сдвигает остальные банки и кэшбэк, и после закрытия глаз ищет, где был. Шторка не трогает обзор, закрывается свайпом вниз, и в ней та же строка выбора <code>SheetList</code>, что везде.</p></div>
+    </div>
+    <div class="frames" id="fs"></div>
+  </section>
+</div>
+
+<script>
+const BANKS=[
+ {n:'Т-Банк',l:'Т',c:'#FFDD2D',ink:'#1b1b1b',acc:184320.50,accN:2,dep:900000,depN:3,cb:1240,subN:2,subM:798},
+ {n:'Сбербанк',l:'С',c:'#21A038',ink:'#fff',acc:62410,accN:1,dep:500000,depN:2,cb:380,subN:1,subM:399},
+ {n:'Альфа-Банк',l:'А',c:'#EF3124',ink:'#fff',acc:41905.20,accN:1,dep:300000,depN:1,cb:2115,subN:0,subM:0},
+ {n:'Озон Банк',l:'О',c:'#005BFF',ink:'#fff',acc:12300,accN:1,dep:0,depN:0,cb:0,subN:1,subM:299},
+ {n:'ВТБ',l:'В',c:'#0A2896',ink:'#fff',acc:0,accN:0,dep:0,depN:0,cb:0,subN:0,subM:0,empty:true},
+];
+const OUT={fx:312000,cash:45000};
+const tot=b=>b.acc+b.dep;
+const TOTAL=BANKS.reduce((s,b)=>s+tot(b),0)+OUT.fx+OUT.cash;
+
+function parts(v){v=Math.abs(v);const r=Math.floor(v+1e-9);const k=Math.round((v-r)*100);
+  return [r.toString().replace(/\B(?=(\d{3})+(?!\d))/g,' '), k?','+String(k).padStart(2,'0'):'']}
+function amt(v,cls='row',sign=''){const [r,k]=parts(v);return `<span class="amt ${cls}">${sign}${r}<span class="k">${k}</span> ₽</span>`}
+function plural(n,a,b,c){const m=n%10,h=n%100;return n+' '+(m==1&&h!=11?a:(m>=2&&m<=4&&(h<10||h>=20)?b:c))}
+function counts(b){const x=[];if(b.accN)x.push(plural(b.accN,'счёт','счёта','счетов'));if(b.depN)x.push(plural(b.depN,'вклад','вклада','вкладов'));if(b.subN)x.push(plural(b.subN,'подписка','подписки','подписок'));return x.join(' · ')}
+const logo=(b,s=36,off=false)=>`<span class="logo${off?' off':''}" style="width:${s}px;height:${s}px;background:${b.c};color:${b.ink};font-size:${Math.round(s*.4)}px">${b.l}</span>`;
+const chev='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>';
+const eye='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5C6.5 5 2.7 9.3 1.5 12c1.2 2.7 5 7 10.5 7s9.3-4.3 10.5-7C21.3 9.3 17.5 5 12 5zm0 11a4 4 0 110-8 4 4 0 010 8z"/></svg>';
+const tune='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>';
+const back='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>';
+const sortI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16M3 16l4 4 4-4M14 6h7M14 12h5M14 18h3"/></svg>';
+const tick='<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5 9-10"/></svg>';
+const spark='<svg class="spark" viewBox="0 0 72 24"><path d="M0 18 L10 16 L20 17 L30 12 L40 13 L50 8 L60 9 L68 5" stroke="#59E2A6" stroke-width="1.5" fill="none"/><circle cx="68" cy="5" r="2.5" fill="#59E2A6"/></svg>';
+
+function phone(inner,overlay=''){return `<div class="phone"><div class="scr"><div class="sb"><span>14:32</span><span>5G ▮▮▮ 82%</span></div><div class="body">${inner}</div>${nav()}${overlay}</div></div>`}
+function nav(){return `<div class="nav"><div class="on"><i></i>Обзор</div><div><i></i>Капитал</div><div><i></i>Платежи</div><div><i></i>Настройки</div></div>`}
+function hdr(t){return `<div class="hdr"><span class="t">${t}</span><span class="ib">${eye}</span></div>`}
+function fr(html,cap){return `<div class="fr">${html}<div class="cap">${cap}</div></div>`}
+
+function heroTop(total){return `<div class="hrow"><span class="lbl">Общий капитал</span><span class="ib">${tune}</span></div>
+  ${amt(total,'hero')}
+  <div class="delta"><span class="amt small mint">+48 300 ₽</span><span style="color:var(--muted)">за месяц</span>${spark}${chev}</div>`}
+const PARTS=list=>{const acc=list.reduce((s,b)=>s+b.acc,0),dep=list.reduce((s,b)=>s+b.dep,0);return [
+  {n:'Счета',c:'var(--brass)',v:acc,s:'4 банка'},{n:'Вклады',c:'var(--violet)',v:dep,s:'6 вкладов · +12 480 ₽ в месяц'},
+  {n:'Валюта',c:'var(--sky)',v:OUT.fx,s:'$ 2 400 · € 1 100'},{n:'Наличные',c:'var(--sand)',v:OUT.cash,s:''}].filter(p=>p.v>0)};
+function partsBar(ps,total){return `<div class="bar" style="margin:14px 12px 6px 0">${ps.map(p=>`<span style="width:${p.v/total*100}%;background:${p.c}"></span>`).join('')}</div>`}
+function partRows(ps){return ps.map(p=>`<div class="prow"><span class="dot" style="background:${p.c}"></span><div class="pmid"><div class="ptop"><span class="pname">${p.n}</span><span class="pamt">${amt(p.v)}</span></div>${p.s?`<div class="sub">${p.s}</div>`:''}</div>${chev}</div>`).join('')}
+function heroParts(list,extra=''){const total=list.reduce((s,b)=>s+tot(b),0)+OUT.fx+OUT.cash;const ps=PARTS(list);
+  return `<div class="panel glow"><div class="hero" style="padding-right:8px">${heroTop(total)}${partsBar(ps,total)}${partRows(ps)}${extra}</div></div>`}
+function cashback(){return `<div class="panel cb"><div class="t">Кэшбэк в октябре</div><div class="s">Лучшее по категориям</div>
+  <div class="chips"><span class="vchip">Супермаркеты <b>7%</b></span><span class="vchip">АЗС <b>5%</b></span><span class="vchip">Аптеки <b>5%</b></span><span class="vchip">Кафе <b>10%</b></span></div></div>`}
+
+/* ---------- bank rows ---------- */
+function bankRowA(b,max){
+  if(b.empty) return `<div class="prow">${logo(b,36,true)}<div class="pmid"><div class="ptop"><span class="pname off">${b.n}</span><span class="pamt sub" style="margin:0 0 0 auto">Пока пусто</span></div></div>${chev}</div>`;
+  const t=tot(b),w=t/max*100;
+  return `<div class="prow">${logo(b)}<div class="pmid"><div class="ptop"><span class="pname">${b.n}</span><span class="pamt">${amt(t)}</span></div>
+   <div class="sub">${counts(b)}</div>
+   <div class="bar thin" style="width:${w}%;margin-top:6px;background:transparent">${b.acc?`<span style="width:${b.acc/t*100}%;background:var(--brass)"></span>`:''}${b.dep?`<span style="width:${b.dep/t*100}%;background:var(--violet)"></span>`:''}</div></div>${chev}</div>`}
+function outsideRow(withBar=false){const v=OUT.fx+OUT.cash;
+  return `<div class="prow"><span style="width:36px;display:flex;justify-content:center;gap:3px;flex:none"><span class="dot" style="background:var(--sky)"></span><span class="dot" style="background:var(--sand)"></span></span>
+  <div class="pmid"><div class="ptop"><span class="pname">Не в банке</span><span class="pamt">${amt(v)}</span></div><div class="sub">Валюта · Наличные</div></div>${chev}</div>`}
+function outsideRowC(){const v=OUT.fx+OUT.cash;
+  return `<div class="prow"><span style="width:24px;display:flex;justify-content:center;gap:2px;flex:none"><span class="dot" style="background:var(--sky);width:8px;height:8px"></span><span class="dot" style="background:var(--sand);width:8px;height:8px"></span></span>
+  <div class="pmid"><div class="ptop"><span class="pname">Не в банке</span><span class="pamt">${amt(v)}</span></div><div class="sub">Валюта · Наличные</div></div>${chev}</div>`}
+function bankRowC(b){
+  if(b.empty) return `<div class="prow">${logo(b,24,true)}<div class="pmid"><div class="ptop"><span class="pname off">${b.n}</span><span class="pamt sub" style="margin:0 0 0 auto">Пока пусто</span></div></div>${chev}</div>`;
+  return `<div class="prow">${logo(b,24)}<div class="pmid"><div class="ptop"><span class="pname">${b.n}</span><span class="pamt">${amt(tot(b))}</span></div><div class="sub">${counts(b)}</div></div>${chev}</div>`}
+const sorted=l=>[...l].sort((a,b)=>(a.empty-b.empty)||tot(b)-tot(a));
+
+/* ---------- A ---------- */
+function screenA(list,{collapsed=4,scroll=true}={}){
+  const s=sorted(list),max=Math.max(...s.map(tot));
+  const shown=s.length>collapsed+1?s.slice(0,collapsed):s;const rest=s.length-shown.length;
+  const panel=`<div class="panel" id="banksA"><div class="blockh"><span class="tt">Банки</span><span class="cnt">${list.length}</span></div>
+    <div class="inner">${shown.map(b=>bankRowA(b,max)).join('')}
+    ${rest?`<div class="more"><span class="stack">${s.slice(collapsed).map(b=>logo(b,24,b.empty)).join('')}</span><span style="flex:1">Ещё ${plural(rest,'банк','банка','банков')}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>`:''}
+    ${outsideRow()}</div></div>`;
+  return hdr('Обзор')+heroParts(list)+panel+cashback();
+}
+/* ---------- B ---------- */
+function screenBOverview(list){
+  const extra=list.length>1?`<div class="prow" style="border-top:1px solid var(--line)"><span class="stack">${sorted(list).slice(0,4).map(b=>logo(b,24,b.empty)).join('')}</span><div class="pmid"><span class="pname">По банкам</span></div><span class="sub" style="margin:0">${list.length}</span>${chev}</div>`:'';
+  return hdr('Обзор')+heroParts(list,extra)+cashback();
+}
+function bankCardB(b){
+  if(b.empty) return `<div class="panel bcard"><div class="bch">${logo(b,36,true)}<span class="nm" style="color:var(--muted)">${b.n}</span></div><div class="empty" style="padding-top:12px">Операций пока нет</div></div>`;
+  const t=tot(b);
+  const rows=[];
+  if(b.accN) rows.push(`<div class="line2"><span class="dot" style="background:var(--brass)"></span><span class="n">Счета<small>${plural(b.accN,'счёт','счёта','счетов')}</small></span>${amt(b.acc)}${chev}</div>`);
+  if(b.depN) rows.push(`<div class="line2"><span class="dot" style="background:var(--violet)"></span><span class="n">Вклады<small>${plural(b.depN,'вклад','вклада','вкладов')}</small></span>${amt(b.dep)}${chev}</div>`);
+  if(b.cb) rows.push(`<div class="line2"><span class="dot" style="background:transparent"></span><span class="n">Кэшбэк в октябре</span>${amt(b.cb,'small mint','+')}${chev}</div>`);
+  if(b.subN) rows.push(`<div class="line2"><span class="dot" style="background:transparent"></span><span class="n">Подписки<small>${plural(b.subN,'подписка','подписки','подписок')}</small></span><span style="color:var(--muted);font-size:13px">${amt(b.subM,'small')} в месяц</span>${chev}</div>`);
+  return `<div class="panel bcard"><div class="bch">${logo(b)}<span class="nm">${b.n}</span>${amt(t,'large')}</div>
+   <div class="bar thin">${b.acc?`<span style="width:${b.acc/t*100}%;background:var(--brass)"></span>`:''}${b.dep?`<span style="width:${b.dep/t*100}%;background:var(--violet)"></span>`:''}</div>
+   <div style="padding-right:0">${rows.join('')}</div></div>`}
+function screenB(list,sortBy='По сумме'){
+  const s=sortBy==='По сумме'?sorted(list):[...list].sort((a,b)=>(a.empty-b.empty)||a.n.localeCompare(b.n,'ru'));
+  const inBanks=list.reduce((x,b)=>x+tot(b),0);
+  return `<div class="hdr"><span class="ib" style="color:var(--fg)">${back}</span><span class="t s">Банки</span><span class="ib">${eye}</span></div>
+  <div class="acts"><span class="w">${plural(list.length,'банк','банка','банков')}</span><span class="sortb">${sortI}${sortBy}</span></div>
+  <div class="panel glow"><div class="hero"><div class="lbl">В банках</div>${amt(inBanks,'hero')}
+   <div class="bar" style="margin:14px 0 8px">${s.filter(b=>!b.empty).map(b=>`<span style="width:${tot(b)/inBanks*100}%;background:${b.c}"></span>`).join('')}</div>
+   <div class="sub" style="margin-bottom:8px">Ещё ${amt(OUT.fx+OUT.cash,'small')} — валюта и наличные, не в банке</div></div></div>
+  ${s.map(bankCardB).join('')}`}
+function sortSheet(){return `<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sh"><span class="t">Сортировка</span></div>
+  <div class="slist"><div class="srow sel"><span class="n">По сумме<small>сначала крупные</small></span>${tick}</div><div class="srow"><span class="n">По названию<small>от А до Я</small></span></div></div></div>`}
+/* ---------- C ---------- */
+function screenC(list,mode){
+  const total=list.reduce((s,b)=>s+tot(b),0)+OUT.fx+OUT.cash;
+  const tabs=list.length>1?`<div class="ptabs"><div class="${mode==='parts'?'on':''}">По частям</div><div class="${mode==='banks'?'on':''}">По банкам</div></div>`:'';
+  let body;
+  if(mode==='parts'){const ps=PARTS(list);body=partsBar(ps,total)+partRows(ps)}
+  else{const s=sorted(list);
+    body=`<div class="bar" style="margin:14px 12px 6px 0">${s.filter(b=>!b.empty).map(b=>`<span style="width:${tot(b)/total*100}%;background:${b.c}"></span>`).join('')}<span style="width:${(OUT.fx+OUT.cash)/total*100}%;background:var(--faint)"></span></div>`
+      +s.map(bankRowC).join('')+outsideRowC()}
+  return hdr('Обзор')+tabs+`<div class="panel glow"><div class="hero" style="padding-right:8px">${heroTop(total)}${body}</div></div>`+cashback();
+}
+function bankSheet(b){
+  const t=tot(b);
+  if(b.empty) return `<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sh">${logo(b,40,true)}<span class="t">${b.n}</span></div>
+    <div class="empty">Операций пока нет</div><div class="slist"><div class="srow"><span class="n">Настройки банка</span>${chev}</div></div></div>`;
+  const money=[];if(b.accN)money.push(`<div class="srow"><span class="dot" style="background:var(--brass)"></span><span class="n">Счета<small>${plural(b.accN,'счёт','счёта','счетов')}</small></span>${amt(b.acc)}${chev}</div>`);
+  if(b.depN)money.push(`<div class="srow"><span class="dot" style="background:var(--violet)"></span><span class="n">Вклады<small>${plural(b.depN,'вклад','вклада','вкладов')}</small></span>${amt(b.dep)}${chev}</div>`);
+  const other=[];if(b.cb)other.push(`<div class="srow"><span class="n">Кэшбэк в октябре</span>${amt(b.cb,'small mint','+')}${chev}</div>`);
+  if(b.subN)other.push(`<div class="srow"><span class="n">Подписки<small>${plural(b.subN,'подписка','подписки','подписок')}</small></span><span style="font-size:13px;color:var(--muted)">${amt(b.subM,'small')} в месяц</span>${chev}</div>`);
+  return `<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sh">${logo(b,40)}<span class="t">${b.n}</span></div>
+   ${amt(t,'large')}
+   <div class="bar thin" style="margin-top:12px">${b.acc?`<span style="width:${b.acc/t*100}%;background:var(--brass)"></span>`:''}${b.dep?`<span style="width:${b.dep/t*100}%;background:var(--violet)"></span>`:''}</div>
+   <div class="slist">${money.join('')}</div>${other.length?`<div class="slist">${other.join('')}</div>`:''}</div>`}
+
+const ONE=[BANKS[0]];
+const THREE=[BANKS[1],BANKS[3],BANKS[4]];
+const swipe=`<div class="gest"><svg viewBox="0 0 60 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M56 10H6M14 3L6 10l8 7"/></svg>свайп по обзору влево — «По банкам»</div>`;
+
+document.getElementById('fa').innerHTML=
+  fr(phone(screenA(BANKS)),'<b>Пять банков.</b> Экран прокручен к панели «Банки» — на открытии она под сгибом. Четвёртый и пятый банк — строкой «Ещё 2 банка».')+
+  fr(phone(screenA(BANKS,{collapsed:9})),'<b>«Ещё 2 банка» раскрыто.</b> ВТБ без операций — последним, приглушён, «Пока пусто».')+
+  fr(phone(screenA(THREE)),'<b>Пустой банк.</b> Три банка, один без операций. Озон без вкладов — полоса только латунная.')+
+  fr(phone(hdr('Обзор')+heroParts(ONE)+cashback()),'<b>Один банк.</b> Панели «Банки» нет — она повторила бы «Счета + Вклады». Появляется со второго банка.');
+document.getElementById('fb').innerHTML=
+  fr(phone(screenBOverview(BANKS)),'<b>Обзор.</b> В герое последней строкой «По банкам» со стопкой логотипов. Касание — экран «Банки» въезжает справа.')+
+  fr(phone(screenB(BANKS)),'<b>Экран «Банки», пять банков.</b> Сумма в банках, полоса по банкам, карточки раскрыты сразу; каждая строка ведёт в свой раздел.')+
+  fr(phone(screenB(THREE)),'<b>Пустой банк.</b> ВТБ в конце карточкой «Операций пока нет».')+
+  fr(phone(screenB(BANKS),sortSheet()),'<b>Сортировка.</b> Кнопка направления → шторка, как во всех списках.')+
+  fr(phone(screenBOverview(ONE)),'<b>Один банк.</b> Строки «По банкам» нет.');
+document.getElementById('fc').innerHTML=
+  fr(phone(screenC(BANKS,'parts')),'<b>По частям</b> — как сейчас, сверху ряд вкладок.'+swipe)+
+  fr(phone(screenC(BANKS,'banks')),'<b>По банкам, пять банков.</b> Сумма и «+48 300 ₽ за месяц» не двигаются; меняются полоса и строки. Кэшбэк остаётся на первом экране.')+
+  fr(phone(screenC(THREE,'banks')),'<b>Пустой банк.</b> ВТБ последним, приглушён, «Пока пусто»; в полосе его нет.')+
+  fr(phone(screenC(ONE,'parts')),'<b>Один банк.</b> Ряда вкладок нет, обзор как сейчас.')+
+  fr(phone(screenC(BANKS,'banks'),bankSheet(BANKS[0])),'<b>Касание Т-Банка</b> — шторка банка.');
+document.getElementById('fs').innerHTML=
+  fr(phone(screenC(BANKS,'banks'),bankSheet(BANKS[0])),'<b>Всё есть:</b> счета, вклады, кэшбэк, подписки.')+
+  fr(phone(screenC(BANKS,'banks'),bankSheet(BANKS[3])),'<b>Только счёт и подписка.</b> Строк без данных нет.')+
+  fr(phone(screenC(BANKS,'banks'),bankSheet(BANKS[4])),'<b>Банк без операций.</b> Одна строка — в настройки банка.');
+
+// A: показать панель «Банки» в кадре
+requestAnimationFrame(()=>document.querySelectorAll('#fa .body').forEach(b=>{const p=b.querySelector('#banksA');if(p)b.scrollTop=p.offsetTop-b.offsetTop-120}));
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===t));
+  document.querySelectorAll('section[data-p]').forEach(s=>s.hidden=s.dataset.p!==t.dataset.v);
+  if(t.dataset.v==='a')requestAnimationFrame(()=>document.querySelectorAll('#fa .body').forEach(b=>{const p=b.querySelector('#banksA');if(p)b.scrollTop=p.offsetTop-120}));
+}));
+</script>
