@@ -166,7 +166,7 @@ private fun CurrencyHero(snap: CapitalSnapshot, refreshing: Boolean, onRefresh: 
                 delta()
                 if (cur.costMinor > 0L) {
                     AmountText(
-                        "наличные: ${signedRub(cur.unrealizedMinor)}" +
+                        signedRub(cur.unrealizedMinor) +
                             (cur.unrealizedPct?.let { RuText.DOT + signedPct(it) } ?: "") +
                             " за всё время",
                         style = MaterialTheme.typography.bodyMedium,
