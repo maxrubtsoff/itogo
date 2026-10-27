@@ -38,24 +38,39 @@ object CapitalByBank {
             .filter { it.key != BankBrand.UNKNOWN.key }
             .distinctBy { it.key }
         val activeSubs = subscriptions.filter { it.status == SubscriptionStatus.ACTIVE }
+        val monthKey = "%04d-%02d".format(snap.today.year, snap.today.monthValue)
 
         val banks = named.map { brand ->
             val a = accounts.filter { it.first.key == brand.key }.map { it.second }
             val d = deposits.filter { it.first.key == brand.key }.map { it.second }
+            val subs = activeSubs.filter { it.brand?.key == brand.key }
+            val cats = cashback.count { it.brand.key == brand.key && it.monthKey == monthKey }
             BankSlice(
                 brand = brand,
                 valueMinor = a.sumOf { it.valueMinor } + d.sumOf { it.valueMinor },
                 share = 0f,
                 accounts = a,
                 deposits = d,
-                hasSubscriptions = activeSubs.any { it.brand?.key == brand.key },
-                hasCashback = cashback.any { it.brand.key == brand.key },
-                subscriptionsCount = activeSubs.count { it.brand?.key == brand.key }
+                hasSubscriptions = subs.isNotEmpty(),
+                hasCashback = cats > 0,
+                subscriptionsCount = subs.size,
+                subscriptionsMonthlyMinor = subs.sumOf { it.period.perMonth(it.priceMinor) },
+                monthCashbackCategories = cats
             )
         }.filter { it.valueMinor != 0L }.sortedByDescending { it.valueMinor }
 
         val rest = snap.totalMinor - banks.sumOf { it.valueMinor }
-        val all = banks + (if (rest != 0L) listOf(BankSlice(null, rest, 0f)) else emptyList())
+        val all: List<BankSlice> = if (rest != 0L) {
+            val cashMinor = snap.parts.firstOrNull { it.part == CapitalPart.CASH && it.included }?.valueMinor ?: 0L
+            val currencyMinor = (rest - cashMinor).coerceAtLeast(0L)
+            banks + BankSlice(
+                brand = null,
+                valueMinor = rest,
+                share = 0f,
+                restCurrencyMinor = currencyMinor,
+                restCashMinor = cashMinor.coerceIn(0L, rest)
+            )
+        } else banks
         val positive = all.sumOf { maxOf(0L, it.valueMinor) }
         return all.map { it.copy(share = if (positive > 0L && it.valueMinor > 0L) it.valueMinor.toFloat() / positive else 0f) }
     }

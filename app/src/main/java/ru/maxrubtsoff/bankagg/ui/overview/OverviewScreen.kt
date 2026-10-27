@@ -149,7 +149,8 @@ fun OverviewScreen(
     onToggleHidden: () -> Unit = {},
     activeSubscriptions: Int = 0,
     onOpenBankSubscriptions: (bankKey: String) -> Unit = {},
-    onOpenBankCashback: (bankKey: String) -> Unit = {}
+    onOpenBankCashback: (bankKey: String) -> Unit = {},
+    onOpenPart: (CapitalPart) -> Unit = onOpenCapital
 ) {
     val snapshot by vm.snapshot.collectAsStateWithLifecycle()
     val slices by vm.banksSlice.collectAsStateWithLifecycle()
@@ -218,9 +219,12 @@ fun OverviewScreen(
     }
 
     slices.firstOrNull { it.key == openBank }?.let { slice ->
+        val monthIndex = snapshot?.today?.monthValue?.minus(1) ?: 0
         BankSheet(
             slice,
+            monthIndex = monthIndex,
             onDismiss = { openBank = null },
+            onOpenPart = { part -> openBank = null; onOpenPart(part) },
             onOpenSubscriptions = { openBank = null; onOpenBankSubscriptions(slice.key) },
             onOpenCashback = { openBank = null; onOpenBankCashback(slice.key) }
         )

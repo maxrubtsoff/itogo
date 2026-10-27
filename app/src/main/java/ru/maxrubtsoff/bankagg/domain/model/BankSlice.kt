@@ -14,12 +14,20 @@ data class BankSlice(
     val deposits: List<Line> = emptyList(),
     val hasSubscriptions: Boolean = false,
     val hasCashback: Boolean = false,
-    val subscriptionsCount: Int = 0
+    val subscriptionsCount: Int = 0,
+    val subscriptionsMonthlyMinor: Long = 0,
+    val monthCashbackCategories: Int = 0,
+    /** For the rest slice: how much is bought-by-hand currency. */
+    val restCurrencyMinor: Long = 0,
+    /** For the rest slice: how much is cash. */
+    val restCashMinor: Long = 0
 ) {
     data class Line(val title: String, val valueMinor: Long)
 
     val accountsCount: Int get() = accounts.size
     val depositsCount: Int get() = deposits.size
+    val accountsTotalMinor: Long get() = accounts.sumOf { it.valueMinor }
+    val depositsTotalMinor: Long get() = deposits.sumOf { it.valueMinor }
 
     /** «2 счёта · 1 вклад · 3 подписки»; empty positions are skipped. */
     val countersLine: String
@@ -31,6 +39,8 @@ data class BankSlice(
 
     /** Stable id of the row: the bank's key, or a fixed one for the rest. */
     val key: String get() = brand?.key ?: REST_KEY
+
+    val isRest: Boolean get() = brand == null
 
     companion object {
         const val REST_KEY = "rest"
