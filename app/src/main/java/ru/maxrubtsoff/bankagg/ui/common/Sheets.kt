@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.TourTarget
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
@@ -124,10 +125,17 @@ fun SlitokSheet(onDismiss: () -> Unit, scroll: Boolean = true, imeField: Boolean
 private var lastImePx = 0
 private val DefaultIme = 280.dp
 
+/** The height of the room under a sheet's content, as plain numbers (B-58, B-110). */
+internal object ImeRoom {
+    fun height(held: Int, now: Int, bars: Int, leaving: Boolean, released: Boolean): Int =
+        maxOf(if (leaving || released) 0 else held, now, bars)
+}
+
 /** What one sheet has seen of the keyboard: how tall it got, and whether it has started to go. */
 private class ImeSeen {
     var peak = 0
     var leaving = false
+    var released by mutableStateOf(false)
 
     fun commit() {
         if (peak > 0) lastImePx = peak
@@ -147,6 +155,11 @@ private fun ImeReserve() {
     val fallback = with(LocalDensity.current) { DefaultIme.roundToPx() }
     val seen = remember { ImeSeen() }
     DisposableEffect(seen) { onDispose { seen.commit() } }
+    // The keyboard never came (the fields don't take focus): let the room go (B-110).
+    LaunchedEffect(seen) {
+        delay(Motion.NORMAL + 300L)
+        if (seen.peak == 0) seen.released = true
+    }
     Spacer(
         Modifier.layout { measurable, constraints ->
             val now = ime.getBottom(this)
@@ -155,8 +168,8 @@ private fun ImeReserve() {
                 seen.leaving = true
                 seen.commit()
             }
-            val held = if (seen.leaving) 0 else if (lastImePx > 0) lastImePx else fallback
-            val height = maxOf(held, now, bars.getBottom(this))
+            val held = if (lastImePx > 0) lastImePx else fallback
+            val height = ImeRoom.height(held, now, bars.getBottom(this), seen.leaving, seen.released)
             val placeable = measurable.measure(constraints)
             layout(placeable.width, height) {}
         }
