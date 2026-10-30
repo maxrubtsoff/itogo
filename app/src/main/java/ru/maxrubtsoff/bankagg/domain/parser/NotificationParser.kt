@@ -20,8 +20,16 @@ data class ParsedOp(
     /** Read separately from [kind]: the sign of [amount] comes from it. */
     val direction: OpDirection,
     val balance: Money?,         // running balance if present
-    val counterparty: String?
-)
+    val counterparty: String?,
+    /** Currency of [balance] when the push marks it; null — the same as [currency]. */
+    val balanceCurrency: String? = null
+) {
+    /** Currency of the account the push is about: the balance's, else the amount's (B-118). */
+    val accountCurrency: String get() = balanceCurrency ?: currency
+
+    /** The amount is in another currency than the account: the bank converted it, we cannot book it. */
+    val foreignAmount: Boolean get() = accountCurrency != currency
+}
 
 object NotificationParser {
 
@@ -188,6 +196,7 @@ object NotificationParser {
         val magnitude = toMinor(op.major) ?: return null
         if (magnitude == 0L) return null
 
+        val balanceHit = balanceAt?.let { at -> hits.firstOrNull { it.start > at } }
         val balance = balanceAt?.let { at ->
             hits.firstOrNull { it.start > at }?.let { toMinor(it.major) }
                 ?: Regex(NUM).find(clean, at)?.let { toMinor(it.groupValues[1]) }
@@ -200,7 +209,8 @@ object NotificationParser {
             kind = kind,
             direction = direction,
             balance = balance?.let(Money::ofMinor),
-            counterparty = counterparty
+            counterparty = counterparty,
+            balanceCurrency = balanceHit?.currency
         )
     }
 

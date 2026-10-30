@@ -54,7 +54,7 @@ class RepairFromJournal(
             val mine = all.mapNotNull { e ->
                 val op = NotificationParser.parse(e.title, e.text, e.brand.defaultCurrency)
                     ?: return@mapNotNull null
-                if (accountId(e.brand.key, op.currency) != id) null
+                if (accountId(e.brand.key, op.accountCurrency) != id) null
                 else RepairEvent(e.postedAt, op.balance?.minor)
             }
             if (mine.isNotEmpty()) withEvents += id
@@ -66,7 +66,7 @@ class RepairFromJournal(
             ledger.deleteTransaction(change.oldId)
             val op = change.op
             val newId = RecordNotification.eventHash(change.content, change.event.postedAt)
-            if (op != null) {
+            if (op != null && !op.foreignAmount) {
                 ledger.addTransaction(
                     Transaction(
                         id = newId,
@@ -122,7 +122,7 @@ class RepairFromJournal(
         changes.size
     }
 
-    private fun accountId(change: Change, op: ParsedOp) = accountId(change.event.brand.key, op.currency)
+    private fun accountId(change: Change, op: ParsedOp) = accountId(change.event.brand.key, op.accountCurrency)
 
     private fun accountId(brandKey: String, currency: String) = "$brandKey:$currency"
 

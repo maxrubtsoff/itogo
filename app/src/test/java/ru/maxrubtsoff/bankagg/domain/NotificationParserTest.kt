@@ -20,6 +20,8 @@ class NotificationParserTest {
         assertEquals("USD", p.currency)
         assertEquals(-100L, p.amount.minor)
         assertEquals(10029L, p.balance!!.minor)
+        assertEquals("EUR", p.accountCurrency)
+        assertTrue(p.foreignAmount)
     }
 
     @Test fun bsb_goodsAndServices_sameCurrency() {
@@ -31,6 +33,8 @@ class NotificationParserTest {
         assertEquals("EUR", p.currency)
         assertEquals(-994L, p.amount.minor)
         assertEquals(9128L, p.balance!!.minor)
+        assertEquals("EUR", p.accountCurrency)
+        assertTrue(!p.foreignAmount)
     }
 
     @Test fun bsb_refund_stillIncome() {

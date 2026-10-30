@@ -66,16 +66,18 @@ class RecordNotification(
             if (!stored) return@run false
 
             if (op != null) {
-                val accountId = "${brand.key}:${op.currency}"
+                val accountId = "${brand.key}:${op.accountCurrency}"
+                // An amount in another currency than the account's (1 USD, balance in EUR)
+                // is not booked: only the account's own balance is taken (B-118).
                 ledger.upsertAccountBalance(
                     accountId = accountId,
                     brand = brand,
-                    currency = op.currency,
-                    amountMinor = op.amount.minor,
+                    currency = op.accountCurrency,
+                    amountMinor = if (op.foreignAmount) 0L else op.amount.minor,
                     balanceMinor = op.balance?.minor,
                     postedAt = postedAt
                 )
-                ledger.addTransaction(
+                if (!op.foreignAmount) ledger.addTransaction(
                     Transaction(
                         id = hash,
                         brand = brand,
