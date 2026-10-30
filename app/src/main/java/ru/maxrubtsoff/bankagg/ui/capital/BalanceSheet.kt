@@ -49,7 +49,13 @@ internal fun checkedDay(at: Long, today: LocalDate = LocalDate.now()): String =
  * the last exact balance, what was added since, what it should be now.
  */
 @Composable
-fun BalanceSheet(account: Account, since: suspend () -> Pair<Long, Long>?, onSave: (Long) -> Unit, onDismiss: () -> Unit) {
+fun BalanceSheet(
+    account: Account, since: suspend () -> Pair<Long, Long>?, onSave: (Long) -> Unit, onDismiss: () -> Unit,
+    /** The history's fix (F-55): what the operations alone counted; shown beside «Сейчас» with a button to put it back. */
+    explained: Long? = null,
+    onRestore: ((Long) -> Unit)? = null,
+    heading: String? = null
+) {
     val start = if (account.needsBalance) "" else amountInput(account.balance.minor)
     var text by remember { mutableStateOf(TextFieldValue(start, TextRange(0, start.length))) }
     var breakdown by remember { mutableStateOf<Pair<Long, Long>?>(null) }
@@ -57,7 +63,13 @@ fun BalanceSheet(account: Account, since: suspend () -> Pair<Long, Long>?, onSav
     val input = parseAmountMinor(text.text)
 
     SlitokSheet(onDismiss, imeField = true) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        if (heading != null) {
+            Text(heading, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if (explained != null) {
+                Line("По операциям", Money.ofMinor(explained).format(account.currency))
+                Line("Сейчас", account.balance.format(account.currency), strong = true)
+            }
+        } else Row(verticalAlignment = Alignment.CenterVertically) {
             BankIcon(account.brand, size = 44.dp)
             Spacer(Modifier.width(14.dp))
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -75,6 +87,11 @@ fun BalanceSheet(account: Account, since: suspend () -> Pair<Long, Long>?, onSav
                 Line("Сверено ${account.checkedAt?.let { checkedDay(it) }.orEmpty()}", Money.ofMinor(checked).format(account.currency))
                 Line("Операции после", (if (added > 0) "+" else "") + Money.ofMinor(added).format(account.currency))
                 Line("Должно быть сейчас", account.balance.format(account.currency), strong = true)
+            }
+        }
+        if (explained != null && onRestore != null && explained != account.balance.minor) {
+            ru.maxrubtsoff.bankagg.ui.common.PlateButton({ onRestore(explained) }, Modifier.fillMaxWidth()) {
+                Text("Вернуть " + Money.ofMinor(explained).format(account.currency), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
         }
         BrassButton(onClick = { input?.let(onSave) }, Modifier.fillMaxWidth(), enabled = input != null) { Text("Сохранить") }

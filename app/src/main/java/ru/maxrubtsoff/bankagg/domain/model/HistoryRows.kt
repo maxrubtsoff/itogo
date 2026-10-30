@@ -138,6 +138,8 @@ object HistoryRows {
         }
         val date = same.maxOf { it.date }
         val total = same.sumOf { it.amountMinor ?: 0L }
+        // One currency through the month — the line opens its accounts (F-55).
+        val manualRefs = same.flatMap { it.parts + it }.mapNotNull { (it.ref as? HistoryRef.Balance)?.currency }.distinct()
         val parts = legs.values.sortedByDescending { kotlin.math.abs(it.effectMinor) }.map { l ->
             HistoryEvent(
                 date, CapitalPart.CURRENCY, Currencies.nameOf(l.currency),
@@ -145,7 +147,8 @@ object HistoryRows {
                 kind = HistoryKind.REVALUATION, target = HistoryTarget.Currency(l.currency)
             )
         } + (if (manual != 0L) listOf(
-            HistoryEvent(date, CapitalPart.CURRENCY, "Остаток изменили вручную", legs.values.singleOrNull()?.let { Currencies.nameOf(it.currency) }, manual, kind = HistoryKind.REVALUATION)
+            HistoryEvent(date, CapitalPart.CURRENCY, "Остаток изменили вручную", legs.values.singleOrNull()?.let { Currencies.nameOf(it.currency) }, manual, kind = HistoryKind.REVALUATION,
+                ref = manualRefs.singleOrNull()?.let { HistoryRef.Balance(it) })
         ) else emptyList())
         val title = groupTitle(HistoryKind.REVALUATION, CapitalPart.CURRENCY, 1, page)
         val subtitle = RevaluationText.subtitle(RevaluationReason(legs.values.toList(), manual))

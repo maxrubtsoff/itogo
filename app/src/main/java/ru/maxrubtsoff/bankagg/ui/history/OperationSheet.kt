@@ -74,6 +74,11 @@ fun OperationSheet(
     onOpenTarget: (HistoryTarget) -> Unit,
     onOpenLog: () -> Unit
 ) {
+    // A hand-changed balance is put right, not looked at or deleted (F-55).
+    if (event.ref is HistoryRef.Balance) {
+        BalanceFlow(event, vm, onDismiss)
+        return
+    }
     val detail by produceState<OperationDetail?>(null, event) { value = vm.detail(event) }
     var mode by remember { mutableStateOf(Mode.VIEW) }
     // The cash edit that undoes this one goes with it, when the person asks for both.

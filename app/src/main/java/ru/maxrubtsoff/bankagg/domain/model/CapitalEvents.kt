@@ -34,6 +34,8 @@ sealed interface HistoryRef {
     data class Cash(val atMs: Long) : HistoryRef
     data class TopUp(val depositId: String, val topUpId: String) : HistoryRef
     data class Fx(val id: String) : HistoryRef
+    /** A balance changed by hand (F-55): the sheet lists the accounts of [currency] to put right. */
+    data class Balance(val currency: String) : HistoryRef
 }
 
 /** What an event is, so the list can tell them apart and the screen can lead to the object. */
@@ -317,18 +319,27 @@ object CapitalEvents {
                 val parts = reason.legs.map { l ->
                     HistoryEvent(cur.date, CapitalPart.CURRENCY, Currencies.nameOf(l.currency), RevaluationText.partSubtitle(l), l.effectMinor,
                         kind = HistoryKind.REVALUATION, target = HistoryTarget.Currency(l.currency))
-                } + (if (reason.manualMinor != 0L) listOf(
-                    HistoryEvent(cur.date, CapitalPart.CURRENCY, "Остаток изменили вручную", reason.legs.singleOrNull()?.let { Currencies.nameOf(it.currency) },
-                        reason.manualMinor, kind = HistoryKind.REVALUATION)
-                ) else emptyList())
+                } + (if (reason.manualMinor != 0L) listOf(manualEvent(cur.date, reason, accounts, zone)) else emptyList())
+                // Nothing but a hand change: the line itself opens the sheet of the balance (F-55).
+                val onlyManual = reason.legs.isEmpty() && reason.manualMinor != 0L
                 out += HistoryEvent(cur.date, CapitalPart.CURRENCY, "Переоценка валюты", RevaluationText.subtitle(reason), revalued, reason,
                     kind = HistoryKind.REVALUATION, parts = if (parts.size >= 2) parts else emptyList(),
+                    ref = if (onlyManual) ManualBalance.currencyOf(reason.legs, accounts)?.let { HistoryRef.Balance(it) } else null,
                     target = reason.legs.maxByOrNull { kotlin.math.abs(it.effectMinor) }?.let { HistoryTarget.Currency(it.currency) }
                         ?: HistoryTarget.Section(CapitalPart.CURRENCY)
                 )
             }
         }
         return out
+    }
+
+    /** «Остаток изменили вручную» of a day; opens the accounts of its currency, with the bank in the subtitle when it is one (F-55). */
+    private fun manualEvent(date: LocalDate, reason: RevaluationReason, accounts: List<Account>, zone: ZoneId): HistoryEvent {
+        val currency = ManualBalance.currencyOf(reason.legs, accounts)
+        val bank = currency?.let { ManualBalance.onlyChanged(ManualBalance.accountsOf(it, accounts), date, zone) }
+        val name = currency?.let { Currencies.nameOf(it) }
+        return HistoryEvent(date, CapitalPart.CURRENCY, "Остаток изменили вручную", listOfNotNull(name, bank?.brand?.title).joinToString(" · ").ifEmpty { null },
+            reason.manualMinor, kind = HistoryKind.REVALUATION, ref = currency?.let { HistoryRef.Balance(it) })
     }
 
     /**

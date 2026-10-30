@@ -104,6 +104,8 @@ class CapitalEventsTest {
         assertEquals(2, e.parts.size)
         assertNull(e.parts[1].target)
         assertEquals(500_000L, e.parts[1].amountMinor)
+        // One leg (USD): the manual line opens the balance of that currency (F-55).
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Balance("USD"), e.parts[1].ref)
     }
 
     @Test fun revaluationWithoutRatesFallsBackToManual() {

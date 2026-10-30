@@ -15,9 +15,11 @@ import ru.maxrubtsoff.bankagg.domain.model.DepositTopUp
 import ru.maxrubtsoff.bankagg.domain.model.FxKind
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
 import ru.maxrubtsoff.bankagg.domain.model.FxPortfolio
+import ru.maxrubtsoff.bankagg.domain.model.FxRates
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEdits
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRef
+import ru.maxrubtsoff.bankagg.domain.model.ManualBalance
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.NoteHighlight
 import ru.maxrubtsoff.bankagg.domain.model.OperationForm
@@ -53,8 +55,16 @@ data class OperationDetail(
     val form: OperationForm?,
     /** The cash edit that undoes this one the same day. */
     val pair: HistoryRef.Cash?,
-    val currency: String?
+    val currency: String?,
+    /** The accounts of a hand-changed balance with what the operations counted (F-55); null — not such a line. */
+    val balance: BalanceDetail? = null
 )
+
+/** The sheet of «Остаток изменили вручную» (F-55): the accounts of [currency], the changed one first. */
+data class BalanceDetail(val currency: String, val rows: List<ManualBalance.Row>)
+
+/** The balance an account had before a hand correction, to put back with «Вернуть» (F-55). */
+class BalanceWas internal constructor(internal val accountId: String, internal val minor: Long, internal val estimated: Boolean, internal val exact: Boolean)
 
 /** What a deletion took out, to put it back (F-51). */
 class Removed internal constructor(internal val items: List<Item>) {
@@ -119,8 +129,33 @@ class HistoryOperations(
                 val op = fx.get(ref.id) ?: return none
                 none.copy(form = OperationForm(op.kind == FxKind.BUY, op.amountMinor, op.date, rubMinor = op.rubMinor), currency = op.currency)
             }
+            is HistoryRef.Balance -> {
+                val ofCurrency = ManualBalance.accountsOf(ref.currency, ledger.observeAccounts().first())
+                val rate = FxRates.latestOnOrBefore(rates.all(), ref.currency, event.date)?.rubPerUnitMicro
+                none.copy(currency = ref.currency, balance = BalanceDetail(ref.currency, ManualBalance.rows(ofCurrency, event.amountMinor ?: 0L, rate, event.date, zone)))
+            }
             null -> none
         }
+    }
+
+    /** A hand-typed balance of one account (the same path as the capital's «Сейчас на счёте»); what to put back is returned. */
+    suspend fun setBalance(accountId: String, balanceMinor: Long): BalanceWas? {
+        val old = ledger.account(accountId) ?: return null
+        ledger.setBalance(accountId, balanceMinor, System.currentTimeMillis())
+        return BalanceWas(old.id, old.balance.minor, old.estimated, !old.needsBalance)
+    }
+
+    /** The last exact balance and what the operations added since; null — never given exactly. */
+    suspend fun balanceSince(account: Account): Pair<Long, Long>? {
+        val at = account.checkedAt ?: return null
+        val added = ledger.sumSince(account.id, at)
+        return (account.balance.minor - added) to added
+    }
+
+    /** Puts the balance back as it was. */
+    suspend fun restoreBalance(was: BalanceWas) {
+        if (was.exact) ledger.setBalance(was.accountId, was.minor, System.currentTimeMillis())
+        else ledger.setCountedBalance(was.accountId, was.minor, was.estimated)
     }
 
     /** The figures to show before [refs] are deleted. */
@@ -154,6 +189,7 @@ class HistoryOperations(
             is HistoryRef.Fx -> fx.get(ref.id)?.let { op ->
                 note(CapitalPart.CURRENCY, -CapitalReconstruction.fxOn(listOf(op), allRates, snap.today), op.date)
             }
+            is HistoryRef.Balance -> Unit
         }
         return HistoryEdits.preview(part, delta, from, parts, snap.totalMinor, included())
     }
@@ -202,6 +238,8 @@ class HistoryOperations(
                 fx.delete(it.id)
                 taken += Removed.Item.Fx(it)
             }
+            // A hand-changed balance is put right, not deleted (F-55).
+            is HistoryRef.Balance -> Unit
         }
         shift(shifts)
         Removed(taken)
@@ -254,6 +292,7 @@ class HistoryOperations(
                     deposits.addTopUp(ref.depositId, DepositTopUp(ref.topUpId, form.date, Money.ofMinor(form.amountMinor)))
                     null
                 }
+                is HistoryRef.Balance -> null
                 is HistoryRef.Fx -> {
                     val old = fx.get(ref.id) ?: return@run null
                     val next = old.copy(
