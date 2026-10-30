@@ -10,6 +10,38 @@ import ru.maxrubtsoff.bankagg.domain.parser.NotificationParser
 
 class NotificationParserTest {
 
+    @Test fun bsb_goodsAndServices_isExpenseInOtherCurrency() {
+        val p = NotificationParser.parse(
+            "BSB Bank",
+            "4475, Сумма: 1 USD, Успешно, Товары и услуги, 2026-10-30 11:31:53, Остаток: 100.29 EUR, LU3/Luxembourg/PAYPAL"
+        )!!
+        assertEquals(OpDirection.OUT, p.direction)
+        assertEquals(TransactionKind.EXPENSE, p.kind)
+        assertEquals("USD", p.currency)
+        assertEquals(-100L, p.amount.minor)
+        assertEquals(10029L, p.balance!!.minor)
+    }
+
+    @Test fun bsb_goodsAndServices_sameCurrency() {
+        val p = NotificationParser.parse(
+            "BSB Bank",
+            "4475, Сумма: 9.94 EUR, Успешно, Товары и услуги, 2026-10-30 11:31:56, Остаток: 91.28 EUR, HK3/XXX XXX/PA..."
+        )!!
+        assertEquals(OpDirection.OUT, p.direction)
+        assertEquals("EUR", p.currency)
+        assertEquals(-994L, p.amount.minor)
+        assertEquals(9128L, p.balance!!.minor)
+    }
+
+    @Test fun bsb_refund_stillIncome() {
+        val p = NotificationParser.parse(
+            "BSB Bank",
+            "4475, Сумма: 1 USD, Успешно, Возврат средств, 2026-10-30 11:31:53, Остаток: 101.22 EUR, LU3/Luxembourg/PAYPAL"
+        )!!
+        assertEquals(OpDirection.IN, p.direction)
+        assertEquals(100L, p.amount.minor)
+    }
+
     @Test fun income_withBalanceAndCounterparty() {
         val op = NotificationParser.parse(null, "Пополнение на 5 000 ₽, счет RUB. Максим Р. Доступно 107 409,81 ₽")!!
         assertEquals(TransactionKind.INCOME, op.kind)

@@ -34,8 +34,9 @@ object NotificationParser {
      * 4 — Альфа-Бизнес, списание по п/п без знака валюты (B-107): the amount is read
      * right after "списано/зачислено" when our own "счет *dddd" follows; the kind then
      * follows the direction.
+     * 5 — BSB "Товары и услуги" is a purchase (B-118).
      */
-    const val VERSION = 4
+    const val VERSION = 5
 
 
     /**
@@ -102,12 +103,12 @@ object NotificationParser {
 
     private val TRANSFER = listOf("перевод", "между счет", "с карты на карту", "себе", "пополнение с карты")
     private val INCOME = listOf("пополнение", "зачисление", "поступление", "возврат", "начислен", "принят", "кэшбэк", "кешбэк")
-    private val EXPENSE = listOf("оплата", "покупка", "списание", "снятие", "платеж", "платёж", "комисси")
+    private val EXPENSE = listOf("товары и услуги", "оплата", "покупка", "списание", "снятие", "платеж", "платёж", "комисси")
     private val BALANCE_MARKERS = listOf("доступно", "остаток", "баланс")
 
     /** Money left the account. Wins over the kind: "Списание … Перевод …" is an expense (B-45). */
     private val OUT_MARKS = listOf(
-        "списание", "списан", "снятие", "оплата", "покупка", "платеж", "платёж", "комисси",
+        "товары и услуги", "списание", "списан", "снятие", "оплата", "покупка", "платеж", "платёж", "комисси",
         "получатель", "отправлен", "исходящ", "вы перевели", "перевод на карту", "перевод со счет",
         "перевод с карты", "перевод на счет получателя"
     )
