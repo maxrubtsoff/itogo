@@ -39,9 +39,11 @@ class RecordNotificationTest {
     private class FakeLedger : LedgerRepository {
         val balances = mutableMapOf<String, Long?>()
         val txs = mutableListOf<Transaction>()
+        /** accountId, currency, amountMinor of each upsert. */
+        val upserts = mutableListOf<Triple<String, String, Long>>()
         override suspend fun upsertAccountBalance(
             accountId: String, brand: BankBrand, currency: String, amountMinor: Long, balanceMinor: Long?, postedAt: Long
-        ) { balances[accountId] = balanceMinor }
+        ) { balances[accountId] = balanceMinor; upserts += Triple(accountId, currency, amountMinor) }
         override suspend fun setBalance(accountId: String, balanceMinor: Long, at: Long) { balances[accountId] = balanceMinor }
         override suspend fun sumSince(accountId: String, from: Long) = 0L
         override suspend fun addTransaction(tx: Transaction): Boolean = txs.add(tx)
@@ -97,6 +99,42 @@ class RecordNotificationTest {
         val record = RecordNotification(events, ledger, direct)
         record("by.bank.bsb.mobile", "BSB", "Оплата 25,40 BYN. Остаток 100,00 BYN", 1L)
         assertEquals(10_000L, ledger.balances["bsb:BYN"])
+    }
+
+    // B-118: an amount in another currency than the account's balance.
+
+    @Test fun bsb_usd_purchase_with_eur_balance_sets_only_the_eur_balance() = runTest {
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct)
+        record(
+            "by.bank.bsb.mobile", "BSB Bank",
+            "4475, Сумма: 1 USD, Успешно, Товары и услуги, 2026-10-30 11:31:53, Остаток: 100.29 EUR, LU3/Luxembourg/PAYPAL", 1L
+        )
+        assertTrue(events.stored.single().parsed)
+        assertTrue(ledger.txs.isEmpty())
+        assertEquals(listOf(Triple("bsb:EUR", "EUR", 0L)), ledger.upserts)
+        assertEquals(10_029L, ledger.balances["bsb:EUR"])
+        assertFalse(ledger.balances.containsKey("bsb:USD"))
+    }
+
+    @Test fun rub_balance_with_usd_purchase_is_not_booked_as_rub_or_usd() = runTest {
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct)
+        record(tbank, "Т-Банк", "Покупка 10 $. Shop. Доступно 1 000 ₽", 1L)
+        assertTrue(ledger.txs.isEmpty())
+        assertEquals(listOf(Triple("tbank:RUB", "RUB", 0L)), ledger.upserts)
+        assertEquals(100_000L, ledger.balances["tbank:RUB"])
+    }
+
+    @Test fun usd_purchase_with_usd_balance_is_still_written() = runTest {
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct)
+        record(tbank, "Т-Банк", "Покупка 10 $. Shop. Доступно 90 $", 1L)
+        assertEquals(1, ledger.txs.size)
+        assertEquals("tbank:USD", ledger.txs.single().accountId)
+        assertEquals(-1_000L, ledger.txs.single().amount.minor)
+        assertEquals(listOf(Triple("tbank:USD", "USD", -1_000L)), ledger.upserts)
+        assertEquals(9_000L, ledger.balances["tbank:USD"])
     }
 
     // B-92: without a balance in the push only the notification key tells a repeat from a new operation.

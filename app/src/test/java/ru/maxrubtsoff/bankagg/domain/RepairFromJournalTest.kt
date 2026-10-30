@@ -288,4 +288,36 @@ class RepairFromJournalTest {
         assertEquals(0L, ledger.accounts[account]!!.balance.minor)
         assertNull(ledger.accounts[account]!!.checkedAt)
     }
+
+    // B-118: the old parser booked "1 USD, Остаток 100.29 EUR" on a USD account.
+    @Test fun bsb_usd_op_with_eur_balance_leaves_the_usd_account_and_sets_eur_balance() = runTest {
+        val bsb = BankBrand.fromPackage("by.bank.bsb.mobile")
+        val text = "4475, Сумма: 1 USD, Успешно, Возврат средств, 2026-10-30 11:31:53, Остаток: 100.29 EUR, LU3/Luxembourg/PAYPAL"
+        val content = RecordNotification.contentHash("by.bank.bsb.mobile", text, 100L, null)
+        val hash = "$content|2000"
+        val event = CapturedEvent(
+            id = 1, packageName = "by.bank.bsb.mobile", brand = bsb, title = "BSB Bank", text = text,
+            postedAt = 2_000L, dedupHash = hash, parsed = true, contentHash = content
+        )
+        val usd = "${bsb.key}:USD"
+        val eur = "${bsb.key}:EUR"
+        val ledger = FakeLedger(
+            accounts = mutableMapOf(
+                usd to Account(id = usd, brand = bsb, title = bsb.title, balance = Money.ZERO, currency = "USD", updatedAt = 2_000L),
+                eur to Account(id = eur, brand = bsb, title = bsb.title, balance = Money.ZERO, currency = "EUR", updatedAt = 2_000L, checkedAt = 2_000L)
+            ),
+            txs = mutableListOf(
+                Transaction(
+                    id = hash, brand = bsb, accountId = usd, amount = Money.ofMinor(100L), currency = "USD",
+                    kind = TransactionKind.INCOME, category = null, counterparty = null, postedAt = 2_000L
+                )
+            )
+        )
+        val fixed = RepairFromJournal(FakeEvents(listOf(event)), ledger, direct)()
+
+        assertEquals(1, fixed)
+        assertTrue(ledger.txs.isEmpty())
+        assertFalse(ledger.hasTransactions(usd))
+        assertEquals(10_029L, ledger.accounts[eur]!!.balance.minor)
+    }
 }

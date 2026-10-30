@@ -101,7 +101,6 @@ class BankStore(
 
     private fun readStored(): List<BankBrand>? {
         val raw = prefs.getString(KEY_MINE, null) ?: return null
-        BankDirectory.replace(readDefinitions())
         val arr = JSONArray(raw)
         return (0 until arr.length()).map { BankBrand.fromKey(arr.getString(it)) }
     }
