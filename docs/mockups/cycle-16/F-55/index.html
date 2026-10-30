@@ -1,0 +1,176 @@
+<title>F-55 · Ручной остаток</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Golos+Text:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0F0F10;--pt:#1B1B1E;--pb:#151517;--inset:#0A0A0B;--line:#26262A;--fg:#F2EFE8;--muted:#9A968E;--faint:#5E5B56;--brass:#C9A55C;--brass2:#E0BE78;--pill:#2A2418;--tint:#1E1A12;--mint:#7FD1A8;--sky:#7FB4E0;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:"Golos Text",system-ui,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
+h1{font:600 22px Unbounded,sans-serif;margin:0 0 6px}h2{font:500 18px Unbounded,sans-serif;margin:32px 0 4px;color:var(--brass2)}
+.lead{color:var(--muted);max-width:900px;line-height:1.5}
+.row{display:flex;gap:20px;overflow-x:auto;padding:12px 0}
+.cap{width:390px;flex:none}.cap p{color:var(--muted);font-size:13px;margin:8px 4px;line-height:1.45}
+.ph{width:390px;height:700px;background:var(--bg);border:1px solid var(--line);border-radius:36px;position:relative;overflow:hidden;flex:none}
+.hdr{height:64px;display:flex;align-items:center;gap:12px;padding:28px 16px 0;font:500 18px Unbounded}
+.tabs{display:flex;gap:6px;margin:4px 16px;background:var(--inset);border-radius:12px;padding:4px;font-size:13px}
+.tabs span{flex:1;text-align:center;padding:7px 0;border-radius:9px;color:var(--muted)}.tabs .on{background:var(--pt);color:var(--fg)}
+.day{font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin:16px 16px 4px}
+.hl{display:flex;align-items:center;padding:10px 16px;gap:12px;min-height:44px}
+.hl .t{flex:1;min-width:0}.hl .a{font-size:15px}.hl .s{font-size:12px;color:var(--muted)}
+.amt{font-family:Unbounded;font-weight:500;font-size:13px}.k{opacity:.75}
+.mint{color:var(--mint)}.fg{color:var(--fg)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--sky);flex:none}
+.focus{box-shadow:inset 3px 0 0 var(--brass2);background:#ffffff06}
+.dim{position:absolute;inset:0;background:#000a}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(var(--pt),var(--pb));border-radius:28px 28px 0 0;padding:10px 20px 24px}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--faint);margin:0 auto 14px}
+.st{font:500 18px Unbounded;margin-bottom:4px}.sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+.list{background:var(--inset);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.sr{display:flex;align-items:center;gap:12px;padding:8px 14px;min-height:52px;border-top:1px solid var(--line)}.sr:first-child{border-top:0}
+.ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:600 12px Unbounded;color:#0F0F10;flex:none}
+.sr .t{flex:1;min-width:0}.sr .n{font-size:16px}.sr .d{font-size:12px;color:var(--muted)}
+.chev{color:var(--faint);font-size:18px}
+.field{background:var(--inset);border:1px solid var(--brass);border-radius:16px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin:10px 0}
+.field b{font:500 22px Unbounded}.lbl{font-size:12px;color:var(--muted)}
+.btn{background:linear-gradient(var(--brass2),var(--brass));color:#1a1408;border-radius:16px;text-align:center;padding:14px;font-weight:500;font-size:15px;margin-top:14px}
+.plate{background:var(--pt);border:1px solid var(--line);border-radius:16px;text-align:center;padding:12px;font-size:15px;margin-top:10px}
+.wb{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);padding:6px 0}
+.kbd{height:220px;background:#18181a;border-top:1px solid var(--line);margin:16px -20px -24px;display:grid;place-items:center;color:var(--faint);font-size:12px}
+.chip{font-size:12px;color:var(--muted)}
+.snack{position:absolute;left:12px;right:12px;bottom:16px;background:#26262a;border-radius:14px;padding:13px 16px;font-size:14px;display:flex;justify-content:space-between}
+.snack span{color:var(--brass2)}
+.note{position:absolute;right:-2px;color:var(--brass2);font-size:11px}
+.rec{display:inline-block;background:var(--pill);color:var(--brass2);border-radius:8px;padding:2px 8px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tip{background:var(--inset);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--muted);line-height:1.45}
+.tip b{color:var(--fg);font-weight:500}
+</style>
+
+<h1>F-55 · Исправить ручной остаток из истории</h1>
+<p class="lead">История капитала → Валюта. Строка «Остаток изменили вручную» становится нажимаемой: признак — шеврон «›» в конце серой подписи (как у <code>HistoryLine</code> GO). Касание открывает шторку. Три варианта — по ряду кадров на каждый: строка → шторка (несколько счетов) → шторка (один счёт) → результат.</p>
+
+<!-- ===== ВАРИАНТ A ===== -->
+<h2>A · Список счетов → BalanceSheet</h2>
+<div class="row">
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="tabs"><span>Всё</span><span>Счета</span><span>Вклады</span><span class="on">Валюта</span></div>
+ <div class="day">Сегодня</div>
+ <div class="hl"><div class="dot"></div><div class="t"><div class="a">Остаток изменили вручную</div><div class="s">Доллар США ›</div></div><div class="amt mint">+710 007<span class="k">,64</span> ₽</div></div>
+ <div class="hl"><div class="dot"></div><div class="t"><div class="a">Переоценка</div><div class="s">Доллар США</div></div><div class="amt mint">+1 204 ₽</div></div>
+ <div class="day">Вчера</div>
+ <div class="hl"><div class="dot"></div><div class="t"><div class="a">Покупка $ 500</div><div class="s">Т-Банк ›</div></div><div class="amt">−48 150 ₽</div></div>
+</div><p>1. Строка: «›» после «Доллар США» — значит открывается. Без подписи «нажмите».</p></div>
+
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="dim"></div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="st">Остаток · Доллар США</div>
+  <div class="sub">Изменили вручную на <span class="amt mint">+710 007<span class="k">,64</span> ₽</span></div>
+  <div class="list">
+   <div class="sr"><div class="ic" style="background:#FFDD2D">Т</div><div class="t"><div class="n">Т-Банк</div><div class="d">Долларовый</div></div><div class="amt fg">$ 8 120</div><div class="chev">›</div></div>
+   <div class="sr"><div class="ic" style="background:#21A038;color:#fff">С</div><div class="t"><div class="n">Сбер</div><div class="d">Валютный</div></div><div class="amt fg">$ 1 004<span class="k">,50</span></div><div class="chev">›</div></div>
+   <div class="sr"><div class="ic" style="background:#EF3124;color:#fff">А</div><div class="t"><div class="n">Альфа</div><div class="d">USD</div></div><div class="amt fg">$ 230</div><div class="chev">›</div></div>
+  </div>
+ </div>
+</div><p>2. Несколько счетов: <code>SheetList</code>, справа текущий остаток. Касание счёта — <code>BalanceSheet</code> поверх.</p></div>
+
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="dim"></div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="st">Остаток · Т-Банк</div>
+  <div class="field"><div><div class="lbl">Долларовый</div><b>8 120</b></div><span class="amt" style="color:var(--muted)">$</span></div>
+  <div class="btn">Сохранить</div>
+  <div class="kbd">клавиатура</div>
+ </div>
+</div><p>3. Один счёт — сразу <code>BalanceSheet</code> (<code>imeField</code>), как в «Капитале». Вид не меняется.</p></div>
+
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="tabs"><span>Всё</span><span>Счета</span><span>Вклады</span><span class="on">Валюта</span></div>
+ <div class="day">Сегодня</div>
+ <div class="hl"><div class="dot"></div><div class="t"><div class="a">Переоценка</div><div class="s">Доллар США</div></div><div class="amt mint">+1 204 ₽</div></div>
+ <div class="day">Вчера</div>
+ <div class="hl"><div class="dot"></div><div class="t"><div class="a">Покупка $ 500</div><div class="s">Т-Банк ›</div></div><div class="amt">−48 150 ₽</div></div>
+ <div class="snack">Остаток сохранён<span>Вернуть</span></div>
+</div><p>4. Разница ушла — строки нет, герой и график пересчитаны. Снекбар «Вернуть» (правку жалко потерять).</p></div>
+</div>
+
+<!-- ===== ВАРИАНТ B ===== -->
+<h2>B · Учтено / сейчас + «Вернуть к учтённому» <span class="rec">рекомендую</span></h2>
+<div class="row">
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="tabs"><span>Всё</span><span>Счета</span><span>Вклады</span><span class="on">Валюта</span></div>
+ <div class="day">Сегодня</div>
+ <div class="hl"><div class="dot"></div><div class="t"><div class="a">Остаток изменили вручную</div><div class="s">Доллар США · Т-Банк ›</div></div><div class="amt mint">+710 007<span class="k">,64</span> ₽</div></div>
+ <div class="hl"><div class="dot"></div><div class="t"><div class="a">Переоценка</div><div class="s">Доллар США</div></div><div class="amt mint">+1 204 ₽</div></div>
+</div><p>1. Та же строка; если правка на одном счёте — в подписи его банк.</p></div>
+
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="dim"></div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="st">Остаток · Доллар США</div>
+  <div class="sub">Где изменили</div>
+  <div class="list">
+   <div class="sr"><div class="ic" style="background:#FFDD2D">Т</div><div class="t"><div class="n">Т-Банк</div><div class="d">по операциям $ 120</div></div><div class="amt fg">$ 8 120</div><div class="chev">›</div></div>
+   <div class="sr"><div class="ic" style="background:#21A038;color:#fff">С</div><div class="t"><div class="n">Сбер</div><div class="d">совпадает</div></div><div class="amt fg">$ 1 004<span class="k">,50</span></div><div class="chev">›</div></div>
+  </div>
+ </div>
+</div><p>2. Несколько счетов: под банком — что насчитали операции; где правка, видно сразу. Счёт с правкой — первым.</p></div>
+
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="dim"></div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="st">Остаток · Т-Банк</div>
+  <div class="wb"><span>По операциям</span><span class="amt" style="color:var(--muted)">$ 120</span></div>
+  <div class="wb"><span>Сейчас</span><span class="amt fg">$ 8 120</span></div>
+  <div class="field"><div><div class="lbl">Долларовый</div><b>8 120</b></div><span class="amt" style="color:var(--muted)">$</span></div>
+  <div class="plate">Вернуть $ 120</div>
+  <div class="btn">Сохранить</div>
+ </div>
+</div><p>3. Один счёт — сразу поле. Ошибку чинит одно касание «Вернуть $ 120» (остаток = учтённому, строка исчезнет); точная сумма — в поле. Без поясняющего текста: два числа говорят сами.</p></div>
+
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="tabs"><span>Всё</span><span>Счета</span><span>Вклады</span><span class="on">Валюта</span></div>
+ <div class="day">Сегодня</div>
+ <div class="hl"><div class="dot"></div><div class="t"><div class="a">Переоценка</div><div class="s">Доллар США</div></div><div class="amt mint">+1 204 ₽</div></div>
+ <div class="snack">Остаток вернули<span>Вернуть</span></div>
+</div><p>4. Строка ушла, капитал пересчитан, снекбар с отменой.</p></div>
+</div>
+
+<!-- ===== ВАРИАНТ C ===== -->
+<h2>C · Как A, с пояснением разницы</h2>
+<div class="row">
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="dim"></div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="st">Остаток · Доллар США</div>
+  <div class="tip" style="margin-bottom:12px"><b>+710 007,64 ₽</b> — остаток на счетах минус то, что насчитали операции. Поправьте остаток — разница пересчитается.</div>
+  <div class="list">
+   <div class="sr"><div class="ic" style="background:#FFDD2D">Т</div><div class="t"><div class="n">Т-Банк</div><div class="d">Долларовый</div></div><div class="amt fg">$ 8 120</div><div class="chev">›</div></div>
+   <div class="sr"><div class="ic" style="background:#21A038;color:#fff">С</div><div class="t"><div class="n">Сбер</div><div class="d">Валютный</div></div><div class="amt fg">$ 1 004<span class="k">,50</span></div><div class="chev">›</div></div>
+  </div>
+ </div>
+</div><p>Подсказка на <code>Inset</code> над списком. Минус: это поясняющая подпись — «Слиток» их не любит; держу только для сравнения.</p></div>
+<div class="cap"><div class="ph">
+ <div class="hdr">‹ &nbsp;История капитала</div>
+ <div class="dim"></div>
+ <div class="sheet">
+  <div class="grab"></div>
+  <div class="st">Остаток · Т-Банк</div>
+  <div class="tip">Разница: остаток минус учтённые операции.</div>
+  <div class="field"><div><div class="lbl">Долларовый</div><b>8 120</b></div><span class="amt" style="color:var(--muted)">$</span></div>
+  <div class="btn">Сохранить</div>
+  <div class="kbd">клавиатура</div>
+ </div>
+</div><p>Один счёт: та же подсказка над полем. Результат — как в A.</p></div>
+</div>
