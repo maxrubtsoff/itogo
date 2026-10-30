@@ -171,7 +171,7 @@ object CashbackParser {
 
     // Not cached: the user's own banks join the list as they're added (F-22).
     private val KEYWORDS: List<Pair<String, BankBrand>> get() =
-        BankBrand.all
+        BankBrand.recognizable
             .flatMap { b -> bankKeywords(b).filter { it.isNotEmpty() }.map { it to b } }
             .sortedByDescending { it.first.length }
 

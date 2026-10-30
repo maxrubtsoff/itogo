@@ -112,6 +112,13 @@ class BankBrand(
         /** Every bank resolvable now: known plus the user's directory. */
         val all: List<BankBrand> get() = known + BankDirectory.extra()
 
+        /**
+         * Banks a screenshot may be recognised as: the known ones and the user's
+         * own that are in "Мои банки". A removed bank stays resolvable by key
+         * ([all], [fromKey]) but is never guessed (B-119).
+         */
+        val recognizable: List<BankBrand> get() = BankDirectory.recognizableOf(known)
+
         fun fromPackage(pkg: String): BankBrand =
             (BankDirectory.extra() + known).firstOrNull { pkg in it.packages } ?: UNKNOWN
 
@@ -147,10 +154,17 @@ class BankBrand(
  */
 object BankDirectory {
     @Volatile private var banks: Map<String, BankBrand> = emptyMap()
+    @Volatile private var active: Set<String> = emptySet()
 
-    fun replace(list: List<BankBrand>) {
+    /** [activeKeys] — the directory banks now in "Мои банки"; by default all of [list]. */
+    fun replace(list: List<BankBrand>, activeKeys: Set<String> = list.map { it.key }.toSet()) {
         banks = list.associateBy { it.key }
+        active = activeKeys
     }
+
+    /** [known] plus the directory banks that are active; the rest is only resolvable by key. */
+    fun recognizableOf(known: List<BankBrand>): List<BankBrand> =
+        known + extra().filter { it.key in active }
 
     fun find(key: String): BankBrand? = banks[key]
 

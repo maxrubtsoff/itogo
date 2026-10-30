@@ -39,7 +39,7 @@ class BankStore(
     private var cbr: List<CbrBanks.Entry>? = null
 
     init {
-        BankDirectory.replace(readDefinitions())
+        BankDirectory.replace(readDefinitions(), activeKeys = _mine.value.map { it.key }.toSet())
     }
 
     /** Fills the list once for an install that had banks before F-22. */
@@ -95,7 +95,7 @@ class BankStore(
             .putString(KEY_MINE, JSONArray(banks.map { it.key }).toString())
             .putString(KEY_DEFS, JSONArray(defs.map(::toJson)).toString())
             .apply()
-        BankDirectory.replace(defs.toList())
+        BankDirectory.replace(defs.toList(), activeKeys = banks.map { it.key }.toSet())
         _mine.value = banks
     }
 
