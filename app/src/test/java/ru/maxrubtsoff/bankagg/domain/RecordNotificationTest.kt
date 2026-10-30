@@ -45,6 +45,7 @@ class RecordNotificationTest {
             accountId: String, brand: BankBrand, currency: String, amountMinor: Long, balanceMinor: Long?, postedAt: Long
         ) { balances[accountId] = balanceMinor; upserts += Triple(accountId, currency, amountMinor) }
         override suspend fun setBalance(accountId: String, balanceMinor: Long, at: Long) { balances[accountId] = balanceMinor }
+        override suspend fun restoreBalance(accountId: String, balanceMinor: Long, updatedAt: Long, checkedAt: Long?, estimated: Boolean) {}
         override suspend fun sumSince(accountId: String, from: Long) = 0L
         override suspend fun addTransaction(tx: Transaction): Boolean = txs.add(tx)
         override fun observeAccounts(): Flow<List<Account>> = emptyFlow()

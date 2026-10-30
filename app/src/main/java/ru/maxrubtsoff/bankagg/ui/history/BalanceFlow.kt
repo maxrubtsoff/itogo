@@ -38,7 +38,7 @@ fun BalanceFlow(event: HistoryEvent, vm: CapitalHistoryViewModel, onDismiss: () 
         val a = row.account
         BalanceSheet(
             a, since = { vm.balanceSince(a) },
-            onSave = { vm.setBalance(a.id, it, it == row.explainedMinor); onDismiss() },
+            onSave = { vm.setBalance(a.id, it, false); onDismiss() },
             onDismiss = { if (rows.size > 1) picked = null else onDismiss() },
             explained = row.explainedMinor,
             onRestore = { vm.setBalance(a.id, it, true); onDismiss() },

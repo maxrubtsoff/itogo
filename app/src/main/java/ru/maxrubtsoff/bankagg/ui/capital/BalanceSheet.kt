@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ru.maxrubtsoff.bankagg.domain.model.Account
 import ru.maxrubtsoff.bankagg.domain.model.Currencies
@@ -34,6 +35,7 @@ import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.RuDays
 import ru.maxrubtsoff.bankagg.ui.common.BankIcon
 import ru.maxrubtsoff.bankagg.ui.common.BrassButton
+import ru.maxrubtsoff.bankagg.ui.common.PlateButton
 import ru.maxrubtsoff.bankagg.ui.theme.Slitok
 import java.time.Instant
 import java.time.LocalDate
@@ -63,19 +65,17 @@ fun BalanceSheet(
     val input = parseAmountMinor(text.text)
 
     SlitokSheet(onDismiss, imeField = true) {
-        if (heading != null) {
-            Text(heading, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            if (explained != null) {
-                Line("По операциям", Money.ofMinor(explained).format(account.currency))
-                Line("Сейчас", account.balance.format(account.currency), strong = true)
-            }
-        } else Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             BankIcon(account.brand, size = 44.dp)
             Spacer(Modifier.width(14.dp))
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(account.title.ifBlank { account.brand.title }, style = MaterialTheme.typography.titleLarge)
-                Text("Остаток из приложения банка", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+                Text(heading ?: account.title.ifBlank { account.brand.title }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (heading == null) Text("Остаток из приложения банка", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
             }
+        }
+        if (heading != null && explained != null) {
+            Line("По операциям", Money.ofMinor(explained).format(account.currency))
+            Line("Сейчас", account.balance.format(account.currency), strong = true)
         }
         Text("Сейчас на счёте", style = MaterialTheme.typography.labelMedium, color = Slitok.Muted)
         AmountField(text, { text = it }, Currencies.symbolOf(account.currency), autoFocus = true)
@@ -90,8 +90,8 @@ fun BalanceSheet(
             }
         }
         if (explained != null && onRestore != null && explained != account.balance.minor) {
-            ru.maxrubtsoff.bankagg.ui.common.PlateButton({ onRestore(explained) }, Modifier.fillMaxWidth()) {
-                Text("Вернуть " + Money.ofMinor(explained).format(account.currency), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            PlateButton({ onRestore(explained) }, Modifier.fillMaxWidth()) {
+                Text("Вернуть " + Money.ofMinor(explained).format(account.currency), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         BrassButton(onClick = { input?.let(onSave) }, Modifier.fillMaxWidth(), enabled = input != null) { Text("Сохранить") }

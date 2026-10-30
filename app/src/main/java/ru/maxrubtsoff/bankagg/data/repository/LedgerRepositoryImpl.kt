@@ -49,6 +49,9 @@ class LedgerRepositoryImpl(
         dao.setBalance(accountId, next.balanceMinor, next.updatedAt, next.checkedAt, next.estimated)
     }
 
+    override suspend fun restoreBalance(accountId: String, balanceMinor: Long, updatedAt: Long, checkedAt: Long?, estimated: Boolean) =
+        dao.setBalance(accountId, balanceMinor, updatedAt, checkedAt, estimated)
+
     override suspend fun sumSince(accountId: String, from: Long): Long = dao.sumSince(accountId, from)
 
     private fun AccountEntity.state() = BalanceState(balanceMinor, updatedAt, checkedAt, estimated)

@@ -64,6 +64,7 @@ class RepairFromJournalTest {
                 accounts[accountId] = it.copy(balance = Money.ZERO, checkedAt = null, estimated = false)
             }
         }
+        override suspend fun restoreBalance(accountId: String, balanceMinor: Long, updatedAt: Long, checkedAt: Long?, estimated: Boolean) {}
         override suspend fun sumSince(accountId: String, from: Long) =
             txs.filter { it.accountId == accountId && it.postedAt > from }.sumOf { it.amount.minor }
         override suspend fun addTransaction(tx: Transaction): Boolean = txs.add(tx)

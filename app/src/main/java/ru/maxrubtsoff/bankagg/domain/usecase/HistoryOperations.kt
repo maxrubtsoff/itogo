@@ -64,7 +64,7 @@ data class OperationDetail(
 data class BalanceDetail(val currency: String, val rows: List<ManualBalance.Row>)
 
 /** The balance an account had before a hand correction, to put back with «Вернуть» (F-55). */
-class BalanceWas internal constructor(internal val accountId: String, internal val minor: Long, internal val estimated: Boolean, internal val exact: Boolean)
+class BalanceWas internal constructor(internal val old: Account)
 
 /** What a deletion took out, to put it back (F-51). */
 class Removed internal constructor(internal val items: List<Item>) {
@@ -132,17 +132,18 @@ class HistoryOperations(
             is HistoryRef.Balance -> {
                 val ofCurrency = ManualBalance.accountsOf(ref.currency, ledger.observeAccounts().first())
                 val rate = FxRates.latestOnOrBefore(rates.all(), ref.currency, event.date)?.rubPerUnitMicro
-                none.copy(currency = ref.currency, balance = BalanceDetail(ref.currency, ManualBalance.rows(ofCurrency, event.amountMinor ?: 0L, rate, event.date, zone)))
+                none.copy(currency = ref.currency, balance = BalanceDetail(ref.currency, ManualBalance.rows(ofCurrency, event.amountMinor ?: 0L, rate, event.date, zone, ledger.observeTransactions(Int.MAX_VALUE).first(), ref.merged)))
             }
             null -> none
         }
     }
 
-    /** A hand-typed balance of one account (the same path as the capital's «Сейчас на счёте»); what to put back is returned. */
-    suspend fun setBalance(accountId: String, balanceMinor: Long): BalanceWas? {
+    /** A hand-typed balance of one account; [counted] - the fix: the app's own count, not an exact figure. */
+    suspend fun setBalance(accountId: String, balanceMinor: Long, counted: Boolean = false): BalanceWas? {
         val old = ledger.account(accountId) ?: return null
-        ledger.setBalance(accountId, balanceMinor, System.currentTimeMillis())
-        return BalanceWas(old.id, old.balance.minor, old.estimated, !old.needsBalance)
+        if (counted) ledger.setCountedBalance(accountId, balanceMinor, true)
+        else ledger.setBalance(accountId, balanceMinor, System.currentTimeMillis())
+        return BalanceWas(old)
     }
 
     /** The last exact balance and what the operations added since; null — never given exactly. */
@@ -152,10 +153,10 @@ class HistoryOperations(
         return (account.balance.minor - added) to added
     }
 
-    /** Puts the balance back as it was. */
+    /** Puts the balance back exactly as it was, dates and flags too. */
     suspend fun restoreBalance(was: BalanceWas) {
-        if (was.exact) ledger.setBalance(was.accountId, was.minor, System.currentTimeMillis())
-        else ledger.setCountedBalance(was.accountId, was.minor, was.estimated)
+        val o = was.old
+        ledger.restoreBalance(o.id, o.balance.minor, o.updatedAt, o.checkedAt, o.estimated)
     }
 
     /** The figures to show before [refs] are deleted. */

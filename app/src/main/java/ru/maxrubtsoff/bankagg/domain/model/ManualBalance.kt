@@ -34,22 +34,25 @@ object ManualBalance {
 
     /**
      * Accounts of one currency for the sheet, the changed one first. [manualRubMinor] is the line's sum in
-     * rubles, [rateMicro] the currency's rate that day (null — unknown). Several candidates, or no rate — no
-     * figure for them: better silent than wrong.
+     * rubles, [rateMicro] the currency's rate that day. «По операциям» is given only when it is sure: one account
+     * had its balance given exactly that day, the rate is known, the line is a single day's ([merged] - no), and no
+     * operation of that account came after the day. Otherwise the list is bare: better silent than wrong.
      */
-    fun rows(ofCurrency: List<Account>, manualRubMinor: Long, rateMicro: Long?, date: LocalDate, zone: ZoneId): List<Row> {
-        val changed = onlyChanged(ofCurrency, date, zone)
-        val known = rateMicro != null && rateMicro > 0L
-        val manualUnits = if (known && changed != null)
-            BigInteger.valueOf(manualRubMinor).multiply(BigInteger.valueOf(1_000_000L)).divide(BigInteger.valueOf(rateMicro!!)).toLong() else 0L
-        val several = changed == null
-        val rows = ofCurrency.map { a ->
+    fun rows(
+        ofCurrency: List<Account>, manualRubMinor: Long, rateMicro: Long?, date: LocalDate, zone: ZoneId,
+        transactions: List<Transaction> = emptyList(), merged: Boolean = false
+    ): List<Row> {
+        val changed = touchedOn(ofCurrency, date, zone).singleOrNull()
+        val after = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val sure = changed != null && !merged && rateMicro != null && rateMicro > 0L &&
+            transactions.none { it.accountId == changed.id && it.postedAt >= after }
+        val units = if (sure) BigInteger.valueOf(manualRubMinor).multiply(BigInteger.valueOf(1_000_000L)).divide(BigInteger.valueOf(rateMicro!!)).toLong() else 0L
+        return ofCurrency.map { a ->
             when {
-                several -> Row(a, null, false)
-                a.id == changed!!.id -> Row(a, if (known) a.balance.minor - manualUnits else null, true)
+                !sure -> Row(a, null, a.id == changed?.id)
+                a.id == changed!!.id -> Row(a, a.balance.minor - units, true)
                 else -> Row(a, a.balance.minor, false)
             }
-        }
-        return rows.sortedByDescending { it.changed }
+        }.sortedByDescending { it.changed }
     }
 }

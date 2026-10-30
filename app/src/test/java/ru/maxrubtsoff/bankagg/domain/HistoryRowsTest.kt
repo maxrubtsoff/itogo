@@ -42,6 +42,19 @@ class HistoryRowsTest {
     private fun topup(day: Int, name: String) =
         ev(day, HistoryKind.DEPOSIT_TOPUP, CapitalPart.DEPOSITS, 1000, "Пополнение вклада", name, HistoryTarget.Deposit(name))
 
+    private fun manual(day: Int) = HistoryEvent(
+        LocalDate.of(2026, 10, day), CapitalPart.CURRENCY, "Переоценка валюты", null, 100L,
+        reason = RevaluationReason(emptyList(), 100L), kind = HistoryKind.REVALUATION, target = HistoryTarget.Section(CapitalPart.CURRENCY),
+        ref = ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Balance("USD")
+    )
+
+    @Test fun monthOfManualEditsIsMergedForBalanceRef() {
+        val one = (rows(listOf(manual(3))).single() as HistoryRow.Group).children.single().ref
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Balance("USD", merged = false), one)
+        val many = (rows(listOf(manual(3), manual(5))).single() as HistoryRow.Group).children.single().ref
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Balance("USD", merged = true), many)
+    }
+
     @Test fun dayFoldsAnySameKind() {
         val days = HistoryRows.days(listOf(topup(20, "А"), topup(20, "Б")), null)
         val g = days.single().rows.single() as HistoryRow.Group

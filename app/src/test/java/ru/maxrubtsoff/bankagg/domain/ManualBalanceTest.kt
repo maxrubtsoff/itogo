@@ -8,6 +8,8 @@ import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.ManualBalance
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.RevaluationLeg
+import ru.maxrubtsoff.bankagg.domain.model.Transaction
+import ru.maxrubtsoff.bankagg.domain.model.TransactionKind
 import java.time.LocalDate
 import java.time.ZoneOffset
 
@@ -39,9 +41,11 @@ class ManualBalanceTest {
         assertEquals(listOf("a"), ManualBalance.accountsOf("USD", list).map { it.id })
     }
 
-    @Test fun single_account_explained_is_balance_minus_manual() {
-        // 1 USD = 100 RUB; the balance rose by 8000 $ = 800 000 ₽ by hand.
-        val rows = ManualBalance.rows(listOf(acc("a", "USD", 812_000)), 80_000_000L, 100_000_000L, day, zone)
+    private fun tx(account: String, at: Long) = Transaction("t", BankBrand.SBER, account, Money.ofMinor(-1), "USD", TransactionKind.EXPENSE, null, null, at)
+
+    @Test fun single_touched_account_explained_is_balance_minus_manual() {
+        // 1 USD = 100 RUB; the balance rose by 8000 $ = 800 000 RUB by hand.
+        val rows = ManualBalance.rows(listOf(acc("a", "USD", 812_000, checked = dayMs)), 80_000_000L, 100_000_000L, day, zone)
         assertEquals(12_000L, rows.single().explainedMinor)
         assertEquals(true, rows.single().changed)
     }
@@ -52,7 +56,26 @@ class ManualBalanceTest {
         assertEquals(listOf("t", "s"), rows.map { it.account.id })
         assertEquals(12_000L, rows[0].explainedMinor)
         assertEquals(100_500L, rows[1].explainedMinor)
-        assertEquals(false, rows[1].changed)
+    }
+
+    @Test fun operations_after_the_day_hide_explained() {
+        val list = listOf(acc("a", "USD", 812_000, checked = dayMs))
+        val later = dayMs + 2 * 86_400_000L
+        assertNull(ManualBalance.rows(list, 80_000_000L, 100_000_000L, day, zone, listOf(tx("a", later))).single().explainedMinor)
+    }
+
+    @Test fun no_rate_hides_explained() {
+        val list = listOf(acc("a", "USD", 812_000, checked = dayMs))
+        assertNull(ManualBalance.rows(list, 80_000_000L, null, day, zone).single().explainedMinor)
+    }
+
+    @Test fun no_touched_account_hides_explained() {
+        assertNull(ManualBalance.rows(listOf(acc("a", "USD", 812_000)), 80_000_000L, 100_000_000L, day, zone).single().explainedMinor)
+    }
+
+    @Test fun merged_line_hides_explained() {
+        val list = listOf(acc("a", "USD", 812_000, checked = dayMs))
+        assertNull(ManualBalance.rows(list, 80_000_000L, 100_000_000L, day, zone, merged = true).single().explainedMinor)
     }
 
     @Test fun several_touched_accounts_have_no_explained() {

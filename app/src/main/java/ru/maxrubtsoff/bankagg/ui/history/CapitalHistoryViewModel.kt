@@ -155,7 +155,7 @@ class CapitalHistoryViewModel(
     /** A balance put right by hand (F-55); offers «Вернуть». [restored] — the sum is the one the operations counted. */
     fun setBalance(accountId: String, minor: Long, restored: Boolean) {
         viewModelScope.launch {
-            val was = operations.setBalance(accountId, minor) ?: return@launch
+            val was = operations.setBalance(accountId, minor, restored) ?: return@launch
             undo.offer(if (restored) "Остаток вернули" else "Остаток сохранён", restore = { operations.restoreBalance(was) })
         }
     }

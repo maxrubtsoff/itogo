@@ -24,6 +24,9 @@ interface LedgerRepository {
     /** «Сейчас на счёте»: the balance the user sees in the bank's app — the new starting point (B-29). */
     suspend fun setBalance(accountId: String, balanceMinor: Long, at: Long)
 
+    /** Puts an account's balance back exactly as it was, with its dates and the count flag (F-55 undo). */
+    suspend fun restoreBalance(accountId: String, balanceMinor: Long, updatedAt: Long, checkedAt: Long?, estimated: Boolean)
+
     /** Operations on the account after [from] (B-29: what the counted balance added up). */
     suspend fun sumSince(accountId: String, from: Long): Long
 

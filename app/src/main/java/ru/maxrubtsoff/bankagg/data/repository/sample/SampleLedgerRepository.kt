@@ -40,6 +40,10 @@ class SampleLedgerRepository(accounts: List<Account>, transactions: List<Transac
         it.copy(balance = Money.ofMinor(balanceMinor), updatedAt = at, checkedAt = at, estimated = false)
     }
 
+    override suspend fun restoreBalance(accountId: String, balanceMinor: Long, updatedAt: Long, checkedAt: Long?, estimated: Boolean) = change(accountId) {
+        it.copy(balance = Money.ofMinor(balanceMinor), updatedAt = updatedAt, checkedAt = checkedAt, estimated = estimated)
+    }
+
     override suspend fun sumSince(accountId: String, from: Long): Long =
         transactions.value.filter { it.accountId == accountId && it.postedAt > from }.sumOf { it.amount.minor }
 

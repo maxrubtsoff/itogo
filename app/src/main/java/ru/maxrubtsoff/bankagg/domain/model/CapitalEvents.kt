@@ -35,7 +35,7 @@ sealed interface HistoryRef {
     data class TopUp(val depositId: String, val topUpId: String) : HistoryRef
     data class Fx(val id: String) : HistoryRef
     /** A balance changed by hand (F-55): the sheet lists the accounts of [currency] to put right. */
-    data class Balance(val currency: String) : HistoryRef
+    data class Balance(val currency: String, val merged: Boolean = false) : HistoryRef
 }
 
 /** What an event is, so the list can tell them apart and the screen can lead to the object. */
