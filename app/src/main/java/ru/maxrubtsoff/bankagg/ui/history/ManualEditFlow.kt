@@ -49,7 +49,9 @@ private enum class ManualMode { VIEW, EDIT, CONFIRM }
 @Composable
 fun ManualEditFlow(event: HistoryEvent, ref: HistoryRef.Manual, vm: CapitalHistoryViewModel, today: LocalDate, onDismiss: () -> Unit) {
     var mode by remember { mutableStateOf(ManualMode.VIEW) }
-    val from by produceState<LocalDate?>(null, ref) { value = vm.manualFrom(ref) }
+    // null — still loading; empty — no saved day before the change, so there is nothing to take out or change.
+    val fromDays by produceState<List<LocalDate>?>(null, ref) { value = listOfNotNull(vm.manualFrom(ref)) }
+    val from = fromDays?.firstOrNull()
     val detail by produceState<ManualDetail?>(null, ref) { value = vm.manualDetail(ref) }
     val d = detail
     val bank = d?.account?.brand
@@ -67,7 +69,10 @@ fun ManualEditFlow(event: HistoryEvent, ref: HistoryRef.Manual, vm: CapitalHisto
                 MoneyText(signedSum(ref.manualMinor), style = Amounts.Large, color = if (ref.manualMinor > 0L) Slitok.Mint else Slitok.Fg, compact = MoneyCompact.short(ref.manualMinor, signed = true))
                 Text(RuDays.dayWeekday(ref.date, today) + " · внесена вручную", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
                 if (d != null && d.dayBefore != null) WasBecomeLine("Валюта", rub(d.partBefore), rub(d.partOnDay))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (fromDays?.isEmpty() == true) {
+                    Text("Раньше этого дня в графике ничего нет: правку нельзя убрать или изменить", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
+                }
+                if (fromDays?.isNotEmpty() == true) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PlateButton({ mode = ManualMode.EDIT }, Modifier.weight(1f)) { Text("Изменить", maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     DangerButton({ mode = ManualMode.CONFIRM }, Modifier.weight(1f)) { Text("Удалить", maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
@@ -103,8 +108,6 @@ fun ManualEditFlow(event: HistoryEvent, ref: HistoryRef.Manual, vm: CapitalHisto
                 val f = from
                 if (f != null) {
                     Text("График пересчитается с ${RuDays.dayMonth(f, today)}. Текущий остаток и сделки не изменятся.", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
-                } else {
-                    Text("Раньше этого дня в графике ничего нет: уйдёт только строка", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PlateButton({ mode = ManualMode.VIEW }, Modifier.weight(1f)) { Text("Оставить", maxLines = 1, overflow = TextOverflow.Ellipsis) }

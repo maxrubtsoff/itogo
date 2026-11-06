@@ -52,6 +52,16 @@ class ManualUndoTest {
         assertTrue(ManualUndo.shift(listOf(p(27, low)), ref, step).isEmpty())
     }
 
+    @Test fun chainOfStepsEachReachesBackToTheOppositeOne() {
+        val a = HistoryRef.Manual(CapitalPart.CURRENCY, day(10), 1_000L, ManualSource.ACCOUNT)
+        val b = HistoryRef.Manual(CapitalPart.CURRENCY, day(15), -1_000L, ManualSource.ACCOUNT, stepFrom = day(10))
+        val c = HistoryRef.Manual(CapitalPart.CURRENCY, day(20), 1_000L, ManualSource.ACCOUNT, stepFrom = day(15))
+        val pts = (5..22).map { p(it, 0L) }
+        assertEquals(day(5)..day(9), ManualUndo.range(pts, a))
+        assertEquals(day(10)..day(14), ManualUndo.range(pts, b))
+        assertEquals(day(15)..day(19), ManualUndo.range(pts, c))
+    }
+
     @Test fun editShiftsByDifference() {
         assertEquals(-71_110_746L, ManualUndo.editBy(ref, -10_000_000L))
         val out = ManualUndo.shift(points, ref, ManualUndo.editBy(ref, -10_000_000L))
