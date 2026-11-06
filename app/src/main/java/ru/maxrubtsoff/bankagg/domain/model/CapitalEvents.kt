@@ -39,9 +39,11 @@ sealed interface HistoryRef {
     /**
      * A hand change of the currency (B-121): a step of [manualMinor] rubles on [date] that no deal or rate explains.
      * [stepFrom] is the first day the step reaches back to, when an opposite hand change stops it earlier; null — the whole past.
+     * [stepTo] is the day of the next opposite hand change (the one that made good this), if any: then the step is a plateau [date, stepTo).
      */
     data class Manual(
-        val part: CapitalPart, val date: LocalDate, val manualMinor: Long, val source: ManualSource, val stepFrom: LocalDate? = null
+        val part: CapitalPart, val date: LocalDate, val manualMinor: Long, val source: ManualSource, val stepFrom: LocalDate? = null,
+        val stepTo: LocalDate? = null
     ) : HistoryRef
 }
 
@@ -347,6 +349,20 @@ object CapitalEvents {
                     )
                 }
             }
+        }
+        return withStepTo(out)
+    }
+
+    /** Gives each hand change the day of the next one of the opposite sign (B-121): the mistake is the plateau between them. */
+    private fun withStepTo(events: List<HistoryEvent>): List<HistoryEvent> {
+        val idx = events.indices.filter { events[it].ref is HistoryRef.Manual }
+        if (idx.size < 2) return events
+        val out = events.toMutableList()
+        for ((k, i) in idx.withIndex()) {
+            val ref = events[i].ref as HistoryRef.Manual
+            val next = idx.drop(k + 1).map { events[it].ref as HistoryRef.Manual }
+                .firstOrNull { (it.manualMinor < 0L) != (ref.manualMinor < 0L) && it.date.isAfter(ref.date) } ?: continue
+            out[i] = events[i].copy(ref = ref.copy(stepTo = next.date))
         }
         return out
     }

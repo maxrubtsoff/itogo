@@ -67,4 +67,29 @@ class ManualUndoTest {
         val out = ManualUndo.shift(points, ref, ManualUndo.editBy(ref, -10_000_000L))
         assertEquals(high - 71_110_746L, out.first().parts[CapitalPart.CURRENCY])
     }
+
+    // Mistake +800k on 10th, made good by −800k on 20th: the plateau [10, 20) is the error.
+    private val m = 80_000_000L
+    private val plateau = (5..9).map { p(it, m) } + (10..19).map { p(it, 2 * m) } + (20..22).map { p(it, m) }
+    private val first = HistoryRef.Manual(CapitalPart.CURRENCY, day(10), m, ManualSource.ACCOUNT, stepTo = day(20))
+    private val second = HistoryRef.Manual(CapitalPart.CURRENCY, day(20), -m, ManualSource.ACCOUNT, stepFrom = day(10))
+
+    private fun flat(changed: List<CapitalPoint>) =
+        (plateau.associateBy { it.date } + changed.associateBy { it.date }).values.map { it.parts[CapitalPart.CURRENCY] }.toSet()
+
+    @Test fun deletingCompensatedFirstRemovesPlateau() {
+        val out = ManualUndo.shift(plateau, first, ManualUndo.deleteBy(first))
+        assertEquals(day(10)..day(19), out.minOf { it.date }..out.maxOf { it.date })
+        assertEquals(setOf(m), flat(out))
+    }
+
+    @Test fun deletingCompensationRemovesPlateau() {
+        val out = ManualUndo.shift(plateau, second, ManualUndo.deleteBy(second))
+        assertEquals(setOf(m), flat(out))
+    }
+
+    @Test fun editingFirstMovesPlateauByDifference() {
+        val out = ManualUndo.shift(plateau, first, ManualUndo.editBy(first, m / 2))
+        assertEquals(setOf(m + m / 2), out.map { it.parts[CapitalPart.CURRENCY] }.toSet())
+    }
 }

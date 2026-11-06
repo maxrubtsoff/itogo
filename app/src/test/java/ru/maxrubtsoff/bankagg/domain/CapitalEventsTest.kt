@@ -121,6 +121,16 @@ class CapitalEventsTest {
         assertEquals(ru.maxrubtsoff.bankagg.domain.model.ManualSource.ACCOUNT, (m.ref as ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual).source)
     }
 
+    @Test fun compensatedManualStepKnowsItsPlateau() {
+        val dm1 = today.minusDays(3)
+        val list = events(listOf(pointFx(dm1, 100), pointFx(d0, 200_100), pointFx(d1, 100), pointFx(today, 100)), emptyList(), emptyList())
+        val refs = list.mapNotNull { it.ref as? ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual }.sortedBy { it.date }
+        assertEquals(2, refs.size)
+        assertEquals(d1, refs[0].stepTo)
+        assertNull(refs[1].stepTo)
+        assertEquals(d0, refs[1].stepFrom)
+    }
+
     @Test fun revaluationWithoutRatesFallsBackToManual() {
         val list = events(listOf(pointFx(d0, 100), pointFx(d1, 90_000)), emptyList(), emptyList())
         assertNull(list.firstOrNull { it.title == "Переоценка валюты" })

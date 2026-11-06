@@ -9,9 +9,13 @@ import java.time.LocalDate
  */
 object ManualUndo {
 
-    /** The saved days the step reaches back over: from its start (an opposite hand change, else the first day) to the day before it. */
+    /** The saved days the step covers: a plateau up to its compensation, else back to its start (an opposite hand change, else the first day). */
     fun range(points: List<CapitalPoint>, ref: HistoryRef.Manual): ClosedRange<LocalDate>? {
-        val inside = points.map { it.date }.filter { it.isBefore(ref.date) && (ref.stepFrom == null || !it.isBefore(ref.stepFrom)) }
+        val to = ref.stepTo
+        val inside = points.map { it.date }.filter {
+            if (to != null) !it.isBefore(ref.date) && it.isBefore(to)
+            else it.isBefore(ref.date) && (ref.stepFrom == null || !it.isBefore(ref.stepFrom))
+        }
         if (inside.isEmpty()) return null
         return inside.min()..inside.max()
     }
@@ -25,9 +29,10 @@ object ManualUndo {
         }
     }
 
-    /** Deleting the change: the past comes to the level after it. */
-    fun deleteBy(ref: HistoryRef.Manual): Long = ref.manualMinor
+    /** Deleting the change: the past (or, when made good later, the plateau) comes to the level without it. */
+    fun deleteBy(ref: HistoryRef.Manual): Long = if (ref.stepTo != null) -ref.manualMinor else ref.manualMinor
 
-    /** Changing the step to [newMinor]: the difference to move the past by. */
-    fun editBy(ref: HistoryRef.Manual, newMinor: Long): Long = ref.manualMinor - newMinor
+    /** Changing the step to [newMinor]: the difference to move the covered days by. */
+    fun editBy(ref: HistoryRef.Manual, newMinor: Long): Long =
+        if (ref.stepTo != null) newMinor - ref.manualMinor else ref.manualMinor - newMinor
 }

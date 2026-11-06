@@ -107,7 +107,9 @@ fun ManualEditFlow(event: HistoryEvent, ref: HistoryRef.Manual, vm: CapitalHisto
                 }
                 val f = from
                 if (f != null) {
-                    Text("График пересчитается с ${RuDays.dayMonth(f, today)}. Текущий остаток и сделки не изменятся.", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
+                    val to = ref.stepTo?.minusDays(1)
+                    val span = if (to != null && to.isAfter(f)) "с ${RuDays.dayMonth(f, today)} по ${RuDays.dayMonth(to, today)}" else "с ${RuDays.dayMonth(f, today)}"
+                    Text("График пересчитается $span. Текущий остаток и сделки не изменятся.", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PlateButton({ mode = ManualMode.VIEW }, Modifier.weight(1f)) { Text("Оставить", maxLines = 1, overflow = TextOverflow.Ellipsis) }
