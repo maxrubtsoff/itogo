@@ -13,7 +13,7 @@ package ru.maxrubtsoff.bankagg.domain.model
 object CashbackWidgetLayout {
 
     const val PADDING = 14f          // inside the widget, each side
-    const val HEADER = 26f           // title line + its gap
+    const val HEADER = 34f           // 32dp header row (sort buttons' touch zone) + gap
     const val LINE = 20f             // a category line (20dp logo)
     const val GAP = 8f               // between lines
     const val BASE_LINE = 28f        // the base rate line + its gap

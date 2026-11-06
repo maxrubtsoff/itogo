@@ -7,7 +7,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.currentState
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
@@ -41,9 +52,11 @@ import kotlinx.coroutines.flow.first
 import ru.maxrubtsoff.bankagg.App
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
-import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
 import ru.maxrubtsoff.bankagg.domain.model.CashbackSpotlight
 import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetLayout
+import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetOrder
+import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetSort
+import ru.maxrubtsoff.bankagg.R
 import ru.maxrubtsoff.bankagg.domain.model.RuPlural
 import java.time.LocalDate
 import ru.maxrubtsoff.bankagg.data.notify.AppNotifier
@@ -67,11 +80,16 @@ class CashbackWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Exact
 
+    // The sort mode lives in the widget instance's own state (F-56).
+    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
+
     private companion object {
         /** Glance renders at most this many children per Row/Column. */
         const val MAX_CHILDREN = 10
         /** Category lines per bank block (+ its header stays within MAX_CHILDREN). */
         const val BLOCK_ROWS = 8
+        /** Touch zone of one sort button (at least 32dp). */
+        const val SORT_BTN = 32f
     }
 
     /** A bank mark: its installed app icon when available, else its initial on its colour. */
@@ -82,16 +100,14 @@ class CashbackWidget : GlanceAppWidget() {
     /** One base-rate chip: the banks sharing a percent. */
     private data class BaseChip(val logos: List<Logo>, val percent: String)
 
-    /** A bank's block for the large widget: its name, base rate and categories in its own words. */
-    private data class BankBlock(val logo: Logo, val title: String, val base: String?, val rows: List<Pair<String, String>>)
-
-    /** What the widget shows: the same order as the home card, decided by [CashbackSpotlight]. */
+    /** What the widget shows; the order is applied in [Content] by [CashbackWidgetOrder]. */
     private data class Model(
         val month: String,
-        val rows: List<WidgetRow>,
+        val spotRows: List<CashbackSpotlight.Row>,
+        val groups: List<CashbackWidgetOrder.BankGroup>,
+        val logos: Map<BankBrand, Logo>,
         val cardRows: Int,
         val base: List<BaseChip>,
-        val banks: List<BankBlock>,
         val missing: Boolean,
         val nextHint: String?,
         /** Cashback isn't kept at all: the widget says so and opens «Что храним» (U-52). */
@@ -100,7 +116,10 @@ class CashbackWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val model = load(context)
-        provideContent { Content(model) }
+        provideContent {
+            val sort = CashbackWidgetSort.parse(currentState<Preferences>()[SORT_KEY])
+            Content(model, sort)
+        }
     }
 
     // The month is recomputed on every draw; how many rows render is decided by
@@ -110,11 +129,11 @@ class CashbackWidget : GlanceAppWidget() {
         val key = CashbackMonth.keyOf(today)
         // Closed data (B-91): an empty widget until the app has opened it.
         if (!App.instance.container.isReady) {
-            return Model(CashbackMonth.shortLabel(key), emptyList(), 0, emptyList(), emptyList(), false, null)
+            return Model(CashbackMonth.shortLabel(key), emptyList(), emptyList(), emptyMap(), 0, emptyList(), false, null)
         }
         val repo = App.instance.container.cashbackRepository
         if (!App.instance.container.settings.currentFeatures().showCashback) {
-            return Model(CashbackMonth.shortLabel(key), emptyList(), 0, emptyList(), emptyList(), false, null, cashbackOff = true)
+            return Model(CashbackMonth.shortLabel(key), emptyList(), emptyList(), emptyMap(), 0, emptyList(), false, null, cashbackOff = true)
         }
         val items = repo.observeMonth(key).first()
         val hasNext = repo.observeMonth(CashbackMonth.nextKey(key)).first().isNotEmpty()
@@ -129,32 +148,29 @@ class CashbackWidget : GlanceAppWidget() {
                 ?: InstalledApps.iconFor(context, bank, iconPx)
             Logo(bitmap, bank.title.take(1).uppercase(), bank.primaryColor, bank.onPrimaryDark)
         }
-        val rows = spot.allRows.map { r -> WidgetRow(r.title, logo(r.banks.first()), formatPercent(r.percent)) }
+        val groups = CashbackWidgetOrder.blocks(items)
         val base = spot.base.map { g -> BaseChip(g.banks.map(::logo), formatPercent(g.percent)) }
-        val banks = items.groupBy { it.brand }.map { (brand, list) ->
-            val (baseItems, regular) = list.partition(CashbackSpotlight::isBase)
-            BankBlock(
-                logo = logo(brand),
-                title = brand.title,
-                base = baseItems.maxOfOrNull { it.percent }?.let(::formatPercent),
-                rows = regular.sortedWith(compareByDescending<CashbackItem> { it.percent }.thenBy { it.category.lowercase() })
-                    .map { it.category to formatPercent(it.percent) }
-            )
-        }.sortedWith(compareByDescending<BankBlock> { it.rows.size }.thenBy { it.title })
+        spot.allRows.forEach { r -> logo(r.banks.first()) }
+        groups.forEach { logo(it.brand) }
         val nextHint = if (spot.offerNextMonth) "Добавьте кэшбэк на ${CashbackMonth.shortLabel(spot.nextMonthKey).lowercase()}" else null
         val cardRows = spot.rows.size + (if (spot.maximum != null) 1 else 0)
-        return Model(CashbackMonth.shortLabel(key), rows, cardRows, base, banks, spot.missingThisMonth, nextHint)
+        return Model(CashbackMonth.shortLabel(key), spot.allRows, groups, logos, cardRows, base, spot.missingThisMonth, nextHint)
     }
 
     @androidx.compose.runtime.Composable
-    private fun Content(model: Model) {
+    private fun Content(model: Model, sort: CashbackWidgetSort) {
         val size = LocalSize.current
         val w = size.width.value
         val h = size.height.value
         val hasBase = model.base.isNotEmpty()
         val withBase = CashbackWidgetLayout.grid(w, h, baseLine = hasBase)
-        val mode = CashbackWidgetLayout.mode(withBase, model.cardRows)
         val innerW = w - 2 * CashbackWidgetLayout.PADDING
+        val narrow = withBase.columns == 1
+        val empty = model.spotRows.isEmpty() && !hasBase
+        val showSort = !model.cashbackOff && !empty
+        val rows = CashbackWidgetOrder.rows(model.spotRows, sort).map {
+            WidgetRow(it.title, model.logos.getValue(it.banks.first()), formatPercent(it.percent))
+        }
 
         Column(
             GlanceModifier
@@ -171,47 +187,101 @@ class CashbackWidget : GlanceAppWidget() {
                 )
                 .padding(CashbackWidgetLayout.PADDING.dp)
         ) {
+            val titleW = if (showSort) (innerW - 3 * SORT_BTN - 4f).coerceAtLeast(40f) else innerW
             Row(
-                GlanceModifier.fillMaxWidth(),
+                GlanceModifier.fillMaxWidth().height(SORT_BTN.dp),
                 verticalAlignment = Alignment.Vertical.CenterVertically
             ) {
-                Text(
-                    "Кэшбэк",
-                    modifier = GlanceModifier.width((innerW - 64f).coerceAtLeast(40f).dp),
-                    style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                )
-                Text(
-                    model.month,
-                    modifier = GlanceModifier.width(64.dp),
-                    style = TextStyle(color = ColorProvider(Slitok.Faint), fontSize = 11.sp, textAlign = TextAlign.End)
-                )
+                Row(GlanceModifier.width(titleW.dp), verticalAlignment = Alignment.Vertical.CenterVertically) {
+                    Text(
+                        "Кэшбэк",
+                        maxLines = 1,
+                        style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    )
+                    // The month only where there is room: the wide widget (F-56).
+                    if (!narrow) {
+                        Text(
+                            " · ${model.month}",
+                            maxLines = 1,
+                            style = TextStyle(color = ColorProvider(Slitok.Faint), fontSize = 11.sp)
+                        )
+                    }
+                }
+                if (showSort) {
+                    Spacer(GlanceModifier.width(4.dp))
+                    SortSwitch(sort)
+                }
             }
-            Spacer(GlanceModifier.height((CashbackWidgetLayout.HEADER - 18f).dp))
+            Spacer(GlanceModifier.height((CashbackWidgetLayout.HEADER - SORT_BTN).dp))
 
             when {
                 model.cashbackOff -> Text(
                     "Кэшбэк выключен · включить в «Что храним»",
                     style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 13.sp)
                 )
-                model.rows.isEmpty() && !hasBase -> Text(
+                empty -> Text(
                     if (model.missing) "Кэшбэк на ${model.month.lowercase()} не добавлен" else "Нет кэшбэка в этом месяце",
                     style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 13.sp)
                 )
-                mode == CashbackWidgetLayout.Mode.BANKS -> BankBlocks(model.banks, CashbackWidgetLayout.grid(w, h, baseLine = false), CashbackWidgetLayout.banksHeight(h))
+                sort == CashbackWidgetSort.BANK -> {
+                    // Grouped by bank, base line on top (F-56 mockup B).
+                    if (hasBase) {
+                        BaseLine(model.base, innerW)
+                        Spacer(GlanceModifier.height((CashbackWidgetLayout.BASE_LINE - 18f).dp))
+                    }
+                    val free = CashbackWidgetLayout.banksHeight(h) - (if (hasBase) CashbackWidgetLayout.BASE_LINE else 0f)
+                    BankBlocks(model.groups, model.logos, CashbackWidgetLayout.grid(w, h, baseLine = false), free)
+                }
                 else -> {
                     // The base rate leads (U-8), then the categories, as on the home card.
                     if (hasBase) {
                         BaseLine(model.base, innerW)
                         Spacer(GlanceModifier.height((CashbackWidgetLayout.BASE_LINE - 18f).dp))
                     }
-                    CategoryGrid(model.rows.take(withBase.slots), withBase)
-                    val usedLines = (minOf(model.rows.size, withBase.slots) + withBase.columns - 1) / withBase.columns
+                    CategoryGrid(rows.take(withBase.slots), withBase)
+                    val usedLines = (minOf(rows.size, withBase.slots) + withBase.columns - 1) / withBase.columns
                     // Room left at month's end: nudge to add next month.
                     if (model.nextHint != null && withBase.lines - usedLines >= 2) {
                         Text(
                             model.nextHint, maxLines = 1,
                             modifier = GlanceModifier.padding(top = 10.dp),
                             style = TextStyle(color = ColorProvider(Slitok.Brass2), fontSize = 12.sp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /** Three sort buttons in an inset: bank, size, A-Z; the chosen one in brass. Each is a 32dp touch zone. */
+    @androidx.compose.runtime.Composable
+    private fun SortSwitch(current: CashbackWidgetSort) {
+        Row(
+            GlanceModifier.cornerRadius(10.dp).background(ColorProvider(Slitok.Inset)),
+            verticalAlignment = Alignment.Vertical.CenterVertically
+        ) {
+            listOf(
+                CashbackWidgetSort.BANK to R.drawable.ic_widget_sort_bank,
+                CashbackWidgetSort.SIZE to R.drawable.ic_widget_sort_size,
+                CashbackWidgetSort.NAME to R.drawable.ic_widget_sort_name
+            ).forEach { (mode, icon) ->
+                val on = mode == current
+                Box(
+                    GlanceModifier.size(SORT_BTN.dp).clickable(
+                        actionRunCallback<SetSortAction>(actionParametersOf(SortParam to mode.name))
+                    ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        GlanceModifier.width(28.dp).height(24.dp).cornerRadius(8.dp)
+                            .background(ColorProvider(if (on) Slitok.BrassPill else Color.Transparent)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            provider = ImageProvider(icon),
+                            contentDescription = mode.label,
+                            colorFilter = ColorFilter.tint(ColorProvider(if (on) Slitok.Brass2 else Slitok.Faint)),
+                            modifier = GlanceModifier.size(14.dp)
                         )
                     }
                 }
@@ -242,7 +312,12 @@ class CashbackWidget : GlanceAppWidget() {
 
     /** The large widget: bank blocks packed into columns, none split; "+N банков" for the rest. */
     @androidx.compose.runtime.Composable
-    private fun BankBlocks(banks: List<BankBlock>, grid: CashbackWidgetLayout.Grid, heightDp: Float) {
+    private fun BankBlocks(
+        banks: List<CashbackWidgetOrder.BankGroup>,
+        logos: Map<BankBrand, Logo>,
+        grid: CashbackWidgetLayout.Grid,
+        heightDp: Float
+    ) {
         val shown = banks.map { it.copy(rows = it.rows.take(BLOCK_ROWS)) }
         val packing = CashbackWidgetLayout.packDp(shown.map { it.rows.size }, grid.columns, heightDp)
         Row(GlanceModifier.fillMaxWidth()) {
@@ -250,7 +325,7 @@ class CashbackWidget : GlanceAppWidget() {
                 if (c > 0) Spacer(GlanceModifier.width(CashbackWidgetLayout.COLUMN_GAP.dp))
                 Column(GlanceModifier.width(grid.columnWidth.dp)) {
                     indices.take(MAX_CHILDREN - 1).forEachIndexed { k, idx ->
-                        BankBlockView(shown[idx], grid, top = if (k > 0) CashbackWidgetLayout.GAP else 0f)
+                        BankBlockView(shown[idx], logos.getValue(shown[idx].brand), grid, top = if (k > 0) CashbackWidgetLayout.GAP else 0f)
                     }
                     if (c == packing.columns.lastIndex && packing.hidden > 0) {
                         Text(
@@ -266,21 +341,21 @@ class CashbackWidget : GlanceAppWidget() {
     }
 
     @androidx.compose.runtime.Composable
-    private fun BankBlockView(block: BankBlock, grid: CashbackWidgetLayout.Grid, top: Float) {
+    private fun BankBlockView(block: CashbackWidgetOrder.BankGroup, logo: Logo, grid: CashbackWidgetLayout.Grid, top: Float) {
         Column(GlanceModifier.width(grid.columnWidth.dp).padding(top = top.dp)) {
             Row(GlanceModifier.width(grid.columnWidth.dp), verticalAlignment = Alignment.Vertical.CenterVertically) {
-                LogoMark(block.logo, CashbackWidgetLayout.LOGO.toInt())
+                LogoMark(logo, CashbackWidgetLayout.LOGO.toInt())
                 Spacer(GlanceModifier.width(CashbackWidgetLayout.LOGO_GAP.dp))
                 Text(
-                    block.title,
+                    block.brand.title,
                     maxLines = 1,
-                    modifier = GlanceModifier.width(grid.nameWidth.dp),
+                    modifier = GlanceModifier.width((grid.columnWidth - CashbackWidgetLayout.LOGO - CashbackWidgetLayout.LOGO_GAP).dp),
                     style = TextStyle(color = ColorProvider(Slitok.Fg), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 )
-                Spacer(GlanceModifier.width(CashbackWidgetLayout.NAME_GAP.dp))
-                FigureImage(block.base ?: "", 12f, Slitok.Muted, CashbackWidgetLayout.PERCENT_WIDTH)
             }
-            block.rows.forEach { (name, pct) ->
+            block.rows.forEach { item ->
+                val name = item.category
+                val pct = formatPercent(item.percent)
                 Row(
                     GlanceModifier.width(grid.columnWidth.dp).padding(top = CashbackWidgetLayout.GAP.dp),
                     verticalAlignment = Alignment.Vertical.CenterVertically
@@ -368,6 +443,18 @@ class CashbackWidget : GlanceAppWidget() {
     @androidx.compose.runtime.Composable
     private fun PercentText(percent: String) {
         FigureImage(percent, 14f, Slitok.Brass2, CashbackWidgetLayout.PERCENT_WIDTH)
+    }
+}
+
+private val SORT_KEY = stringPreferencesKey("sort")
+private val SortParam = ActionParameters.Key<String>("sort")
+
+/** A sort button tapped: remember the mode for this widget instance and redraw it. */
+class SetSortAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val mode = CashbackWidgetSort.parse(parameters[SortParam])
+        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { it.toMutablePreferences().apply { this[SORT_KEY] = mode.name } }
+        CashbackWidget().update(context, glanceId)
     }
 }
 
