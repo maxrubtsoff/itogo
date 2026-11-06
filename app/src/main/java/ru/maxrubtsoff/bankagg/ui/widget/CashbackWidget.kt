@@ -106,7 +106,6 @@ class CashbackWidget : GlanceAppWidget() {
         val spotRows: List<CashbackSpotlight.Row>,
         val groups: List<CashbackWidgetOrder.BankGroup>,
         val logos: Map<BankBrand, Logo>,
-        val cardRows: Int,
         val base: List<BaseChip>,
         val missing: Boolean,
         val nextHint: String?,
@@ -129,11 +128,11 @@ class CashbackWidget : GlanceAppWidget() {
         val key = CashbackMonth.keyOf(today)
         // Closed data (B-91): an empty widget until the app has opened it.
         if (!App.instance.container.isReady) {
-            return Model(CashbackMonth.shortLabel(key), emptyList(), emptyList(), emptyMap(), 0, emptyList(), false, null)
+            return Model(CashbackMonth.shortLabel(key), emptyList(), emptyList(), emptyMap(), emptyList(), false, null)
         }
         val repo = App.instance.container.cashbackRepository
         if (!App.instance.container.settings.currentFeatures().showCashback) {
-            return Model(CashbackMonth.shortLabel(key), emptyList(), emptyList(), emptyMap(), 0, emptyList(), false, null, cashbackOff = true)
+            return Model(CashbackMonth.shortLabel(key), emptyList(), emptyList(), emptyMap(), emptyList(), false, null, cashbackOff = true)
         }
         val items = repo.observeMonth(key).first()
         val hasNext = repo.observeMonth(CashbackMonth.nextKey(key)).first().isNotEmpty()
@@ -153,8 +152,7 @@ class CashbackWidget : GlanceAppWidget() {
         spot.allRows.forEach { r -> logo(r.banks.first()) }
         groups.forEach { logo(it.brand) }
         val nextHint = if (spot.offerNextMonth) "Добавьте кэшбэк на ${CashbackMonth.shortLabel(spot.nextMonthKey).lowercase()}" else null
-        val cardRows = spot.rows.size + (if (spot.maximum != null) 1 else 0)
-        return Model(CashbackMonth.shortLabel(key), spot.allRows, groups, logos, cardRows, base, spot.missingThisMonth, nextHint)
+        return Model(CashbackMonth.shortLabel(key), spot.allRows, groups, logos, base, spot.missingThisMonth, nextHint)
     }
 
     @androidx.compose.runtime.Composable
@@ -187,12 +185,12 @@ class CashbackWidget : GlanceAppWidget() {
                 )
                 .padding(CashbackWidgetLayout.PADDING.dp)
         ) {
-            val titleW = if (showSort) (innerW - 3 * SORT_BTN - 4f).coerceAtLeast(40f) else innerW
+            val titleW = if (showSort) CashbackWidgetLayout.titleWidth(innerW) else innerW
             Row(
                 GlanceModifier.fillMaxWidth().height(SORT_BTN.dp),
                 verticalAlignment = Alignment.Vertical.CenterVertically
             ) {
-                Row(GlanceModifier.width(titleW.dp), verticalAlignment = Alignment.Vertical.CenterVertically) {
+                if (titleW > 0f) Row(GlanceModifier.width(titleW.dp), verticalAlignment = Alignment.Vertical.CenterVertically) {
                     Text(
                         "Кэшбэк",
                         maxLines = 1,
@@ -208,6 +206,8 @@ class CashbackWidget : GlanceAppWidget() {
                     }
                 }
                 if (showSort) {
+                    // No room for the title: the switch stays at the right edge.
+                    if (titleW == 0f) Spacer(GlanceModifier.width((innerW - CashbackWidgetLayout.SORT_SWITCH + 4f).coerceAtLeast(0f).dp))
                     Spacer(GlanceModifier.width(4.dp))
                     SortSwitch(sort)
                 }

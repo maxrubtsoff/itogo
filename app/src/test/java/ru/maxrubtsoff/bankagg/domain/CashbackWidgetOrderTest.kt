@@ -1,7 +1,6 @@
 package ru.maxrubtsoff.bankagg.domain
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
@@ -57,12 +56,10 @@ class CashbackWidgetOrderTest {
         assertEquals(listOf("Аптеки", "Авто", "Кафе"), b[0].rows.map { it.category })
     }
 
-    @Test fun basePercentSeparatedFromRows() {
+    @Test fun baseItemsAreNotRows() {
         val base = "base"
         val items = listOf(item(BankBrand.ALFA, "Все покупки", 1.5, key = base), item(BankBrand.ALFA, "Кафе", 5.0))
         val b = CashbackWidgetOrder.blocks(items).single()
-        assertEquals(1.5, b.basePercent!!, 0.0)
         assertEquals(listOf("Кафе"), b.rows.map { it.category })
-        assertNull(CashbackWidgetOrder.blocks(listOf(item(BankBrand.SBER, "АЗС", 5.0))).single().basePercent)
     }
 }

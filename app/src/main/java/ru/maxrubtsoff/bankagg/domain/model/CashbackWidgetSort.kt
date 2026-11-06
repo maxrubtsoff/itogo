@@ -13,8 +13,8 @@ enum class CashbackWidgetSort(val label: String) {
 /** Pure ordering of the widget's lines, so every mode is testable on the JVM. */
 object CashbackWidgetOrder {
 
-    /** A bank's block: its brand, base rate and regular categories (best first). */
-    data class BankGroup(val brand: BankBrand, val basePercent: Double?, val rows: List<CashbackItem>)
+    /** A bank's block: its brand and regular categories (best first); the base rate is on the widget's base line. */
+    data class BankGroup(val brand: BankBrand, val rows: List<CashbackItem>)
 
     /** Flat rows of the home-card ranking, in the chosen order. */
     fun rows(rows: List<CashbackSpotlight.Row>, sort: CashbackWidgetSort): List<CashbackSpotlight.Row> = when (sort) {
@@ -32,13 +32,12 @@ object CashbackWidgetOrder {
         )
     }
 
-    /** Bank blocks: the base rate apart, categories by percent; blocks by category count, then name. */
+    /** Bank blocks: base rate left out, categories by percent; blocks by category count, then name. */
     fun blocks(items: List<CashbackItem>): List<BankGroup> =
         items.groupBy { it.brand }.map { (brand, list) ->
-            val (base, regular) = list.partition(CashbackSpotlight::isBase)
+            val regular = list.filterNot(CashbackSpotlight::isBase)
             BankGroup(
                 brand = brand,
-                basePercent = base.maxOfOrNull { it.percent },
                 rows = regular.sortedWith(
                     compareByDescending<CashbackItem> { it.percent }.thenBy { it.category.lowercase() }
                 )

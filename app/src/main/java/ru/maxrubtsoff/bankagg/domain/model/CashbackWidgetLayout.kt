@@ -5,8 +5,6 @@ package ru.maxrubtsoff.bankagg.domain.model
  * pure, so every size can be checked in tests:
  * - [grid]: columns, column width and how many 20dp lines fit, with the header
  *   and the base line reserved first — nothing is ever cut in half;
- * - [mode]: small (like the home card), medium (more categories), banks (blocks
- *   "logo → its categories" once the widget is really large);
  * - [packDp]: bank blocks into columns without splitting one; what doesn't fit is
  *   counted for a "+N банков" line.
  */
@@ -29,11 +27,6 @@ object CashbackWidgetLayout {
     /** Two columns from this inner width: two readable rows side by side. */
     const val TWO_COLUMNS_FROM = 290f
 
-    /** Bank blocks only on a really large widget: two columns and at least this many lines. */
-    const val BANKS_FROM_LINES = 7
-
-    enum class Mode { SMALL, MEDIUM, BANKS }
-
     data class Grid(val columns: Int, val columnWidth: Float, val lines: Int) {
         val slots: Int get() = columns * lines
         /** Width left for the category name in one column. */
@@ -50,15 +43,13 @@ object CashbackWidgetLayout {
         return Grid(columns, colW, lines)
     }
 
-    /**
-     * Small — what the home card shows fits and little more; medium — room for
-     * more categories; banks — two columns and [BANKS_FROM_LINES]+ lines.
-     */
-    fun mode(grid: Grid, cardRows: Int): Mode = when {
-        grid.columns == 2 && grid.lines >= BANKS_FROM_LINES -> Mode.BANKS
-        grid.slots > cardRows -> Mode.MEDIUM
-        else -> Mode.SMALL
-    }
+    /** Width of the three sort buttons plus the gap before them. */
+    const val SORT_SWITCH = 3 * 32f + 4f
+    /** The "Кэшбэк" title needs at least this much room, else it is hidden. */
+    const val MIN_TITLE = 50f
+
+    /** Width for the header title beside the sort switch, or 0 when it would not fit. */
+    fun titleWidth(innerW: Float): Float = (innerW - SORT_SWITCH).let { if (it >= MIN_TITLE) it else 0f }
 
     data class Packing(val columns: List<List<Int>>, val hidden: Int)
 

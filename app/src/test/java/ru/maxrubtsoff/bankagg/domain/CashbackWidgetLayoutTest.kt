@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetLayout
-import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetLayout.Mode
 
 class CashbackWidgetLayoutTest {
 
@@ -36,14 +35,15 @@ class CashbackWidgetLayoutTest {
         }
     }
 
-    @Test fun modes() {
-        val small = L.grid(280f, 180f, true)
-        assertEquals(1, small.columns)
-        assertEquals(Mode.SMALL, L.mode(small, cardRows = small.slots))
-        val medium = L.grid(340f, 260f, true)
-        assertEquals(Mode.MEDIUM, L.mode(medium, cardRows = 5))
-        val large = L.grid(340f, 420f, false)
-        assertEquals(Mode.BANKS, L.mode(large, cardRows = 5))
+    @Test fun headerNeverOverflows() {
+        for (w in 150..400) {
+            val inner = w - 2 * L.PADDING
+            val t = L.titleWidth(inner)
+            assertTrue("w=$w", t + L.SORT_SWITCH <= inner + 0.01f || t == 0f)
+            assertTrue("w=$w", L.SORT_SWITCH - 4f <= inner)
+        }
+        assertEquals(0f, L.titleWidth(120f), 0f)
+        assertTrue(L.titleWidth(150f) >= L.MIN_TITLE)
     }
 
     private fun blockH(n: Int) = L.BLOCK_HEAD + n * (L.GAP + L.ROW)
