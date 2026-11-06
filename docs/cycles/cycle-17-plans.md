@@ -132,26 +132,46 @@
 
 ## B-121
 
-**Цель:** у ручной правки в истории «Валюта» есть шторка «Остаток изменили вручную» с действием «Убрать из истории»; после него ступенька исчезает, график и суммы за прошлые дни пересчитаны, текущий остаток счёта не тронут.
+**Цель:** ручная правка валюты (и с вкладки «Валюта», и на банковском валютном счёте) видна в истории отдельной строкой «Правка остатка · вручную» (макет вариант 1, `docs/mockups/cycle-17/B-121/index.html`). Тап открывает шторку с «Изменить»/«Удалить», удаление можно отменить снекбаром «Вернуть». После удаления график и суммы за прошлые дни пересчитаны, текущие остатки не тронуты.
 
-**Модель (что значит «удалить правку»):** ручная правка не хранится — она выводится из разницы соседних дневных точек `capital_days` (`CapitalSnapshotEntity.kt:12`) за вычетом курсовой переоценки (`CapitalEvents.kt:364-398`). Ошибка пользователя — завышенные **исторические** точки до дня правки. Поэтому «убрать правку» = выровнять прошлые точки части CURRENCY (и total) на величину ручной части: прибавить `manualMinor` события ко всем дням **от начала ступени до дня перед событием**. Начало ступени — день после ближайшего предыдущего ручного события той же части с противоположным знаком (это и есть ошибочный ввод), а если его нет — с первой точки истории. Текущие счета и сегодняшняя точка не меняются. Новой сущности и миграции не нужно (выбрано как минимальный путь; журнал правок не помог бы с уже случившейся ошибкой 27.10, которая нигде не записана).
+**Два источника правки (по коду):**
+- **Вкладка «Валюта» без банка.** Отдельного «остатка» у позиции нет: позиция = сумма `fx_operations` BUY/SELL (`FxEntities.kt:8`, `FxRepository`). Правка — это добавление или изменение операции (`HistoryOperations.kt:300`, `CurrencyDetailScreen.kt:147` `edit:`). Изменение старой операции не пересчитывает уже записанные дни `capital_days`, поэтому между замороженными точками и сегодняшним днём возникает ступенька. `CapitalEvents.kt:364-398` выводит её как ручной остаток (`manualMinor`, ref `null`/`Balance`) — это и есть событие −811 107,46 от 27.10.
+- **Банковский валютный счёт.** `setBalance` (`HistoryOperations.kt:142-147`) → `accounts.balanceMinor`; в истории тоже появляется выведенный `manualMinor`, ref `HistoryRef.Balance` (`CapitalEvents.kt:327,342`).
+
+В обоих случаях отдельной записи правки нет, есть только ступенька в `capital_days`. Значит, «удалить правку» = убрать ступеньку из истории: сдвинуть прошлые дневные точки части CURRENCY (и total) на `manualMinor` события. Сдвигаем дни **от начала ступени до дня перед событием**; начало ступени — день после ближайшего предыдущего ручного события той же части с противоположным знаком, если его нет — первая точка истории. Текущие `accounts`, `fx_operations` и точки с дня события не меняются (требование пункта: текущий остаток не тронут).
+
+**Сущность и миграция — не нужны (выбор):** строка строится из уже выводимого события. Новая таблица правок не покрыла бы уже случившуюся ошибку 27.10: она нигде не записана. «Вернуть» держит снимок заменённых точек в памяти сессии — так же, как `BalanceWas` (`HistoryOperations.kt:66-67`). `version` остаётся 20.
 
 **Шаги:**
-1. Домен, `domain/model/CapitalEvents.kt`: новый `HistoryRef.Manual(part: CapitalPart, date: LocalDate, manualMinor: Long)` (рядом с `HistoryRef.Balance`). В `:322-327` и `manualEvent` (`:336-342`) для событий с ручной частью ставить `ref = HistoryRef.Manual(...)` вместо `HistoryRef.Balance`. `HistoryRows.kt:150-152` — строка «Остаток изменили вручную» тоже с `Manual` (при сворачивании месяца — ref последнего ручного события; сворачивание нескольких в один ref запрещает удаление, тогда ref = null... выбор: свернутая строка месяца несёт ref только если ручное событие одно, иначе тап раскрывает дни, как остальные свёрнутые строки).
-2. Домен, новый `domain/model/ManualUndo.kt`: `object ManualUndo { fun apply(points: List<CapitalPoint>, ref: HistoryRef.Manual, events: List<HistoryEvent>): List<CapitalPoint> }` — возвращает только изменённые точки (part и total сдвинуты на `ref.manualMinor` в диапазоне, описанном выше). Чистая, под тест.
-3. Интерфейс репозитория истории капитала (тот, что отдаёт `CapitalPoint`; реализация использует `CapitalSnapshotDao`, `CapitalSnapshotEntity.kt:23`): добавить `suspend fun replaceDays(points: List<CapitalPoint>)` (реализация — `upsertAll(points.map { it.toEntity() })`, `CapitalSnapshotEntity.kt:29,54`). Room-схема не меняется, `version` остаётся 20.
-4. Use-case `domain/usecase/HistoryOperations.kt`:
-   - `preview` (`:163-196`): ветка `is HistoryRef.Manual` → «станет» = сумма части до/после (из `ManualUndo.apply`);
-   - `delete` (`:243`): ветка `is HistoryRef.Manual` → `history.replaceDays(ManualUndo.apply(points, ref, events))`. `HistoryRef.Balance -> Unit` оставить (для других мест).
-   - `check` (`:199-212`): Manual — допустим, если точки в диапазоне есть.
-5. UI, `ui/history/OperationSheet.kt:78-79`: `HistoryRef.Manual` → шторка правки (по канону `SlitokSheet`, сумма `AmountText`, действие удаления как у операций в этой же шторке — существующий путь удаления с подтверждением/preview). `HistoryRef.Balance` → `BalanceFlow` как раньше (ветка для «правки остатка сейчас»). Новые компоненты не нужны; вид — тот же, что у удаления операции.
-6. `CapitalHistoryViewModel` (`ui/history/CapitalHistoryViewModel.kt`): метод `deleteManual(ref)` → `HistoryOperations.delete(listOf(ref))`; Flow точек реактивно перерисует график.
-7. DI/Factory/маршрут — без изменений.
+1. Домен, `domain/model/CapitalEvents.kt`:
+   - новый `HistoryRef.Manual(part: CapitalPart, date: LocalDate, manualMinor: Long, source: ManualSource)`, рядом с `HistoryRef.Balance`;
+   - `enum class ManualSource { CURRENCY_POSITION, ACCOUNT }` — `ACCOUNT`, если в шаге менялся остаток валютного счёта (есть кандидат из `HistoryRef.Balance(currency)`), иначе `CURRENCY_POSITION`.
+   - В `:317-327` ручная часть **всегда** выделяется в отдельное событие `manualEvent` (`:336-342`) с заголовком «Правка остатка · вручную» и `ref = HistoryRef.Manual(...)`. Строка «Переоценка валюты» остаётся только с курсовой частью (`legs`); если `legs` пуст — переоценки нет.
+2. Домен, `domain/model/HistoryRows.kt:127-155`: ручные события **не сворачиваются** в месячную строку переоценки. Каждое — своя строка «Правка остатка · вручную» с её `ref` (`:150-152` заменить; подпись группы `:180` не трогать).
+3. Домен, новый `domain/model/ManualUndo.kt`, `object ManualUndo`:
+   - `fun range(points, ref, events): ClosedRange<LocalDate>?` — дни ступени по правилу выше;
+   - `fun shift(points, ref, byMinor: Long): List<CapitalPoint>` — возвращает только изменённые точки диапазона, у которых part и total сдвинуты на `byMinor`.
+   - Удалить = `shift(.., ref.manualMinor)`. Изменить на новую величину `v` = `shift(.., ref.manualMinor - v)`, тогда в истории остаётся правка `v`.
+4. Репозиторий истории капитала (интерфейс в `domain/repository`, отдающий `CapitalPoint`; реализация на `CapitalSnapshotDao`, `CapitalSnapshotEntity.kt:23`): добавить `suspend fun replaceDays(points: List<CapitalPoint>)` → `upsertAll(points.map { it.toEntity() })` (`:29,54`). Схема Room не меняется.
+5. Use-case `domain/usecase/HistoryOperations.kt`:
+   - `class ManualWas(points: List<CapitalPoint>)` — снимок для «Вернуть»;
+   - `suspend fun removeManual(ref): ManualWas`;
+   - `suspend fun editManual(ref, newMinor): ManualWas`;
+   - `suspend fun restoreManual(was)` → `replaceDays(was.points)`;
+   - `delete` (`:243`) получает ветку `is HistoryRef.Manual -> removeManual`; `preview` (`:163-196`) показывает части до/после; `check` (`:199-212`) проверяет, что диапазон не пуст.
+   - Ветки `HistoryRef.Balance` не трогать.
+6. UI, `ui/history/OperationSheet.kt:78-79`:
+   - `HistoryRef.Manual` → новая шторка `ManualEditFlow` (рядом с `BalanceFlow.kt`, по макету варианта 1): сумма правки (`AmountText`), дата, источник («Валюта» / название счёта), кнопки «Изменить» (поле суммы как в `BalanceFlow`) и «Удалить».
+   - После удаления — снекбар «Вернуть» → `restoreManual`, тем же механизмом, что «Вернуть» в F-55 (`HistoryOperations.kt:156-159`).
+   - `HistoryRef.Balance` → `BalanceFlow`, как раньше. Компоненты — из `ui/common` (как в макете, новых нет).
+7. `ui/history/CapitalHistoryViewModel.kt` (около `:156`): `removeManual`/`editManual`/`restoreManual`, последний `ManualWas` хранится в VM. Точки перерисует Flow.
+8. DI/Factory/маршрут — без изменений.
 
 **Тесты:**
 - `ManualUndoTest`: `shiftsDaysBeforeEventByManualPart` (точки 20–26.10 по 1,62 млн, 27.10 — 0,81 млн, событие −811 107,46 → дни 20–26.10 стали 0,81 млн, total сдвинут так же, 27.10 и позже не тронуты); `stopsAtOppositeManualStep` (была +811k ступень 15.10 → сдвиг только 15–26.10, до 15.10 нетронуто); `otherPartsUntouched`; `noPointsBeforeIsEmpty`.
-- `CapitalEventsTest`: `manualRemainderGetsManualRef` (правка `:94`, `:111` — ожидание ref `Manual`, не `Balance`).
-- `HistoryRowsTest` (`:150` случай): одна ручная правка в месяце → ref `Manual`; две → null.
-- `HistoryOperationsTest`: `deleteManualReplacesDaysAndKeepsAccountBalance` — фейковый ledger: остаток счёта не изменился, `replaceDays` получил ожидаемые точки.
+- `ManualUndoTest`: `editShiftsByDifference` (правка −811k → −100k: сдвиг на −711k).
+- `CapitalEventsTest`: `manualRemainderIsSeparateManualEvent` (обновить ожидания `:94`, `:111`, `:251-268`: отдельное событие «Правка остатка · вручную» с `HistoryRef.Manual`, «Переоценка валюты» только с курсовой частью); `fxPositionEditSourceIsCurrencyPosition` (шаг без смены остатка счёта, ops изменены → `CURRENCY_POSITION`); `accountEditSourceIsAccount`.
+- `HistoryRowsTest` (`:137-174`): ручные события не сворачиваются, по строке на каждое.
+- `HistoryOperationsTest`: `removeManualKeepsAccountsAndFxOps` (фейки: `accounts`/`fx_operations` не тронуты, `replaceDays` получил ожидаемые точки); `restoreManualReturnsOriginalPoints`.
 
-**Критерии:** сборка и тесты зелёные; инварианты: суммы только в копейках (Long), удаление правки не трогает `accounts`, сегодняшняя точка и точки после события неизменны. Device-check: в «Капитал → История → Валюта» тап по «Переоценка валюты −811 107,46 ₽ (27.10)» открывает шторку правки, не «Остаток · BSB Bank»; после удаления ступенька 26–27.10 исчезает, ранние дни ≈0,81 млн, остаток BSB Bank 91,28 $ прежний.
+**Критерии:** сборка и тесты зелёные; инварианты: суммы только в копейках (Long), удаление правки не трогает `accounts`, сегодняшняя точка и точки после события неизменны. Device-check: в «Капитал → История → Валюта» 27.10 видна строка «Правка остатка · вручную −811 107,46 ₽», тап открывает шторку с «Изменить»/«Удалить», а не «Остаток · BSB Bank»; «Удалить» → снекбар «Вернуть» работает; после удаления ступенька 26–27.10 исчезает, ранние дни ≈0,81 млн, остаток BSB Bank 91,28 $ прежний.
