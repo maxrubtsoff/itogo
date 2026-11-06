@@ -20,6 +20,8 @@ import ru.maxrubtsoff.bankagg.domain.model.HistoryEdits
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRef
 import ru.maxrubtsoff.bankagg.domain.model.ManualBalance
+import ru.maxrubtsoff.bankagg.domain.model.ManualUndo
+import ru.maxrubtsoff.bankagg.domain.model.CapitalPoint
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.NoteHighlight
 import ru.maxrubtsoff.bankagg.domain.model.OperationForm
@@ -65,6 +67,9 @@ data class BalanceDetail(val currency: String, val rows: List<ManualBalance.Row>
 
 /** The balance an account had before a hand correction, to put back with «Вернуть» (F-55). */
 class BalanceWas internal constructor(internal val old: Account)
+
+/** The saved days a hand change moved, as they were, to put back with «Вернуть» (B-121). */
+class ManualWas internal constructor(internal val points: List<CapitalPoint>)
 
 /** What a deletion took out, to put it back (F-51). */
 class Removed internal constructor(internal val items: List<Item>) {
@@ -134,6 +139,7 @@ class HistoryOperations(
                 val rate = FxRates.latestOnOrBefore(rates.all(), ref.currency, event.date)?.rubPerUnitMicro
                 none.copy(currency = ref.currency, balance = BalanceDetail(ref.currency, ManualBalance.rows(ofCurrency, event.amountMinor ?: 0L, rate, event.date, zone, ledger.observeTransactions(Int.MAX_VALUE).first(), ref.merged)))
             }
+            is HistoryRef.Manual -> none
             null -> none
         }
     }
@@ -157,6 +163,28 @@ class HistoryOperations(
     suspend fun restoreBalance(was: BalanceWas) {
         val o = was.old
         ledger.restoreBalance(o.id, o.balance.minor, o.updatedAt, o.checkedAt, o.estimated)
+    }
+
+    /** The first saved day a hand change moved when it goes; null — no saved day before it (nothing to take out). */
+    suspend fun manualFrom(ref: HistoryRef.Manual): LocalDate? = ManualUndo.range(history.days(), ref)?.start
+
+    /** Takes the hand change out of the history: the days before it move by its step. Accounts and deals stay. */
+    suspend fun removeManual(ref: HistoryRef.Manual): ManualWas? = shiftManual(ref, ManualUndo.deleteBy(ref))
+
+    /** Puts the hand change at [newMinor] rubles instead. */
+    suspend fun editManual(ref: HistoryRef.Manual, newMinor: Long): ManualWas? = shiftManual(ref, ManualUndo.editBy(ref, newMinor))
+
+    /** Puts the days back exactly as they were. */
+    suspend fun restoreManual(was: ManualWas) = lock.run { history.upsertAll(was.points) }
+
+    private suspend fun shiftManual(ref: HistoryRef.Manual, by: Long): ManualWas? = lock.run {
+        val days = history.days()
+        val changed = ManualUndo.shift(days, ref, by)
+        if (changed.isEmpty()) return@run null
+        val dates = changed.map { it.date }.toSet()
+        val was = ManualWas(days.filter { it.date in dates })
+        history.upsertAll(changed)
+        was
     }
 
     /** The figures to show before [refs] are deleted. */
@@ -190,7 +218,7 @@ class HistoryOperations(
             is HistoryRef.Fx -> fx.get(ref.id)?.let { op ->
                 note(CapitalPart.CURRENCY, -CapitalReconstruction.fxOn(listOf(op), allRates, snap.today), op.date)
             }
-            is HistoryRef.Balance -> Unit
+            is HistoryRef.Balance, is HistoryRef.Manual -> Unit
         }
         return HistoryEdits.preview(part, delta, from, parts, snap.totalMinor, included())
     }
@@ -240,7 +268,7 @@ class HistoryOperations(
                 taken += Removed.Item.Fx(it)
             }
             // A hand-changed balance is put right, not deleted (F-55).
-            is HistoryRef.Balance -> Unit
+            is HistoryRef.Balance, is HistoryRef.Manual -> Unit
         }
         shift(shifts)
         Removed(taken)
@@ -293,7 +321,7 @@ class HistoryOperations(
                     deposits.addTopUp(ref.depositId, DepositTopUp(ref.topUpId, form.date, Money.ofMinor(form.amountMinor)))
                     null
                 }
-                is HistoryRef.Balance -> null
+                is HistoryRef.Balance, is HistoryRef.Manual -> null
                 is HistoryRef.Fx -> {
                     val old = fx.get(ref.id) ?: return@run null
                     val next = old.copy(

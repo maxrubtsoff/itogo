@@ -25,7 +25,7 @@ object ManualBalance {
         accounts.filter { !it.excluded && it.currency == currency }.sortedWith(compareBy({ it.brand.title }, { it.title }))
 
     /** Accounts of the list whose balance was given exactly on [date]: the likely place of the change. */
-    private fun touchedOn(accounts: List<Account>, date: LocalDate, zone: ZoneId): List<Account> =
+    fun touchedOn(accounts: List<Account>, date: LocalDate, zone: ZoneId): List<Account> =
         accounts.filter { a -> a.checkedAt?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() == date } == true }
 
     /** The account the change is on when it is the only candidate (a line's subtitle); null — several or none. */

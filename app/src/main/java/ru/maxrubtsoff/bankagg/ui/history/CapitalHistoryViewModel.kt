@@ -160,6 +160,25 @@ class CapitalHistoryViewModel(
         }
     }
 
+    /** The first saved day a hand change of the currency moved; null — none. */
+    suspend fun manualFrom(ref: HistoryRef.Manual): LocalDate? = operations.manualFrom(ref)
+
+    /** Takes a hand change of the currency out of the history and offers «Вернуть» (B-121). */
+    fun removeManual(ref: HistoryRef.Manual) {
+        viewModelScope.launch {
+            val was = operations.removeManual(ref) ?: return@launch
+            undo.offer("Правка удалена", restore = { operations.restoreManual(was) })
+        }
+    }
+
+    /** Puts a hand change of the currency at another sum; «Вернуть» brings the old days back. */
+    fun editManual(ref: HistoryRef.Manual, minor: Long) {
+        viewModelScope.launch {
+            val was = operations.editManual(ref, minor) ?: return@launch
+            undo.offer("Правка изменена", restore = { operations.restoreManual(was) })
+        }
+    }
+
     /** Null when saved, else why not. */
     suspend fun save(ref: HistoryRef, form: OperationForm): String? = operations.save(ref, form)
 

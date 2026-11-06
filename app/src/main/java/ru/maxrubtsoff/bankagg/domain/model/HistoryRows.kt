@@ -15,6 +15,8 @@ object HistoryRows {
         else -> RowKind.SUM
     }
 
+    private fun isManual(e: HistoryEvent) = e.ref is HistoryRef.Manual
+
     /** True when any event inside the row happened in the picked [span] of the chart (F-46). */
     fun touches(row: HistoryRow, span: DaySpan?): Boolean = span != null && row.sources.any { it.date in span }
 
@@ -33,12 +35,13 @@ object HistoryRows {
      */
     fun days(events: List<HistoryEvent>, page: CapitalPart?): List<HistoryDay> =
         events.groupBy { it.date }.toSortedMap(compareByDescending { it }).map { (day, list) ->
-            val buckets = list.groupBy { it.kind to it.part }
+            // A hand change is its own line, never folded (B-121).
+            val buckets = list.filterNot(::isManual).groupBy { it.kind to it.part }
             val seen = HashSet<Pair<HistoryKind, CapitalPart>>()
             val rows = ArrayList<HistoryRow>()
             list.forEachIndexed { i, e ->
                 val key = e.kind to e.part
-                val same = buckets.getValue(key)
+                val same = if (isManual(e)) listOf(e) else buckets.getValue(key)
                 when {
                     same.size < 2 -> rows += HistoryRow.Single(e, id = "s:${day.toEpochDay()}:$i")
                     seen.add(key) -> rows += group("d:${day.toEpochDay()}:${e.kind.name}:${e.part.name}", e.kind, e.part, same, same, page, null)
@@ -56,7 +59,8 @@ object HistoryRows {
 
     private fun monthRows(m: MonthEvents, page: CapitalPart?, today: LocalDate): List<HistoryRow> {
         val rows = ArrayList<HistoryRow>()
-        m.events.groupBy { it.kind to it.part }.forEach { (key, same) ->
+        m.events.filter(::isManual).forEachIndexed { i, e -> rows += HistoryRow.Single(dated(e, today), "mm:${m.month}:$i", listOf(e)) }
+        m.events.filterNot(::isManual).groupBy { it.kind to it.part }.forEach { (key, same) ->
             val (kind, part) = key
             val id = "m:${m.month}:${kind.name}:${part.name}"
             rows += when {
