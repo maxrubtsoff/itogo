@@ -16,7 +16,7 @@ import ru.maxrubtsoff.bankagg.domain.repository.Today
  * B-121: the «Валюта» part of every saved day recounted by [CurrencyHistory] from the deals,
  * the foreign accounts and CBR rates. Missing weekly rates are asked from the CBR (public
  * rates only); offline the cached ones stand. [ifNeeded] runs once after the update,
- * [invoke] — by the button in Настройки. Returns how many days changed.
+ * [invoke] — by the button in Настройки. Returns how many days changed, or [NO_RATES].
  */
 class RebuildCurrencyHistory(
     private val history: CapitalHistoryRepository,
@@ -30,7 +30,8 @@ class RebuildCurrencyHistory(
 ) {
     suspend fun ifNeeded() {
         if (settings.currencyHistoryRebuilt()) return
-        invoke()
+        // Without rates nothing is written and the flag stays: the next start tries again.
+        if (invoke() == NO_RATES) return
         settings.markCurrencyHistoryRebuilt()
     }
 
@@ -46,6 +47,7 @@ class RebuildCurrencyHistory(
             .map { CapitalReconstruction.knownFrom(it, transactions) }).minOrNull()
         if (from != null) fetchPastRates(rates, source, maxOf(from, saved.minOf { it.date }), day)
         val allRates = rates.all()
+        if (!CurrencyHistory.ratesCover(accounts, transactions, ops, allRates)) return NO_RATES
         val included = settings.capitalParts.first() intersect settings.features.first().capitalParts
         return lock.run {
             // Read again under the lock: a writer may have changed the days since.
@@ -53,5 +55,10 @@ class RebuildCurrencyHistory(
             if (changed.isNotEmpty()) history.upsertAll(changed)
             changed.size
         }
+    }
+
+    companion object {
+        /** The CBR rates for the past are not there yet (offline): nothing was written. */
+        const val NO_RATES = -2
     }
 }

@@ -63,4 +63,24 @@ object CurrencyHistory {
         }
         return sum
     }
+
+    /**
+     * The CBR rates cover the past: every currency held (a deal or a foreign account) has a
+     * rate no later than a week after its first day. False — offline so far: recount nothing.
+     */
+    fun ratesCover(
+        accounts: List<Account>, transactions: List<Transaction>, fxOps: List<FxOperation>, rates: List<FxRate>,
+        zone: ZoneId = ZoneId.systemDefault()
+    ): Boolean {
+        val firsts = HashMap<String, LocalDate>()
+        fun note(code: String, d: LocalDate) { firsts[code] = firsts[code]?.let { minOf(it, d) } ?: d }
+        fxOps.forEach { note(it.currency, it.date) }
+        accounts.filter { !it.excluded && it.currency != Currencies.RUB }
+            .forEach { note(it.currency, CapitalReconstruction.knownFrom(it, transactions, zone)) }
+        return firsts.all { (code, first) ->
+            rates.any { it.currency == code && !it.date.isAfter(first.plusDays(GRID_DAYS)) }
+        }
+    }
+
+    const val GRID_DAYS = 7L
 }

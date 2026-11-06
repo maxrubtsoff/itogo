@@ -2,6 +2,7 @@ package ru.maxrubtsoff.bankagg.ui.settings
 
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
+import ru.maxrubtsoff.bankagg.domain.usecase.RebuildCurrencyHistory
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import ru.maxrubtsoff.bankagg.ui.common.SlitokDialog
@@ -134,6 +135,7 @@ fun SettingsScreen(
                     subtitle = when {
                         rebuilding -> "Пересчитываю…"
                         rebuilt == null -> "Из сделок и курсов ЦБ"
+                        rebuilt == RebuildCurrencyHistory.NO_RATES -> "Нет курсов, нужна сеть"
                         rebuilt!! < 0 -> "Не получилось, попробуйте ещё раз"
                         rebuilt == 0 -> "Всё уже сходится"
                         else -> "Исправлено дней: $rebuilt"
