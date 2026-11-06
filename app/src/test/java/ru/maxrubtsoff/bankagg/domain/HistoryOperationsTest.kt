@@ -289,6 +289,15 @@ class HistoryOperationsTest {
         assertEquals(1_500L, days.getValue(d19).parts[CapitalPart.CURRENCY])
     }
 
+    @Test fun `a hand change with no saved day before it has nothing to take out`() = runTest {
+        val w = accountsWorld()
+        w.seed(fxPoint(d19, 1_500))
+        assertNull(w.ops.manualFrom(manualRef))
+        assertNull(w.ops.removeManual(manualRef))
+        assertNull(w.ops.editManual(manualRef, -100L))
+        assertEquals(1_500L, w.days().getValue(d19).parts[CapitalPart.CURRENCY])
+    }
+
     @Test fun `restoring a hand change returns the original days`() = runTest {
         val w = accountsWorld()
         w.seed(fxPoint(d14, 2_000), fxPoint(d17, 2_000), fxPoint(d19, 1_500))
