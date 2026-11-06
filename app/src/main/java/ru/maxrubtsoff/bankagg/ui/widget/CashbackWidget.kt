@@ -197,7 +197,7 @@ class CashbackWidget : GlanceAppWidget() {
                     if (model.missing) "Кэшбэк на ${model.month.lowercase()} не добавлен" else "Нет кэшбэка в этом месяце",
                     style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 13.sp)
                 )
-                mode == CashbackWidgetLayout.Mode.BANKS -> BankBlocks(model.banks, CashbackWidgetLayout.grid(w, h, baseLine = false))
+                mode == CashbackWidgetLayout.Mode.BANKS -> BankBlocks(model.banks, CashbackWidgetLayout.grid(w, h, baseLine = false), CashbackWidgetLayout.banksHeight(h))
                 else -> {
                     // The base rate leads (U-8), then the categories, as on the home card.
                     if (hasBase) {
@@ -242,9 +242,9 @@ class CashbackWidget : GlanceAppWidget() {
 
     /** The large widget: bank blocks packed into columns, none split; "+N банков" for the rest. */
     @androidx.compose.runtime.Composable
-    private fun BankBlocks(banks: List<BankBlock>, grid: CashbackWidgetLayout.Grid) {
+    private fun BankBlocks(banks: List<BankBlock>, grid: CashbackWidgetLayout.Grid, heightDp: Float) {
         val shown = banks.map { it.copy(rows = it.rows.take(BLOCK_ROWS)) }
-        val packing = CashbackWidgetLayout.pack(shown.map { 1 + it.rows.size }, grid.columns, grid.lines)
+        val packing = CashbackWidgetLayout.packDp(shown.map { it.rows.size }, grid.columns, heightDp)
         Row(GlanceModifier.fillMaxWidth()) {
             packing.columns.forEachIndexed { c, indices ->
                 if (c > 0) Spacer(GlanceModifier.width(CashbackWidgetLayout.COLUMN_GAP.dp))
