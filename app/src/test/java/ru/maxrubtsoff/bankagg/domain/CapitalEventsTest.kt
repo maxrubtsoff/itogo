@@ -94,7 +94,7 @@ class CapitalEventsTest {
     private val manualPoints = listOf(pointFx(d0, 9_000_000), pointFx(d1, 9_750_000))
     private val manualOps = listOf(buy("USD", d0, 100_000, 9_000_000))
     private val manualRates = listOf(FxRate("USD", d0, 90_000_000), FxRate("USD", d1, 92_500_000))
-    private val manualTitle = "Правка остатка · вручную"
+    private val manualTitle = "Правка остатка"
 
     @Test fun manualRemainderIsSeparateManualEvent() {
         val list = events(manualPoints, manualOps, manualRates)

@@ -351,7 +351,7 @@ object CapitalEvents {
         return out
     }
 
-    /** «Правка остатка · вручную» of a day (B-121): its own line; the account is named when the change is on one. */
+    /** «Правка остатка» (tagged «вручную» by the screen) of a day (B-121): its own line; the account is named when the change is on one. */
     private fun manualEvent(date: LocalDate, reason: RevaluationReason, accounts: List<Account>, zone: ZoneId, from: LocalDate?): HistoryEvent {
         val currency = ManualBalance.currencyOf(reason.legs, accounts)
         val touched = currency?.let { ManualBalance.touchedOn(ManualBalance.accountsOf(it, accounts), date, zone) }.orEmpty()
@@ -361,7 +361,7 @@ object CapitalEvents {
             ManualSource.ACCOUNT -> listOfNotNull(bank?.brand?.title, currency?.let { Currencies.symbolOf(it) }).joinToString(" · ").ifEmpty { null }
             ManualSource.CURRENCY_POSITION -> "Валюта"
         }
-        return HistoryEvent(date, CapitalPart.CURRENCY, "Правка остатка · вручную", sub, reason.manualMinor, kind = HistoryKind.REVALUATION,
+        return HistoryEvent(date, CapitalPart.CURRENCY, "Правка остатка", sub, reason.manualMinor, kind = HistoryKind.REVALUATION,
             bank = bank?.brand, ref = HistoryRef.Manual(CapitalPart.CURRENCY, date, reason.manualMinor, source, from))
     }
 

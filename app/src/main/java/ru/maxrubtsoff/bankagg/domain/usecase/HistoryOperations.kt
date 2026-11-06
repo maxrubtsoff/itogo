@@ -71,6 +71,15 @@ class BalanceWas internal constructor(internal val old: Account)
 /** The saved days a hand change moved, as they were, to put back with «Вернуть» (B-121). */
 class ManualWas internal constructor(internal val points: List<CapitalPoint>)
 
+/** What the sheet of a hand change shows (B-121): the currency part and the capital on the day before the step, and after it goes. */
+data class ManualDetail(
+    val dayBefore: LocalDate?,
+    val partBefore: Long, val partOnDay: Long, val partAfterDelete: Long,
+    val capitalBefore: Long, val capitalAfterDelete: Long,
+    /** The account the change is on, with its balance as it is now; null — the currency position or several accounts. */
+    val account: Account?
+)
+
 /** What a deletion took out, to put it back (F-51). */
 class Removed internal constructor(internal val items: List<Item>) {
     internal sealed interface Item {
@@ -167,6 +176,21 @@ class HistoryOperations(
 
     /** The first saved day a hand change moved when it goes; null — no saved day before it (nothing to take out). */
     suspend fun manualFrom(ref: HistoryRef.Manual): LocalDate? = ManualUndo.range(history.days(), ref)?.start
+
+    suspend fun manualDetail(ref: HistoryRef.Manual): ManualDetail {
+        val days = history.days().sortedBy { it.date }
+        val before = days.lastOrNull { it.date.isBefore(ref.date) }
+        val on = days.firstOrNull { !it.date.isBefore(ref.date) }
+        val pb = before?.valueOf(ref.part) ?: 0L
+        val account = if (ref.source == ru.maxrubtsoff.bankagg.domain.model.ManualSource.ACCOUNT) {
+            val accs = ledger.observeAccounts().first().filter { !it.excluded && it.currency != Currencies.RUB }
+            ManualBalance.touchedOn(accs, ref.date, zone).singleOrNull()
+        } else null
+        return ManualDetail(
+            before?.date, pb, on?.valueOf(ref.part) ?: (pb + ref.manualMinor), pb + ref.manualMinor,
+            before?.totalMinor ?: 0L, (before?.totalMinor ?: 0L) + ref.manualMinor, account
+        )
+    }
 
     /** Takes the hand change out of the history: the days before it move by its step. Accounts and deals stay. */
     suspend fun removeManual(ref: HistoryRef.Manual): ManualWas? = shiftManual(ref, ManualUndo.deleteBy(ref))

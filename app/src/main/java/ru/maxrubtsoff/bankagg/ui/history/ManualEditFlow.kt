@@ -18,7 +18,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRef
-import ru.maxrubtsoff.bankagg.domain.model.ManualSource
+import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.domain.usecase.ManualDetail
+import ru.maxrubtsoff.bankagg.ui.common.WasBecomeLine
 import ru.maxrubtsoff.bankagg.domain.model.MoneyCompact
 import ru.maxrubtsoff.bankagg.domain.model.RuDays
 import ru.maxrubtsoff.bankagg.ui.capital.amountInput
@@ -48,18 +50,23 @@ private enum class ManualMode { VIEW, EDIT, CONFIRM }
 fun ManualEditFlow(event: HistoryEvent, ref: HistoryRef.Manual, vm: CapitalHistoryViewModel, today: LocalDate, onDismiss: () -> Unit) {
     var mode by remember { mutableStateOf(ManualMode.VIEW) }
     val from by produceState<LocalDate?>(null, ref) { value = vm.manualFrom(ref) }
+    val detail by produceState<ManualDetail?>(null, ref) { value = vm.manualDetail(ref) }
+    val d = detail
+    val bank = d?.account?.brand
+    val rub = { v: Long -> Money.ofMinor(v).format() }
     SlitokSheet(onDismiss, imeField = mode == ManualMode.EDIT) {
         when (mode) {
             ManualMode.VIEW -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (event.bank != null) BankIcon(event.bank, 36.dp) else Dot(event.part.color())
+                    if (bank != null) BankIcon(bank, 36.dp) else Dot(event.part.color())
                     Text(
-                        if (ref.source == ManualSource.ACCOUNT) "Правка остатка · " + (event.subtitle ?: "счёт") else "Правка остатка · Валюта",
+                        "Правка остатка · " + (bank?.title ?: "Валюта"),
                         style = MaterialTheme.typography.titleMedium, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
                 MoneyText(signedSum(ref.manualMinor), style = Amounts.Large, color = if (ref.manualMinor > 0L) Slitok.Mint else Slitok.Fg, compact = MoneyCompact.short(ref.manualMinor, signed = true))
                 Text(RuDays.dayWeekday(ref.date, today) + " · внесена вручную", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
+                if (d != null && d.dayBefore != null) WasBecomeLine("Валюта", rub(d.partBefore), rub(d.partOnDay))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PlateButton({ mode = ManualMode.EDIT }, Modifier.weight(1f)) { Text("Изменить", maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     DangerButton({ mode = ManualMode.CONFIRM }, Modifier.weight(1f)) { Text("Удалить", maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -83,10 +90,19 @@ fun ManualEditFlow(event: HistoryEvent, ref: HistoryRef.Manual, vm: CapitalHisto
             }
             ManualMode.CONFIRM -> {
                 Text("Удалить правку?", style = MaterialTheme.typography.titleLarge, color = Slitok.Fg)
-                Text("Текущий остаток и сделки не изменятся", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted)
+                if (d != null && d.dayBefore != null) {
+                    WasBecomeLine("Валюта", rub(d.partBefore), rub(d.partAfterDelete))
+                    WasBecomeLine("Капитал", rub(d.capitalBefore), rub(d.capitalAfterDelete))
+                }
+                d?.account?.let { a ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Остаток ${a.brand.title} сейчас", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        MoneyText(a.balance.format(a.currency), style = MaterialTheme.typography.bodyMedium, color = Slitok.Fg)
+                    }
+                }
                 val f = from
                 if (f != null) {
-                    Text("График пересчитается с ${RuDays.dayMonth(f, today)}", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
+                    Text("График пересчитается с ${RuDays.dayMonth(f, today)}. Текущий остаток и сделки не изменятся.", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
                 } else {
                     Text("Раньше этого дня в графике ничего нет: уйдёт только строка", style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
                 }

@@ -409,6 +409,7 @@ private fun EventRow(
     HistoryLine(
         e.title, e.subtitle, e.amountMinor, kind, nested = nested, expanded = expanded, highlighted = highlighted,
         subtitleLines = if (e.reason != null) 2 else 1,
+        tag = if (e.ref is ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual) "вручную" else null,
         lead = {
             when {
                 e.bank != null -> BankIcon(e.bank, 28.dp)
