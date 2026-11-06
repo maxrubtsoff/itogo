@@ -238,8 +238,16 @@ class CashbackWidget : GlanceAppWidget() {
                         BaseLine(model.base, innerW)
                         Spacer(GlanceModifier.height((CashbackWidgetLayout.BASE_LINE - 18f).dp))
                     }
-                    CategoryGrid(rows.take(withBase.slots), withBase)
-                    val usedLines = (minOf(rows.size, withBase.slots) + withBase.columns - 1) / withBase.columns
+                    val flat = CashbackWidgetLayout.flat(withBase, rows.size)
+                    CategoryGrid(rows.take(flat.shown), withBase)
+                    if (flat.showMore) {
+                        Text(
+                            "+" + RuPlural.categories(flat.hidden), maxLines = 1,
+                            modifier = GlanceModifier.padding(top = CashbackWidgetLayout.GAP.dp),
+                            style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 12.sp)
+                        )
+                    }
+                    val usedLines = (flat.shown + withBase.columns - 1) / withBase.columns
                     // Room left at month's end: nudge to add next month.
                     if (model.nextHint != null && withBase.lines - usedLines >= 2) {
                         Text(

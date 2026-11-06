@@ -98,4 +98,19 @@ class CashbackWidgetLayoutTest {
     @Test fun banksHeight_excludesPaddingAndHeader() {
         assertEquals(300f - 2 * L.PADDING - L.HEADER, L.banksHeight(300f), 0.01f)
     }
+
+    @Test fun flatShowsAllWhenTheyFit() {
+        val g = CashbackWidgetLayout.Grid(2, 150f, 4)
+        assertEquals(CashbackWidgetLayout.Flat(8, 0, false), L.flat(g, 8))
+    }
+
+    @Test fun flatKeepsOneLineForMoreWhenHidden() {
+        val g = CashbackWidgetLayout.Grid(2, 150f, 4)
+        assertEquals(CashbackWidgetLayout.Flat(6, 5, true), L.flat(g, 11))
+        assertEquals(CashbackWidgetLayout.Flat(3, 7, true), L.flat(CashbackWidgetLayout.Grid(1, 150f, 4), 10))
+    }
+
+    @Test fun flatSingleLineHasNoRoomForMore() {
+        assertEquals(CashbackWidgetLayout.Flat(2, 3, false), L.flat(CashbackWidgetLayout.Grid(2, 150f, 1), 5))
+    }
 }

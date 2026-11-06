@@ -94,4 +94,19 @@ object CashbackWidgetLayout {
         val (cut, cutHidden) = place(true)
         return Packing(cut, cutHidden)
     }
+
+    /** Flat list: [shown] lines of the grid and, when some are hidden, [hidden] for the "+N категорий" line. */
+    data class Flat(val shown: Int, val hidden: Int, val showMore: Boolean)
+
+    /**
+     * Fits [total] lines into [grid]. If they don't all fit, the last grid line
+     * gives way to the "+N" line (it needs less height than a line); with one
+     * line only there is no room for it, so just the first slots show.
+     */
+    fun flat(grid: Grid, total: Int): Flat {
+        if (total <= grid.slots) return Flat(total, 0, false)
+        if (grid.lines <= 1) return Flat(grid.slots, total - grid.slots, false)
+        val shown = grid.columns * (grid.lines - 1)
+        return Flat(shown, total - shown, true)
+    }
 }
