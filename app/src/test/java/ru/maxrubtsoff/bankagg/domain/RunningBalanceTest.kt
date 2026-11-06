@@ -38,4 +38,12 @@ class RunningBalanceTest {
         val s = RunningBalance.setByUser(null, 1_000_000, 5_000)
         assertEquals(1_000_000, RunningBalance.apply(s, -20_000, 300_000, 4_000).balanceMinor)
     }
+
+    @Test fun laterArrivalWithEarlierOpTimeDoesNotOverwrite() {
+        // Arrival order 17:43, 17:39, 17:42; the times are the operations' own.
+        var s = RunningBalance.apply(null, 13_192_050, 41_368_462, 1_743)
+        s = RunningBalance.apply(s, -104_500, 176_412, 1_739)
+        s = RunningBalance.apply(s, 28_000_000, 28_176_412, 1_742)
+        assertEquals(41_368_462, s.balanceMinor)
+    }
 }

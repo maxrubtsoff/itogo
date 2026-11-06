@@ -19,6 +19,8 @@ import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
 import ru.maxrubtsoff.bankagg.domain.repository.TransactionRunner
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordNotification
 import ru.maxrubtsoff.bankagg.domain.usecase.RepairFromJournal
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
  * The log keeps the raw text of every notification, so an improved parser fixes
@@ -320,5 +322,38 @@ class RepairFromJournalTest {
         assertTrue(ledger.txs.isEmpty())
         assertFalse(ledger.hasTransactions(usd))
         assertEquals(10_029L, ledger.accounts[eur]!!.balance.minor)
+    }
+
+    @Test fun repairPicksBalanceByOperationTime() = runTest {
+        val zone = ZoneId.of("Europe/Moscow")
+        fun ms(h: Int, m: Int) = LocalDateTime.of(2026, 11, 3, h, m).atZone(zone).toInstant().toEpochMilli()
+        val arrival = ms(17, 43)
+        val texts = listOf(
+            "Пополнение на 131 920,50 RUB Баланс 413 684,62 RUB 3 ноября 17:43" to 13_192_050L,
+            "Покупка 1 045 RUB Баланс 1 764,12 RUB Додо Пицца 3 ноября 17:39" to -104_500L,
+            "Пополнение на 280 000 RUB Баланс 281 764,12 RUB 3 ноября 17:42" to 28_000_000L
+        )
+        val balances = listOf(41_368_462L, 176_412L, 28_176_412L)
+        val pairs = texts.mapIndexed { i, (t, amount) ->
+            stored(id = i + 1L, text = t, postedAt = arrival, oldAmountMinor = amount, oldBalanceMinor = balances[i])
+        }
+        val ledger = FakeLedger(
+            accounts = mutableMapOf(
+                account to Account(
+                    id = account, brand = brand, title = brand.title,
+                    balance = Money.ofMinor(28_176_412L), currency = "RUB", updatedAt = arrival,
+                    checkedAt = arrival, estimated = false
+                )
+            ),
+            txs = pairs.mapNotNull { it.second }.toMutableList()
+        )
+        val events = FakeEvents(pairs.map { it.first })
+
+        assertEquals(2, RepairFromJournal(events, ledger, direct, zone)())  // the 17:43 push already sits at its own time
+
+        assertEquals(41_368_462L, ledger.accounts[account]!!.balance.minor)
+        // Identity stays the arrival time's: eventHash(content, postedAt).
+        assertTrue(events.stored.drop(1).all { it.dedupHash == RecordNotification.eventHash(it.contentHash, arrival) })
+        assertEquals(setOf(ms(17, 39), ms(17, 42), ms(17, 43)), ledger.txs.map { it.postedAt }.toSet())
     }
 }

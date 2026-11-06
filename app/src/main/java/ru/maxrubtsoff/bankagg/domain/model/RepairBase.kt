@@ -1,7 +1,7 @@
 package ru.maxrubtsoff.bankagg.domain.model
 
 /** One log entry of an account as the current parser reads it: when, and the exact balance it gave (B-90). */
-data class RepairEvent(val postedAt: Long, val balanceMinor: Long?)
+data class RepairEvent(val postedAt: Long, val balanceMinor: Long?, val arrivedAt: Long = postedAt)
 
 /**
  * What a repaired account counts from. The exact balance the bank gave in a
@@ -27,7 +27,7 @@ sealed interface RepairBase {
             if (checkedAt !in changedPostedAts) {
                 return Keep(checkedAt, account.balance.minor - sumSince)
             }
-            val last = accountEvents.filter { it.balanceMinor != null }.maxByOrNull { it.postedAt }
+            val last = accountEvents.filter { it.balanceMinor != null }.maxWithOrNull(compareBy<RepairEvent> { it.postedAt }.thenBy { it.arrivedAt })
                 ?: return None
             return FromJournal(last.postedAt, last.balanceMinor!!)
         }

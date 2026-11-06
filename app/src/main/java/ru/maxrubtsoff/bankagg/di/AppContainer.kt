@@ -168,8 +168,8 @@ class AppContainer(context: Context) {
 
     // Use cases
     val transactionRunner by lazy { RoomTransactionRunner(db) }
-    val recordNotification by lazy { RecordNotification(eventRepository, ledgerRepository, transactionRunner) }
-    val repairFromJournal by lazy { RepairFromJournal(eventRepository, ledgerRepository, transactionRunner) }
+    val recordNotification by lazy { RecordNotification(eventRepository, ledgerRepository, transactionRunner, java.time.ZoneId.systemDefault()) }
+    val repairFromJournal by lazy { RepairFromJournal(eventRepository, ledgerRepository, transactionRunner, java.time.ZoneId.systemDefault()) }
 
     /** The app's own notifications and their switches (F-24). */
     val reminders: ReminderStore by lazy { ReminderStore(appContext) }

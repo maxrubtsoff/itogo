@@ -10,7 +10,9 @@ import ru.maxrubtsoff.bankagg.domain.parser.ParsedOp
 import ru.maxrubtsoff.bankagg.domain.repository.EventRepository
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
 import ru.maxrubtsoff.bankagg.domain.repository.TransactionRunner
+import ru.maxrubtsoff.bankagg.domain.model.OperationTime
 import java.security.MessageDigest
+import java.time.ZoneId
 
 /**
  * Handles one incoming bank notification entirely on-device: parses it, stores
@@ -25,7 +27,8 @@ import java.security.MessageDigest
 class RecordNotification(
     private val events: EventRepository,
     private val ledger: LedgerRepository,
-    private val tx: TransactionRunner
+    private val tx: TransactionRunner,
+    private val zone: ZoneId = ZoneId.systemDefault()
 ) {
     private val mutex = Mutex()
 
@@ -66,6 +69,8 @@ class RecordNotification(
             if (!stored) return@run false
 
             if (op != null) {
+                // The operation's own time from the text; the arrival stays the event's identity (B-123).
+                val at = OperationTime.resolve(op.opTime, postedAt, zone)
                 val accountId = "${brand.key}:${op.accountCurrency}"
                 // An amount in another currency than the account's (1 USD, balance in EUR)
                 // is not booked: only the account's own balance is taken (B-118).
@@ -75,7 +80,7 @@ class RecordNotification(
                     currency = op.accountCurrency,
                     amountMinor = if (op.foreignAmount) 0L else op.amount.minor,
                     balanceMinor = op.balance?.minor,
-                    postedAt = postedAt
+                    postedAt = at
                 )
                 if (!op.foreignAmount) ledger.addTransaction(
                     Transaction(
@@ -87,7 +92,7 @@ class RecordNotification(
                         kind = op.kind,
                         category = null,
                         counterparty = op.counterparty,
-                        postedAt = postedAt
+                        postedAt = at
                     )
                 )
             }

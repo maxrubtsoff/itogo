@@ -15,6 +15,10 @@ import ru.maxrubtsoff.bankagg.domain.repository.EventRepository
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
 import ru.maxrubtsoff.bankagg.domain.repository.TransactionRunner
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordNotification
+import ru.maxrubtsoff.bankagg.domain.model.BalanceState
+import ru.maxrubtsoff.bankagg.domain.model.RunningBalance
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 class RecordNotificationTest {
 
@@ -41,9 +45,11 @@ class RecordNotificationTest {
         val txs = mutableListOf<Transaction>()
         /** accountId, currency, amountMinor of each upsert. */
         val upserts = mutableListOf<Triple<String, String, Long>>()
+        /** balanceMinor, postedAt of each upsert, in call order. */
+        val upsertTimes = mutableListOf<Pair<Long?, Long>>()
         override suspend fun upsertAccountBalance(
             accountId: String, brand: BankBrand, currency: String, amountMinor: Long, balanceMinor: Long?, postedAt: Long
-        ) { balances[accountId] = balanceMinor; upserts += Triple(accountId, currency, amountMinor) }
+        ) { balances[accountId] = balanceMinor; upserts += Triple(accountId, currency, amountMinor); upsertTimes += balanceMinor to postedAt }
         override suspend fun setBalance(accountId: String, balanceMinor: Long, at: Long) { balances[accountId] = balanceMinor }
         override suspend fun restoreBalance(accountId: String, balanceMinor: Long, updatedAt: Long, checkedAt: Long?, estimated: Boolean) {}
         override suspend fun sumSince(accountId: String, from: Long) = 0L
@@ -170,5 +176,25 @@ class RecordNotificationTest {
         val record = RecordNotification(events, ledger, direct)
         assertTrue(record(tbank, null, text, 1_000_000L, "key-1"))
         assertFalse(record(tbank, null, text, 1_000_000L + 60_000L, "key-2"))
+    }
+
+    // B-123: the operation time from the text, not the arrival, orders operations and picks the balance.
+
+    @Test fun balanceFromLatestOperationTime() = runTest {
+        val zone = ZoneId.of("Europe/Moscow")
+        fun ms(h: Int, m: Int) = LocalDateTime.of(2026, 11, 3, h, m).atZone(zone).toInstant().toEpochMilli()
+        val arrival = ms(17, 43)
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct, zone)
+        val alfa = "ru.alfabank.mobile.android"
+        record(alfa, "Альфа-Банк", "Пополнение на 131 920,50 RUB Баланс 413 684,62 RUB 3 ноября 17:43", arrival)
+        record(alfa, "Альфа-Банк", "Покупка 1 045 RUB Баланс 1 764,12 RUB Додо Пицца 3 ноября 17:39", arrival)
+        record(alfa, "Альфа-Банк", "Пополнение на 280 000 RUB Баланс 281 764,12 RUB 3 ноября 17:42", arrival)
+
+        assertEquals(setOf(ms(17, 39), ms(17, 42), ms(17, 43)), ledger.txs.map { it.postedAt }.toSet())
+        assertEquals(arrival, events.stored.first().postedAt)
+        var state: BalanceState? = null
+        for ((balance, at) in ledger.upsertTimes) state = RunningBalance.apply(state, 0L, balance, at)
+        assertEquals(41_368_462L, state!!.balanceMinor)
     }
 }

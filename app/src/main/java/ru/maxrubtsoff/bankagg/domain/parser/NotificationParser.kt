@@ -2,6 +2,7 @@ package ru.maxrubtsoff.bankagg.domain.parser
 
 import ru.maxrubtsoff.bankagg.domain.model.Currencies
 import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.domain.model.OpTime
 import ru.maxrubtsoff.bankagg.domain.model.TransactionKind
 
 /**
@@ -22,7 +23,9 @@ data class ParsedOp(
     val balance: Money?,         // running balance if present
     val counterparty: String?,
     /** Currency of [balance] when the push marks it; null — the same as [currency]. */
-    val balanceCurrency: String? = null
+    val balanceCurrency: String? = null,
+    /** Time of the operation read from the text, if any (B-123). */
+    val opTime: OpTime? = null
 ) {
     /** Currency of the account the push is about: the balance's, else the amount's (B-118). */
     val accountCurrency: String get() = balanceCurrency ?: currency
@@ -218,7 +221,8 @@ object NotificationParser {
             direction = direction,
             balance = balance?.let(Money::ofMinor),
             counterparty = counterparty,
-            balanceCurrency = balanceHit?.currency
+            balanceCurrency = balanceHit?.currency,
+            opTime = OpTimeParser.find(blob)
         )
     }
 

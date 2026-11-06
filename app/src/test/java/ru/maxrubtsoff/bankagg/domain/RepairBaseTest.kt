@@ -26,4 +26,9 @@ class RepairBaseTest {
     @Test fun none_when_poisoned_and_no_exact_balance() {
         assertEquals(RepairBase.None, RepairBase.pick(acc(5L), listOf(RepairEvent(1L, null)), setOf(5L), 0L))
     }
+
+    @Test fun tieOnOpTimeBrokenByArrival() {
+        val ev = listOf(RepairEvent(3L, 100L, arrivedAt = 10L), RepairEvent(3L, 300L, arrivedAt = 11L))
+        assertEquals(RepairBase.FromJournal(3L, 300L), RepairBase.pick(acc(5L), ev, setOf(5L), 0L))
+    }
 }

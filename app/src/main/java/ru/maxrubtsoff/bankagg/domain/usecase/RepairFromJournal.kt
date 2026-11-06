@@ -7,7 +7,9 @@ import ru.maxrubtsoff.bankagg.domain.parser.NotificationParser
 import ru.maxrubtsoff.bankagg.domain.parser.ParsedOp
 import ru.maxrubtsoff.bankagg.domain.repository.EventRepository
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
+import ru.maxrubtsoff.bankagg.domain.model.OperationTime
 import ru.maxrubtsoff.bankagg.domain.repository.TransactionRunner
+import java.time.ZoneId
 
 /**
  * Runs the current parser over the log and fixes what the old one got wrong
@@ -23,7 +25,8 @@ import ru.maxrubtsoff.bankagg.domain.repository.TransactionRunner
 class RepairFromJournal(
     private val events: EventRepository,
     private val ledger: LedgerRepository,
-    private val tx: TransactionRunner
+    private val tx: TransactionRunner,
+    private val zone: ZoneId = ZoneId.systemDefault()
 ) {
 
     /** Returns how many log entries were fixed. */
@@ -31,7 +34,11 @@ class RepairFromJournal(
         val changes = events.all().mapNotNull { event ->
             val op = NotificationParser.parse(event.title, event.text, event.brand.defaultCurrency)
             val content = RecordNotification.contentHash(event.packageName, event.text, op)
-            if (content == event.contentHash) null else Change(event.id, event.dedupHash, content, op, event)
+            // Same content, but the stored operation sits at the arrival time while the text
+            // names its own (B-123): that is a change too.
+            val timeOff = op != null && !op.foreignAmount &&
+                ledger.transaction(event.dedupHash)?.let { it.postedAt != at(op, event) } == true
+            if (content == event.contentHash && !timeOff) null else Change(event.id, event.dedupHash, content, op, event)
         }
         if (changes.isEmpty()) return@run 0
 
@@ -47,7 +54,7 @@ class RepairFromJournal(
         // counted on top of it — those are about to be re-counted. A figure from
         // a push that is no operation any more is no base (B-90).
         val all = events.all()
-        val changedAt = changes.map { it.event.postedAt }.toSet()
+        val changedAt = changes.flatMap { c -> listOfNotNull(c.event.postedAt, c.op?.let { at(it, c.event) }) }.toSet()
         val withEvents = mutableSetOf<String>()
         val bases = affected.mapNotNull { id ->
             val account = ledger.account(id) ?: return@mapNotNull null
@@ -55,7 +62,7 @@ class RepairFromJournal(
                 val op = NotificationParser.parse(e.title, e.text, e.brand.defaultCurrency)
                     ?: return@mapNotNull null
                 if (accountId(e.brand.key, op.accountCurrency) != id) null
-                else RepairEvent(e.postedAt, op.balance?.minor)
+                else RepairEvent(at(op, e), op.balance?.minor, e.postedAt)
             }
             if (mine.isNotEmpty()) withEvents += id
             val since = account.checkedAt?.let { ledger.sumSince(id, it) } ?: 0L
@@ -77,7 +84,7 @@ class RepairFromJournal(
                         kind = op.kind,
                         category = null,
                         counterparty = op.counterparty,
-                        postedAt = change.event.postedAt
+                        postedAt = at(op, change.event)
                     )
                 )
             }
@@ -121,6 +128,9 @@ class RepairFromJournal(
         }
         changes.size
     }
+
+    private fun at(op: ParsedOp, event: ru.maxrubtsoff.bankagg.domain.model.CapturedEvent) =
+        OperationTime.resolve(op.opTime, event.postedAt, zone)
 
     private fun accountId(change: Change, op: ParsedOp) = accountId(change.event.brand.key, op.accountCurrency)
 
