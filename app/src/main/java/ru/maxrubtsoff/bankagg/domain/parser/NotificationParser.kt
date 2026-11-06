@@ -43,8 +43,9 @@ object NotificationParser {
      * right after "списано/зачислено" when our own "счет *dddd" follows; the kind then
      * follows the direction.
      * 5 — BSB "Товары и услуги" is a purchase (B-118).
+     * 6 — Альфа-Бизнес «Поступило … счет … от … счет …»; operation time from the text (B-122, B-123).
      */
-    const val VERSION = 5
+    const val VERSION = 6
 
 
     /**
@@ -97,7 +98,13 @@ object NotificationParser {
      * account mask right after it. The recipient's "счет 0741" has no star (B-107).
      */
     private val ORDER_AMOUNT = Regex(
-        """(?<![а-яё])(?:списано|зачислено)[\s  ]+$NUM[\s  ]+сч[её]т[\s  ]+[*•]\d{4}(?!\d)""",
+        """(?<![а-яё])(?:списано|зачислено|поступило)[\s  ]+$NUM[\s  ]+сч[её]т[\s  ]+[*•]\d{4}(?!\d)""",
+        RegexOption.IGNORE_CASE
+    )
+
+    /** "… от ООО "Бета" счет *1007" — the sender of an incoming payment order (B-122). */
+    private val ORDER_SENDER = Regex(
+        """(?<![а-яё])от[\s  ]+(.+?)[\s  ]+сч[её]т[\s  ]+\*?\d{4}""",
         RegexOption.IGNORE_CASE
     )
 
@@ -175,12 +182,13 @@ object NotificationParser {
         if (isPromo(low)) return null
 
         val detected = detectKind(blob)
-        val counterparty = counterparty(text)
+        val counterparty0 = counterparty(text)
         // No direction — no operation: a push without an operation sign is an
         // advertisement, a balance notice or something else (B-45, B-46).
         val plain = hits(clean)
         val hits = plain.ifEmpty { orderHit(blob) }
-        val direction = detectDirection(low, clean, detected, counterparty, hits) ?: return null
+        val counterparty = if (plain.isEmpty() && hits.isNotEmpty()) orderSender(blob) ?: counterparty0 else counterparty0
+        val direction = detectDirection(low, clean, detected, counterparty0, hits) ?: return null
         val kind = when {
             detected != TransactionKind.UNKNOWN || plain.isNotEmpty() -> detected
             direction == OpDirection.OUT -> TransactionKind.EXPENSE
@@ -212,6 +220,11 @@ object NotificationParser {
             counterparty = counterparty,
             balanceCurrency = balanceHit?.currency
         )
+    }
+
+    private fun orderSender(text: String): String? {
+        if (!text.lowercase().contains("поступило")) return null
+        return ORDER_SENDER.find(text)?.groupValues?.get(1)?.trim()?.ifEmpty { null }
     }
 
     private fun orderHit(text: String): List<Hit> =

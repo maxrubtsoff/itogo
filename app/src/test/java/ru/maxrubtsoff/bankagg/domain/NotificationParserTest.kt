@@ -283,6 +283,29 @@ class NotificationParserTest {
         assertEquals(100_000L, op.amount.minor)
     }
 
+    private val alfaIn = "Поступило 322581.00 счет *4863 от ООО \"Бета\" счет *1007. Остаток 325218.58"
+
+    @Test fun alfaBusinessIncomingFromCompany() {
+        for (title in listOf(null, "Альфа-Бизнес")) {
+            val op = NotificationParser.parse(title, alfaIn)!!
+            assertEquals(OpDirection.IN, op.direction)
+            assertEquals(32_258_100L, op.amount.minor)
+            assertEquals("RUB", op.currency)
+            assertEquals(32_521_858L, op.balance!!.minor)
+            assertEquals("ООО \"Бета\"", op.counterparty)
+        }
+    }
+
+    @Test fun alfaBusinessIncomingSenderAccountIsNotOurs() {
+        val op = NotificationParser.parse(null, alfaIn)!!
+        assertTrue(op.amount.minor != 1_007L && op.amount.minor != 100_700L)
+        assertTrue(op.balance!!.minor != 100_700L)
+    }
+
+    @Test fun alfaBusinessIncomingWithoutOwnMaskIsNull() {
+        assertNull(NotificationParser.parse(null, "Поступило 100.00 от ООО \"Бета\". Остаток 5.00"))
+    }
+
     @Test fun oldFormatKeepsUnknownKind() {
         val op = NotificationParser.parse(null, "Поступило 500 ₽. Доступно 1 000 ₽")
         assertEquals(TransactionKind.UNKNOWN, op!!.kind)
