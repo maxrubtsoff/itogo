@@ -1,0 +1,108 @@
+<title>Сортировка в виджете кэшбэка</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0F0E;--page:#0F0F10;--pt:#18211F;--pb:#111917;--inset:#0C1211;--fg:#EEF3F0;--muted:#8EA39B;--faint:#56655F;--line:rgba(255,255,255,.08);--brass:#D7A74A;--brass2:#F0C878;--pill:rgba(215,167,74,.15);--bline:rgba(215,167,74,.33);--mint:#59E2A6;color-scheme:dark}
+body{background:var(--page);color:var(--fg);font-family:"Golos Text",system-ui,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+h1{font-family:Unbounded,sans-serif;font-size:22px;font-weight:600;margin:0 0 6px}
+h2{font-family:Unbounded,sans-serif;font-size:18px;font-weight:600;margin:40px 0 4px}
+.lead{color:var(--muted);max-width:820px;line-height:1.45;margin:0 0 8px}
+.rec{display:inline-block;background:var(--pill);border:1px solid var(--bline);color:var(--brass2);border-radius:8px;padding:2px 8px;font-size:12px;margin-left:8px;vertical-align:middle}
+.row{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;margin-top:16px}
+.cap{color:var(--muted);font-size:12px;margin:8px 0 0;max-width:360px}
+.home{width:min(390px,100%);background:radial-gradient(120% 80% at 70% 20%,#26302d 0,#0b0d0d 60%);border-radius:28px;padding:18px 14px;box-sizing:border-box}
+.home.wide{width:min(420px,100%)}
+.w{background:linear-gradient(var(--pt),var(--pb));border-radius:22px;padding:14px 14px 12px;box-sizing:border-box}
+.w.narrow{width:190px}
+.hd{display:flex;align-items:center;gap:6px;min-height:28px}
+.ttl{color:var(--muted);font-size:13px;flex:1;white-space:nowrap}
+.mon{color:var(--faint);font-size:12px}
+.base{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px;margin:4px 0 6px}
+.r{display:flex;align-items:center;gap:8px;height:24px}
+.r .n{flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pct{font-family:Unbounded,sans-serif;font-weight:600;font-size:13px;color:var(--brass2)}
+.ic{width:18px;height:18px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:9px;font-weight:700;font-family:"Golos Text"}
+.bh{display:flex;align-items:center;gap:6px;margin:8px 0 2px;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.bh:first-of-type{margin-top:2px}
+.grp .r{padding-left:2px}
+.cols{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+.chip{display:flex;align-items:center;gap:4px;background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:3px 8px;font-size:11px;color:var(--fg);white-space:nowrap}
+.chip svg{width:12px;height:12px;stroke:var(--brass2)}
+.seg{display:flex;background:var(--inset);border-radius:10px;padding:2px;gap:2px}
+.seg span{width:24px;height:22px;border-radius:8px;display:grid;place-items:center;color:var(--faint)}
+.seg span.on{background:var(--pill);color:var(--brass2)}
+.seg svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.monbtn{color:var(--fg);font-size:12px;display:flex;align-items:center;gap:3px}
+.monbtn small{color:var(--brass2);font-size:11px}
+.tap{position:relative}
+.tap::after{content:"";position:absolute;inset:-4px;border:1.5px dashed var(--brass);border-radius:12px;pointer-events:none}
+.note{font-size:12px;color:var(--brass2);margin:6px 0 0}
+.frames{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.arrow{color:var(--faint);font-size:18px}
+.scroll{overflow-x:auto}
+.pros{font-size:13px;color:var(--muted);max-width:820px;line-height:1.5}
+.pros b{color:var(--fg);font-weight:500}
+</style>
+
+<h1>F-56 · Сортировка в виджете кэшбэка</h1>
+<p class="lead">Три режима: <b>по банку</b> (по умолчанию в узком виде — группы с шапкой банка), <b>по размеру</b>, <b>по названию</b>. Glance умеет только касания (actionRunCallback), поэтому переключатель — элемент в шапке виджета; выбор сохраняется для каждого экземпляра виджета (по appWidgetId) и переживает перезапуск. Ниже каждый вариант: три кадра узкого вида (по режимам) и широкий вид. Пунктир — место касания (на виджете его нет).</p>
+
+<div id="out"></div>
+
+<script>
+const B={
+ alfa:{n:"Альфа",bg:"#EF3124",fg:"#fff",l:"А"},
+ ozon:{n:"Озон",bg:"#005BFF",fg:"#fff",l:"oz"},
+ peo:{n:"ПЭО",bg:"#2a0d10",fg:"#fff",l:"пэо"},
+ sber:{n:"Сбер",bg:"#21A038",fg:"#fff",l:"С"},
+ t:{n:"Т-Банк",bg:"#FFDD2D",fg:"#222",l:"Т"}};
+const D=[["alfa","Супермаркеты",15],["alfa","Кафе",7],["alfa","Аптеки",7],["ozon","АЗС",5],["peo","MAAG, ECRU, VILET",20],["alfa","Одежда",7],["sber","Транспорт",5],["alfa","Дом и ремонт",7],["peo","Бристоль",12],["sber","Красота",5],["t","Развлечения",5],["ozon","Электроника",5],["alfa","Авто",7],["t","Искусство и культура",5],["alfa","Цветы",5],["alfa","Цифровые товары",5],["peo","Яндекс Такси",5]];
+const bankOrder=["alfa","peo","ozon","sber","t"];// банки — по лучшей категории, потом по имени
+const ic=k=>`<span class="ic" style="background:${B[k].bg};color:${B[k].fg}">${B[k].l}</span>`;
+const row=(d,icon=true)=>`<div class="r">${icon?ic(d[0]):""}<span class="n">${d[1]}</span><span class="pct">${d[2]}%</span></div>`;
+function sorted(m){const a=D.slice();
+ if(m==="size")a.sort((x,y)=>y[2]-x[2]||x[1].localeCompare(y[1],"ru"));
+ if(m==="name")a.sort((x,y)=>x[1].localeCompare(y[1],"ru"));
+ return a}
+function byBank(){return bankOrder.map(k=>[k,D.filter(d=>d[0]===k).sort((x,y)=>y[2]-x[2]||x[1].localeCompare(y[1],"ru"))])}
+function bankBlock(k,items){return `<div class="grp"><div class="bh">${ic(k)}${B[k].n}</div>${items.map(d=>row(d,false)).join("")}</div>`}
+const I={
+ bank:'<svg viewBox="0 0 24 24"><path d="M3 10h18M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18M12 3l9 5H3z"/></svg>',
+ size:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h5"/></svg>',
+ name:'<svg viewBox="0 0 24 24"><path d="M4 18l4-12 4 12M5.5 14h5M15 6h5l-5 12h5"/></svg>'};
+const L={bank:"По банку",size:"По размеру",name:"По названию"};
+function header(v,m,wide){
+ if(v==="A")return `<div class="hd"><span class="ttl">Кэшбэк · Ноябрь</span><span class="chip tap">${I[m].replace('<svg','<svg fill="none" stroke-width="2"')}${L[m]}</span></div>`;
+ if(v==="B")return `<div class="hd"><span class="ttl">Кэшбэк${wide?' <span class="mon">· Ноябрь</span>':''}</span><span class="seg tap">${["bank","size","name"].map(k=>`<span class="${k===m?"on":""}">${I[k]}</span>`).join("")}</span></div>`;
+ return `<div class="hd"><span class="ttl">Кэшбэк</span><span class="monbtn tap">Ноябрь <small>· ${L[m].replace("По ","по ")}</small></span></div>`;
+}
+const base=`<div class="base">Базовый ${ic("ozon")}<span class="pct" style="font-size:12px">1,5%</span></div>`;
+function body(m,wide,limit){
+ if(m==="bank"){const g=byBank();
+  if(!wide){let n=0,h="";for(const [k,it] of g){if(n>=limit)break;const take=it.slice(0,Math.max(1,limit-n));n+=take.length+1;h+=bankBlock(k,take)}
+   const hidden=D.length-g.reduce((s,[k,it])=>s,0);return h}
+  const c1=g.slice(0,2),c2=g.slice(2);
+  return `<div class="cols"><div>${c1.map(([k,i])=>bankBlock(k,i)).join("")}</div><div>${c2.map(([k,i])=>bankBlock(k,i)).join("")}</div></div>`}
+ const a=sorted(m);
+ if(!wide)return a.slice(0,limit).map(d=>row(d)).join("");
+ const h=Math.ceil(a.length/2);
+ return `<div class="cols"><div>${a.slice(0,h).map(d=>row(d)).join("")}</div><div>${a.slice(h).map(d=>row(d)).join("")}</div></div>`}
+function widget(v,m,wide){return `<div class="w ${wide?"":"narrow"}">${header(v,m,wide)}${base}${body(m,wide,15)}</div>`}
+const V=[
+ {id:"A",t:"Вариант A · плашка режима в шапке",rec:false,
+  p:"<b>Как:</b> справа в шапке плашка «По банку». Касание переключает по кругу: банк → размер → название. <b>Плюс:</b> текущий режим назван словом. <b>Минус:</b> чтобы попасть в «по названию» из «по банку», два касания и не видно, что будет следующим; в узком виде плашка вытесняет месяц в заголовок."},
+ {id:"B",t:"Вариант B · три значка",rec:true,
+  p:"<b>Как:</b> справа в шапке три маленьких значка в углублении (как ViewToggle в приложении): банк · по размеру · А–Я. Выбранный — латунь на BrassPill. Одно касание — нужный режим, без перебора. <b>Плюс:</b> все варианты видны, любой — за одно касание, тот же язык, что и «По банкам / По категориям» в разделе кэшбэка. <b>Минус:</b> значки мелкие (касание 32 dp — делаем зону больше значка). Месяц в узком виде уходит — он и так текущий; в широком остаётся."},
+ {id:"C",t:"Вариант C · касание по «Ноябрь»",rec:false,
+  p:"<b>Как:</b> месяц справа превращается в «Ноябрь · по банку»; касание переключает режим по кругу. <b>Плюс:</b> шапка почти не меняется. <b>Минус:</b> месяц выглядит как подпись, а не как кнопка — без подсказки догадаться нельзя (противоречит правилу «без поясняющих подписей»); перебор по кругу."}];
+let h="";
+for(const v of V){
+ h+=`<h2>${v.t}${v.rec?'<span class="rec">рекомендую</span>':""}</h2><p class="pros">${v.p}</p>`;
+ h+=`<div class="row">`;
+ for(const m of ["bank","size","name"])h+=`<div><div class="home">${widget(v.id,m,false)}</div><p class="cap">Узкий · ${L[m].toLowerCase()}${m==="bank"?" (по умолчанию для узкого)":""}</p></div>`;
+ h+=`</div><div class="row"><div class="scroll"><div class="home wide">${widget(v.id,"bank",true)}</div><p class="cap">Широкий · по банку: блоки банков раскладываются по двум колонкам целиком, банк не рвётся.</p></div><div class="scroll"><div class="home wide">${widget(v.id,"size",true)}</div><p class="cap">Широкий · по размеру: сверху вниз по первой колонке, потом по второй.</p></div></div>`;
+}
+h+=`<h2>Нехватка высоты</h2><p class="pros">Если строки не влезают: в «по банку» последний банк обрезается целыми строками, банк без хотя бы одной строки не показывается; строка «+N» внизу ставится только если что-то скрыто, и занимает место одной строки (связь с B-120). В режимах «по размеру»/«по названию» — первые N строк, затем «+N категорий».</p>`;
+document.getElementById("out").innerHTML=h;
+</script>
