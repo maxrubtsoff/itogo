@@ -43,16 +43,17 @@ class HistoryRowsTest {
         ev(day, HistoryKind.DEPOSIT_TOPUP, CapitalPart.DEPOSITS, 1000, "Пополнение вклада", name, HistoryTarget.Deposit(name))
 
     private fun manual(day: Int) = HistoryEvent(
-        LocalDate.of(2026, 10, day), CapitalPart.CURRENCY, "Переоценка валюты", null, 100L,
-        reason = RevaluationReason(emptyList(), 100L), kind = HistoryKind.REVALUATION, target = HistoryTarget.Section(CapitalPart.CURRENCY),
-        ref = ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Balance("USD")
+        LocalDate.of(2026, 10, day), CapitalPart.CURRENCY, "Правка остатка · вручную", null, 100L,
+        kind = HistoryKind.REVALUATION,
+        ref = ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual(CapitalPart.CURRENCY, LocalDate.of(2026, 10, day), 100L, ru.maxrubtsoff.bankagg.domain.model.ManualSource.ACCOUNT)
     )
 
-    @Test fun monthOfManualEditsIsMergedForBalanceRef() {
-        val one = (rows(listOf(manual(3))).single() as HistoryRow.Group).children.single().ref
-        assertEquals(ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Balance("USD", merged = false), one)
-        val many = (rows(listOf(manual(3), manual(5))).single() as HistoryRow.Group).children.single().ref
-        assertEquals(ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Balance("USD", merged = true), many)
+    @Test fun manualEditsAreNeverFolded() {
+        val m = rows(listOf(manual(3), manual(5)))
+        assertEquals(2, m.size)
+        assertTrue(m.all { it is HistoryRow.Single && it.event.ref is ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual })
+        val d = HistoryRows.days(listOf(manual(3), manual(3)), null).single().rows
+        assertEquals(2, d.size)
     }
 
     @Test fun dayFoldsAnySameKind() {

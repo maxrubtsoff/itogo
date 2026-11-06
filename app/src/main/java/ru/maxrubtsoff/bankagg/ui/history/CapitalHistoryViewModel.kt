@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import ru.maxrubtsoff.bankagg.domain.model.DeletePreview
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRef
+import ru.maxrubtsoff.bankagg.domain.usecase.ManualDetail
 import ru.maxrubtsoff.bankagg.domain.model.OperationForm
 import ru.maxrubtsoff.bankagg.domain.usecase.HistoryOperations
 import ru.maxrubtsoff.bankagg.domain.usecase.OperationDetail
@@ -157,6 +158,27 @@ class CapitalHistoryViewModel(
         viewModelScope.launch {
             val was = operations.setBalance(accountId, minor, restored) ?: return@launch
             undo.offer(if (restored) "Остаток вернули" else "Остаток сохранён", restore = { operations.restoreBalance(was) })
+        }
+    }
+
+    /** The first saved day a hand change of the currency moved; null — none. */
+    suspend fun manualFrom(ref: HistoryRef.Manual): LocalDate? = operations.manualFrom(ref)
+
+    suspend fun manualDetail(ref: HistoryRef.Manual): ManualDetail = operations.manualDetail(ref)
+
+    /** Takes a hand change of the currency out of the history and offers «Вернуть» (B-121). */
+    fun removeManual(ref: HistoryRef.Manual) {
+        viewModelScope.launch {
+            val was = operations.removeManual(ref) ?: return@launch
+            undo.offer("Правка удалена", restore = { operations.restoreManual(was) })
+        }
+    }
+
+    /** Puts a hand change of the currency at another sum; «Вернуть» brings the old days back. */
+    fun editManual(ref: HistoryRef.Manual, minor: Long) {
+        viewModelScope.launch {
+            val was = operations.editManual(ref, minor) ?: return@launch
+            undo.offer("Правка изменена", restore = { operations.restoreManual(was) })
         }
     }
 

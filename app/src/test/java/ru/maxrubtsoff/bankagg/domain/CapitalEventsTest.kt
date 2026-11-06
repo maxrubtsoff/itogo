@@ -91,27 +91,40 @@ class CapitalEventsTest {
         assertEquals("$ 81,03 → 80,54 ₽", e.subtitle)
     }
 
-    @Test fun revaluationWithManualRemainder() {
-        val e = reval(
-            events(
-                listOf(pointFx(d0, 9_000_000), pointFx(d1, 9_750_000)),
-                listOf(buy("USD", d0, 100_000, 9_000_000)),
-                listOf(FxRate("USD", d0, 90_000_000), FxRate("USD", d1, 92_500_000))
-            )
+    private val manualPoints = listOf(pointFx(d0, 9_000_000), pointFx(d1, 9_750_000))
+    private val manualOps = listOf(buy("USD", d0, 100_000, 9_000_000))
+    private val manualRates = listOf(FxRate("USD", d0, 90_000_000), FxRate("USD", d1, 92_500_000))
+    private val manualTitle = "Правка остатка"
+
+    @Test fun manualRemainderIsSeparateManualEvent() {
+        val list = events(manualPoints, manualOps, manualRates)
+        val e = reval(list)
+        assertEquals(0L, e.reason!!.manualMinor)
+        assertEquals(250_000L, e.amountMinor)
+        val m = list.single { it.title == manualTitle }
+        assertEquals(500_000L, m.amountMinor)
+        assertEquals(500_000L, (m.ref as ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual).manualMinor)
+    }
+
+    @Test fun fxPositionEditSourceIsCurrencyPosition() {
+        val m = events(manualPoints, manualOps, manualRates).single { it.title == manualTitle }
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.ManualSource.CURRENCY_POSITION, (m.ref as ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual).source)
+    }
+
+    @Test fun accountEditSourceIsAccount() {
+        val acc = ru.maxrubtsoff.bankagg.domain.model.Account(
+            "u", ru.maxrubtsoff.bankagg.domain.model.BankBrand.SBER, "u", Money.ofMinor(100_000), "USD", 0L,
+            checkedAt = d1.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() + 1_000
         )
-        assertEquals(500_000L, e.reason!!.manualMinor)
-        assertTrue(e.subtitle!!.endsWith(" · остаток изменён"))
-        assertEquals(2, e.parts.size)
-        assertNull(e.parts[1].target)
-        assertEquals(500_000L, e.parts[1].amountMinor)
-        // One leg (USD): the manual line opens the balance of that currency (F-55).
-        assertEquals(ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Balance("USD"), e.parts[1].ref)
+        val list = CapitalEvents.build(emptyList(), listOf(acc), manualOps, emptyList(), null, manualPoints, today, ZoneOffset.UTC, manualRates)
+        val m = list.single { it.title == manualTitle }
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.ManualSource.ACCOUNT, (m.ref as ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual).source)
     }
 
     @Test fun revaluationWithoutRatesFallsBackToManual() {
-        val e = reval(events(listOf(pointFx(d0, 100), pointFx(d1, 90_000)), emptyList(), emptyList()))
-        assertTrue(e.reason!!.legs.isEmpty())
-        assertEquals("Курс или остаток изменились", e.subtitle)
+        val list = events(listOf(pointFx(d0, 100), pointFx(d1, 90_000)), emptyList(), emptyList())
+        assertNull(list.firstOrNull { it.title == "Переоценка валюты" })
+        assertEquals(89_900L, list.single { it.title == manualTitle }.amountMinor)
     }
 
     @Test fun revaluationTwoCurrencies() {

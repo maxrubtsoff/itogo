@@ -270,4 +270,33 @@ class HistoryOperationsTest {
         assertNotNull(err)
         assertEquals(5_000L, w.fx.get("s1")!!.amountMinor)
     }
+
+    // ---- B-121: a hand change of the currency ----
+    private fun fxPoint(d: LocalDate, fx: Long) = CapitalPoint(d, fx + 1_000, mapOf(CapitalPart.CURRENCY to fx, CapitalPart.ACCOUNTS to 1_000L))
+    private val manualRef = HistoryRef.Manual(CapitalPart.CURRENCY, d19, -500L, ru.maxrubtsoff.bankagg.domain.model.ManualSource.CURRENCY_POSITION)
+
+    @Test fun `removing a hand change keeps accounts and deals and moves only the days before it`() = runTest {
+        val w = accountsWorld()
+        w.seed(fxPoint(d14, 2_000), fxPoint(d17, 2_000), fxPoint(d19, 1_500))
+        val was = w.ops.removeManual(manualRef)
+        assertNotNull(was)
+        assertEquals(15_000, w.balance("a"))
+        assertTrue(w.fx.all().isEmpty())
+        val days = w.days()
+        assertEquals(1_500L, days.getValue(d14).parts[CapitalPart.CURRENCY])
+        assertEquals(1_500L, days.getValue(d17).parts[CapitalPart.CURRENCY])
+        assertEquals(2_500L, days.getValue(d17).totalMinor)
+        assertEquals(1_500L, days.getValue(d19).parts[CapitalPart.CURRENCY])
+    }
+
+    @Test fun `restoring a hand change returns the original days`() = runTest {
+        val w = accountsWorld()
+        w.seed(fxPoint(d14, 2_000), fxPoint(d17, 2_000), fxPoint(d19, 1_500))
+        val was = w.ops.removeManual(manualRef)!!
+        w.ops.restoreManual(was)
+        val days = w.days()
+        assertEquals(2_000L, days.getValue(d14).parts[CapitalPart.CURRENCY])
+        assertEquals(3_000L, days.getValue(d17).totalMinor)
+        assertEquals(1_500L, days.getValue(d19).parts[CapitalPart.CURRENCY])
+    }
 }

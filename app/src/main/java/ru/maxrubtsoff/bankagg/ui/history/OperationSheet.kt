@@ -79,6 +79,7 @@ fun OperationSheet(
         BalanceFlow(event, vm, onDismiss)
         return
     }
+    (event.ref as? HistoryRef.Manual)?.let { ManualEditFlow(event, it, vm, today, onDismiss); return }
     val detail by produceState<OperationDetail?>(null, event) { value = vm.detail(event) }
     var mode by remember { mutableStateOf(Mode.VIEW) }
     // The cash edit that undoes this one goes with it, when the person asks for both.
