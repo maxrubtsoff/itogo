@@ -4,15 +4,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
-import ru.maxrubtsoff.bankagg.domain.model.CashbackSpotlight
 import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetOrder
 import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetSort
 import ru.maxrubtsoff.bankagg.domain.model.CategoryGroups
 
 class CashbackWidgetOrderTest {
-
-    private fun row(title: String, bank: BankBrand, pct: Double) =
-        CashbackSpotlight.Row(title, "", CategoryGroups.OTHER, pct, listOf(bank), 1, pct)
 
     private var n = 0
     private fun item(brand: BankBrand, name: String, pct: Double, key: String = CategoryGroups.OTHER) =
@@ -24,24 +20,32 @@ class CashbackWidgetOrderTest {
         assertEquals(CashbackWidgetSort.NAME, CashbackWidgetSort.parse("NAME"))
     }
 
-    @Test fun bankSortGroupsRowsOfOneBankTogether() {
-        val rows = listOf(
-            row("a1", BankBrand.ALFA, 7.0), row("o1", BankBrand.OZON, 5.0), row("s1", BankBrand.SBER, 5.0),
-            row("a2", BankBrand.ALFA, 5.0), row("o2", BankBrand.OZON, 5.0)
-        )
-        val out = CashbackWidgetOrder.rows(rows, CashbackWidgetSort.BANK).map { it.title }
-        assertEquals(listOf("a1", "a2", "o1", "o2", "s1"), out)
+    private val shot = listOf(
+        item(BankBrand.OZON, "Автоуслуги", 5.0), item(BankBrand.OZON, "Топливо и АЗС", 5.0),
+        item(BankBrand.OZON, "Электроника и бытовая техника", 5.0),
+        item(BankBrand.ALFA, "Кафе и рестораны", 5.0), item(BankBrand.ALFA, "Пятёрочка", 4.0),
+        item(BankBrand.ALFA, "Все покупки", 1.0, key = "base")
+    )
+
+    @Test fun flatModesHaveSameRowsAsBankBlocks() {
+        val bank = CashbackWidgetOrder.blocks(shot).flatMap { b -> b.rows.map { b.brand to it.category } }.toSet()
+        for (sort in listOf(CashbackWidgetSort.BANK, CashbackWidgetSort.SIZE, CashbackWidgetSort.NAME)) {
+            val flat = CashbackWidgetOrder.flatRows(shot, sort)
+            assertEquals(5, flat.size)
+            assertEquals(bank, flat.map { it.brand to it.category }.toSet())
+        }
+        assertEquals(true, CashbackWidgetOrder.flatRows(shot, CashbackWidgetSort.SIZE).any { it.category == "Автоуслуги" })
     }
 
     @Test fun nameSortIsCaseInsensitive() {
-        val rows = listOf(row("яблоки", BankBrand.ALFA, 5.0), row("Аптеки", BankBrand.ALFA, 5.0), row("авто", BankBrand.SBER, 7.0))
-        val out = CashbackWidgetOrder.rows(rows, CashbackWidgetSort.NAME).map { it.title }
+        val items = listOf(item(BankBrand.ALFA, "яблоки", 5.0), item(BankBrand.ALFA, "Аптеки", 5.0), item(BankBrand.SBER, "авто", 7.0))
+        val out = CashbackWidgetOrder.flatRows(items, CashbackWidgetSort.NAME).map { it.category }
         assertEquals(listOf("авто", "Аптеки", "яблоки"), out)
     }
 
     @Test fun sizeSortByPercentThenName() {
-        val rows = listOf(row("Б", BankBrand.ALFA, 5.0), row("В", BankBrand.ALFA, 7.0), row("А", BankBrand.SBER, 5.0))
-        val out = CashbackWidgetOrder.rows(rows, CashbackWidgetSort.SIZE).map { it.title }
+        val items = listOf(item(BankBrand.ALFA, "Б", 5.0), item(BankBrand.ALFA, "В", 7.0), item(BankBrand.SBER, "А", 5.0))
+        val out = CashbackWidgetOrder.flatRows(items, CashbackWidgetSort.SIZE).map { it.category }
         assertEquals(listOf("В", "А", "Б"), out)
     }
 

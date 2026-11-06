@@ -16,19 +16,17 @@ object CashbackWidgetOrder {
     /** A bank's block: its brand and regular categories (best first); the base rate is on the widget's base line. */
     data class BankGroup(val brand: BankBrand, val rows: List<CashbackItem>)
 
-    /** Flat rows of the home-card ranking, in the chosen order. */
-    fun rows(rows: List<CashbackSpotlight.Row>, sort: CashbackWidgetSort): List<CashbackSpotlight.Row> = when (sort) {
-        CashbackWidgetSort.BANK -> {
-            // Groups by first appearance in the ranking; inside, the ranking order.
-            val order = LinkedHashMap<String, MutableList<CashbackSpotlight.Row>>()
-            rows.forEach { order.getOrPut(it.banks.firstOrNull()?.title ?: "") { mutableListOf() }.add(it) }
-            order.values.flatten()
-        }
-        CashbackWidgetSort.NAME -> rows.sortedWith(
-            compareBy<CashbackSpotlight.Row> { it.title.lowercase() }.thenByDescending { it.percent }
+    /**
+     * Flat rows for SIZE / NAME: the same real categories as the bank blocks (base rate left out),
+     * each keeping its bank. BANK order is [blocks]; here it falls back to the block order flattened.
+     */
+    fun flatRows(items: List<CashbackItem>, sort: CashbackWidgetSort): List<CashbackItem> = when (sort) {
+        CashbackWidgetSort.BANK -> blocks(items).flatMap { it.rows }
+        CashbackWidgetSort.NAME -> items.filterNot(CashbackSpotlight::isBase).sortedWith(
+            compareBy<CashbackItem> { it.category.lowercase() }.thenByDescending { it.percent }
         )
-        CashbackWidgetSort.SIZE -> rows.sortedWith(
-            compareByDescending<CashbackSpotlight.Row> { it.percent }.thenBy { it.title.lowercase() }
+        CashbackWidgetSort.SIZE -> items.filterNot(CashbackSpotlight::isBase).sortedWith(
+            compareByDescending<CashbackItem> { it.percent }.thenBy { it.category.lowercase() }
         )
     }
 

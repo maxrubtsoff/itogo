@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.first
 import ru.maxrubtsoff.bankagg.App
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CashbackMonth
+import ru.maxrubtsoff.bankagg.domain.model.CashbackItem
 import ru.maxrubtsoff.bankagg.domain.model.CashbackSpotlight
 import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetLayout
 import ru.maxrubtsoff.bankagg.domain.model.CashbackWidgetOrder
@@ -103,7 +104,7 @@ class CashbackWidget : GlanceAppWidget() {
     /** What the widget shows; the order is applied in [Content] by [CashbackWidgetOrder]. */
     private data class Model(
         val month: String,
-        val spotRows: List<CashbackSpotlight.Row>,
+        val items: List<CashbackItem>,
         val groups: List<CashbackWidgetOrder.BankGroup>,
         val logos: Map<BankBrand, Logo>,
         val base: List<BaseChip>,
@@ -149,10 +150,10 @@ class CashbackWidget : GlanceAppWidget() {
         }
         val groups = CashbackWidgetOrder.blocks(items)
         val base = spot.base.map { g -> BaseChip(g.banks.map(::logo), formatPercent(g.percent)) }
-        spot.allRows.forEach { r -> logo(r.banks.first()) }
+        items.forEach { logo(it.brand) }
         groups.forEach { logo(it.brand) }
         val nextHint = if (spot.offerNextMonth) "Добавьте кэшбэк на ${CashbackMonth.shortLabel(spot.nextMonthKey).lowercase()}" else null
-        return Model(CashbackMonth.shortLabel(key), spot.allRows, groups, logos, base, spot.missingThisMonth, nextHint)
+        return Model(CashbackMonth.shortLabel(key), items, groups, logos, base, spot.missingThisMonth, nextHint)
     }
 
     @androidx.compose.runtime.Composable
@@ -164,10 +165,10 @@ class CashbackWidget : GlanceAppWidget() {
         val withBase = CashbackWidgetLayout.grid(w, h, baseLine = hasBase)
         val innerW = w - 2 * CashbackWidgetLayout.PADDING
         val narrow = withBase.columns == 1
-        val empty = model.spotRows.isEmpty() && !hasBase
+        val empty = model.items.isEmpty()
         val showSort = !model.cashbackOff && !empty
-        val rows = CashbackWidgetOrder.rows(model.spotRows, sort).map {
-            WidgetRow(it.title, model.logos.getValue(it.banks.first()), formatPercent(it.percent))
+        val rows = CashbackWidgetOrder.flatRows(model.items, sort).map {
+            WidgetRow(it.category, model.logos.getValue(it.brand), formatPercent(it.percent))
         }
 
         Column(
@@ -326,14 +327,16 @@ class CashbackWidget : GlanceAppWidget() {
         grid: CashbackWidgetLayout.Grid,
         heightDp: Float
     ) {
-        val shown = banks.map { it.copy(rows = it.rows.take(BLOCK_ROWS)) }
-        val packing = CashbackWidgetLayout.packDp(shown.map { it.rows.size }, grid.columns, heightDp)
+        // A block shows all its categories up to the Glance child limit (header + rows + "+N"), else "+N" says how many are hidden.
+        val shown = banks.map { if (it.rows.size <= MAX_CHILDREN - 1) it else it.copy(rows = it.rows.take(BLOCK_ROWS)) }
+        val hiddenIn = banks.indices.map { banks[it].rows.size - shown[it].rows.size }
+        val packing = CashbackWidgetLayout.packDp(shown.indices.map { shown[it].rows.size + if (hiddenIn[it] > 0) 1 else 0 }, grid.columns, heightDp)
         Row(GlanceModifier.fillMaxWidth()) {
             packing.columns.forEachIndexed { c, indices ->
                 if (c > 0) Spacer(GlanceModifier.width(CashbackWidgetLayout.COLUMN_GAP.dp))
                 Column(GlanceModifier.width(grid.columnWidth.dp)) {
                     indices.take(MAX_CHILDREN - 1).forEachIndexed { k, idx ->
-                        BankBlockView(shown[idx], logos.getValue(shown[idx].brand), grid, top = if (k > 0) CashbackWidgetLayout.GAP else 0f)
+                        BankBlockView(shown[idx], hiddenIn[idx], logos.getValue(shown[idx].brand), grid, top = if (k > 0) CashbackWidgetLayout.GAP else 0f)
                     }
                     if (c == packing.columns.lastIndex && packing.hidden > 0) {
                         Text(
@@ -349,7 +352,7 @@ class CashbackWidget : GlanceAppWidget() {
     }
 
     @androidx.compose.runtime.Composable
-    private fun BankBlockView(block: CashbackWidgetOrder.BankGroup, logo: Logo, grid: CashbackWidgetLayout.Grid, top: Float) {
+    private fun BankBlockView(block: CashbackWidgetOrder.BankGroup, hidden: Int, logo: Logo, grid: CashbackWidgetLayout.Grid, top: Float) {
         Column(GlanceModifier.width(grid.columnWidth.dp).padding(top = top.dp)) {
             Row(GlanceModifier.width(grid.columnWidth.dp), verticalAlignment = Alignment.Vertical.CenterVertically) {
                 LogoMark(logo, CashbackWidgetLayout.LOGO.toInt())
@@ -378,6 +381,14 @@ class CashbackWidget : GlanceAppWidget() {
                     Spacer(GlanceModifier.width(CashbackWidgetLayout.NAME_GAP.dp))
                     PercentText(pct)
                 }
+            }
+            if (hidden > 0) {
+                Text(
+                    "+$hidden",
+                    maxLines = 1,
+                    modifier = GlanceModifier.padding(top = CashbackWidgetLayout.GAP.dp, start = (CashbackWidgetLayout.LOGO + CashbackWidgetLayout.LOGO_GAP).dp),
+                    style = TextStyle(color = ColorProvider(Slitok.Muted), fontSize = 12.sp)
+                )
             }
         }
     }
