@@ -25,6 +25,8 @@ object OpTimeParser {
         RegexOption.IGNORE_CASE
     )
 
+    private val BOUND_WORD = Regex("""(?<![а-яё])(?:на|до|с)[\s ]+$""", RegexOption.IGNORE_CASE)
+
     fun find(text: String): OpTime? {
         val times = TIME_RE.findAll(text)
             .map { (it.groupValues[1].toInt()) to it.groupValues[2].toInt() }
@@ -48,6 +50,9 @@ object OpTimeParser {
                 return OpTime(day, month, y, h, m)
             }
         }
+        // A lone time after "на/до/с" is a deadline or a balance moment, not the operation's.
+        val at = TIME_RE.find(text)!!.range.first
+        if (BOUND_WORD.containsMatchIn(text.substring(0, at))) return null
         return OpTime(null, null, null, h, m)
     }
 }

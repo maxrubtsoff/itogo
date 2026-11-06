@@ -23,7 +23,7 @@ object OperationTime {
 
         val result: Long? = when {
             op.day != null && op.month != null -> {
-                fun inYear(y: Int) = runCatching { at(LocalDate.of(y, op.month, op.day)) }.getOrNull()
+                fun inYear(y: Int) = runCatching { LocalDate.of(y, op.month, op.day) }.getOrNull()?.let(::at)
                 if (op.year != null) inYear(op.year)
                 else inYear(arrival.year)?.let { if (it > limit) inYear(arrival.year - 1) else it }
             }

@@ -197,4 +197,20 @@ class RecordNotificationTest {
         for ((balance, at) in ledger.upsertTimes) state = RunningBalance.apply(state, 0L, balance, at)
         assertEquals(41_368_462L, state!!.balanceMinor)
     }
+
+    @Test fun lateArrivalWithEarlierOpTimeIsRecordedButKeepsBalance() = runTest {
+        val zone = ZoneId.of("Europe/Moscow")
+        fun ms(h: Int, m: Int) = LocalDateTime.of(2026, 11, 3, h, m).atZone(zone).toInstant().toEpochMilli()
+        val events = FakeEvents(); val ledger = FakeLedger()
+        val record = RecordNotification(events, ledger, direct, zone)
+        val alfa = "ru.alfabank.mobile.android"
+        record(alfa, "Альфа-Банк", "Пополнение на 131 920,50 RUB Баланс 413 684,62 RUB 3 ноября 17:43", ms(17, 43))
+        record(alfa, "Альфа-Банк", "Покупка 1 045 RUB Баланс 1 764,12 RUB Додо Пицца 3 ноября 17:39", ms(17, 50))
+
+        assertEquals(2, ledger.txs.size)
+        assertTrue(ledger.txs.any { it.postedAt == ms(17, 39) })
+        var state: BalanceState? = null
+        for ((balance, at) in ledger.upsertTimes) state = RunningBalance.apply(state, 0L, balance, at)
+        assertEquals(41_368_462L, state!!.balanceMinor)
+    }
 }

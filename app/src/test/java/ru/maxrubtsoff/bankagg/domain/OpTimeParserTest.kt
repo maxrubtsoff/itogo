@@ -22,6 +22,11 @@ class OpTimeParserTest {
     @Test fun paymentOrderDateIsNotOpTime() {
         assertNull(OpTimeParser.find("Списано 440.00 счет *4863 п/п №92712 от 27.10.26 в адрес АО \"АЛЬФА-БАНК\" счет 0741. Остаток 3079.36"))
     }
+    @Test fun loneTimeAfterBoundWordIsNull() {
+        assertNull(OpTimeParser.find("Баланс на 10:00 составил 5 ₽"))
+        assertNull(OpTimeParser.find("Действует до 18:00"))
+        assertNull(OpTimeParser.find("Доступно с 9:00"))
+    }
     @Test fun twoDifferentTimesIsNull() {
         assertNull(OpTimeParser.find("Покупка 5 ₽ 17:39, баланс на 17:42"))
     }
