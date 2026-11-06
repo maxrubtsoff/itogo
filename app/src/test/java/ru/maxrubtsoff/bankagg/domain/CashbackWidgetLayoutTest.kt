@@ -46,16 +46,56 @@ class CashbackWidgetLayoutTest {
         assertEquals(Mode.BANKS, L.mode(large, cardRows = 5))
     }
 
-    @Test fun pack_blocksStayWhole_leastFilledColumn() {
-        val p = L.pack(listOf(4, 3, 2, 2), columns = 2, lines = 8)
+    private fun blockH(n: Int) = L.BLOCK_HEAD + n * (L.GAP + L.ROW)
+
+    @Test fun packDpFitsAllWhenHeightEnough() {
+        val blocks = listOf(3, 2, 2, 1, 1)
+        // Columns: [3,1] and [2,2,1] -> need the taller one.
+        val need = maxOf(blockH(3) + L.GAP + blockH(1), blockH(2) + L.GAP + blockH(2) + L.GAP + blockH(1))
+        val p = L.packDp(blocks, 2, need)
         assertEquals(0, p.hidden)
-        assertEquals(listOf(listOf(0, 3), listOf(1, 2)), p.columns)
+        assertEquals(5, p.columns.sumOf { it.size })
     }
 
-    @Test fun pack_leftoversCountedAndLineReserved() {
-        val p = L.pack(listOf(5, 5, 4, 3), columns = 2, lines = 8)
-        assertEquals(2, p.hidden)
-        // Neither 4 nor 3 fits next to a 5-line block; one line stays for "+2 банка".
+    @Test fun packDpHidesOnlyWhatDoesNotFit() {
+        val h = blockH(3) + L.GAP + blockH(1) - 1f
+        val p = L.packDp(listOf(3, 3, 1), 2, h)
+        assertEquals(1, p.hidden)
         assertEquals(listOf(listOf(0), listOf(1)), p.columns)
+    }
+
+    @Test fun packDpReservesMoreLineOnlyInLastColumn() {
+        // Column 0 is filled to the very top by one block; the "+N" line is only in column 1.
+        val h = blockH(4)
+        val p = L.packDp(listOf(4, 5), 2, h)
+        assertEquals(1, p.hidden)
+        assertEquals(listOf(0), p.columns[0])
+    }
+
+    @Test fun packDpNoExtraTail() {
+        val blocks = listOf(3, 2, 2, 1, 1)
+        for (h in 60..400 step 3) {
+            val p = L.packDp(blocks, 2, h.toFloat())
+            if (p.hidden > 0) {
+                // A hidden block really does not fit: not even after the shown ones in the emptiest column.
+                val shown = p.columns.flatten().toSet()
+                val minHidden = blocks.indices.filter { it !in shown }.minOf { blockH(blocks[it]) }
+                val freeMax = p.columns.mapIndexed { c, col ->
+                    val used = col.sumOf { blockH(blocks[it]).toDouble() }.toFloat() + L.GAP * (col.size - 1).coerceAtLeast(0)
+                    val limit = if (c == p.columns.lastIndex) h.toFloat() - (L.GAP + L.MORE_LINE) else h.toFloat()
+                    limit - used - L.GAP
+                }.max()
+                assertTrue("h=$h", freeMax < minHidden)
+            }
+            p.columns.forEachIndexed { c, col ->
+                val used = col.sumOf { blockH(blocks[it]).toDouble() }.toFloat() + L.GAP * (col.size - 1).coerceAtLeast(0)
+                val limit = if (p.hidden > 0 && c == p.columns.lastIndex) h - (L.GAP + L.MORE_LINE) else h.toFloat()
+                assertTrue("h=$h c=$c", used <= limit + 0.01f)
+            }
+        }
+    }
+
+    @Test fun banksHeight_excludesPaddingAndHeader() {
+        assertEquals(300f - 2 * L.PADDING - L.HEADER, L.banksHeight(300f), 0.01f)
     }
 }

@@ -7,7 +7,7 @@ package ru.maxrubtsoff.bankagg.domain.model
  *   and the base line reserved first — nothing is ever cut in half;
  * - [mode]: small (like the home card), medium (more categories), banks (blocks
  *   "logo → its categories" once the widget is really large);
- * - [pack]: bank blocks into columns without splitting one; what doesn't fit is
+ * - [packDp]: bank blocks into columns without splitting one; what doesn't fit is
  *   counted for a "+N банков" line.
  */
 object CashbackWidgetLayout {
@@ -22,6 +22,9 @@ object CashbackWidgetLayout {
     const val LOGO = 20f
     const val LOGO_GAP = 8f
     const val NAME_GAP = 6f
+    const val ROW = 18f              // a category line inside a bank block (13sp text, no logo)
+    const val BLOCK_HEAD = LOGO      // bank block head: 20dp logo
+    const val MORE_LINE = 18f        // the "+N банков" line
 
     /** Two columns from this inner width: two readable rows side by side. */
     const val TWO_COLUMNS_FROM = 290f
@@ -59,31 +62,36 @@ object CashbackWidgetLayout {
 
     data class Packing(val columns: List<List<Int>>, val hidden: Int)
 
+    /** Free height under the header for bank blocks (no base line in this mode). */
+    fun banksHeight(heightDp: Float): Float = heightDp - 2 * PADDING - HEADER
+
     /**
-     * Places blocks (sizes in lines, in order) into [columns] of [lines] each:
-     * every block goes to the least-filled column it fits in whole, gaps between
-     * blocks included. One line is kept for "+N" when something is left out.
+     * Places bank blocks (category counts, in order) into [columns] by real dp
+     * height: a block is its head plus n category rows; the least-filled column
+     * that takes it whole wins. If something is left out, only the last column
+     * keeps room for the "+N" line; the others keep their full height.
      */
-    fun pack(blockLines: List<Int>, columns: Int, lines: Int): Packing {
-        fun place(limit: Int): Pair<List<List<Int>>, Int> {
-            val used = IntArray(columns)
+    fun packDp(blocks: List<Int>, columns: Int, heightDp: Float): Packing {
+        fun place(withMore: Boolean): Pair<List<List<Int>>, Int> {
+            val used = FloatArray(columns)
             val out = List(columns) { mutableListOf<Int>() }
             var hidden = 0
-            blockLines.forEachIndexed { i, size ->
+            blocks.forEachIndexed { i, n ->
+                val size = BLOCK_HEAD + n * (GAP + ROW)
+                fun limit(c: Int) = if (withMore && c == columns - 1) heightDp - (GAP + MORE_LINE) else heightDp
                 val target = (0 until columns)
-                    .filter { c -> used[c] + (if (out[c].isEmpty()) 0 else 1) + size <= limit }
+                    .filter { c -> used[c] + (if (out[c].isEmpty()) 0f else GAP) + size <= limit(c) + 0.001f }
                     .minByOrNull { used[it] }
                 if (target == null) hidden++ else {
-                    used[target] += (if (out[target].isEmpty()) 0 else 1) + size
+                    used[target] += (if (out[target].isEmpty()) 0f else GAP) + size
                     out[target] += i
                 }
             }
             return out to hidden
         }
-        val (all, hidden) = place(lines)
+        val (all, hidden) = place(false)
         if (hidden == 0) return Packing(all, 0)
-        // Something is left out: keep the last line of the last column for "+N".
-        val (cut, cutHidden) = place(lines - 1)
+        val (cut, cutHidden) = place(true)
         return Packing(cut, cutHidden)
     }
 }
