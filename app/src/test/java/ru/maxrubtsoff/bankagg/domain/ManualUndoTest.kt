@@ -92,4 +92,13 @@ class ManualUndoTest {
         val out = ManualUndo.shift(plateau, first, ManualUndo.editBy(first, m / 2))
         assertEquals(setOf(m + m / 2), out.map { it.parts[CapitalPart.CURRENCY] }.toSet())
     }
+
+    @Test fun asymmetricPairLeavesOnlyTheDifferenceStep() {
+        val base = 100_000_000L
+        val pts = (5..9).map { p(it, base) } + (10..19).map { p(it, base + 80_000_000L) } + (20..22).map { p(it, base - 1_100_000L) }
+        val a = HistoryRef.Manual(CapitalPart.CURRENCY, day(10), 80_000_000L, ManualSource.ACCOUNT, stepTo = day(20))
+        val out = ManualUndo.shift(pts, a, ManualUndo.deleteBy(a)).associateBy { it.date }
+        val after = (pts.associateBy { it.date } + out).toSortedMap().values.map { it.parts[CapitalPart.CURRENCY] }
+        assertEquals(List(15) { base } + List(3) { base - 1_100_000L }, after)
+    }
 }
