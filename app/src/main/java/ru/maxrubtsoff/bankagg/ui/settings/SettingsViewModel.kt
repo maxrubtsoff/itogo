@@ -19,6 +19,8 @@ import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 
 class SettingsViewModel(
     private val settings: SettingsRepository,
+    /** B-121: recounts «Валюта» of the saved days; returns how many changed. */
+    private val rebuildCurrency: suspend () -> Int = { 0 },
     /** Stores a new PIN sealed with the phone's key (B-32). */
     private val setNewPin: suspend (String) -> Unit
 ) : ViewModel() {
@@ -33,6 +35,21 @@ class SettingsViewModel(
             val current = settings.currentSelectedPackages()
             val next = if (enabled) current + packages else current - packages
             settings.setSelectedPackages(next)
+        }
+    }
+
+    // ---- currency history (B-121) ----
+
+    private val _rebuilding = MutableStateFlow(false)
+    val rebuilding: StateFlow<Boolean> = _rebuilding.asStateFlow()
+
+    fun rebuildCurrencyHistory(done: (Int) -> Unit) {
+        if (_rebuilding.value) return
+        _rebuilding.value = true
+        viewModelScope.launch {
+            val n = runCatching { withContext(Dispatchers.IO) { rebuildCurrency() } }.getOrDefault(-1)
+            _rebuilding.value = false
+            done(n)
         }
     }
 

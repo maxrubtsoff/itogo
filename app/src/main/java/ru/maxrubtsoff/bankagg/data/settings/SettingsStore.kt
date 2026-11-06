@@ -49,6 +49,12 @@ class SettingsStore(context: Context) : SettingsRepository {
         prefs.edit().putBoolean(KEY_ACCOUNTS_PAST_REPAIRED, true).apply()
     }
 
+    override suspend fun currencyHistoryRebuilt(): Boolean = prefs.getBoolean(KEY_CURRENCY_HISTORY_REBUILT, false)
+
+    override suspend fun markCurrencyHistoryRebuilt() {
+        prefs.edit().putBoolean(KEY_CURRENCY_HISTORY_REBUILT, true).apply()
+    }
+
     // ---- the parser the log was read with (B-45, B-46) ----
 
     override suspend fun repairedParserVersion(): Int = prefs.getInt(KEY_PARSER_VERSION, 0)
@@ -285,5 +291,6 @@ class SettingsStore(context: Context) : SettingsRepository {
         const val KEY_INTRO_SHOWN = "intro_shown"
         const val KEY_PARTS_BACKFILLED = "parts_backfilled"
         const val KEY_ACCOUNTS_PAST_REPAIRED = "accounts_past_repaired"
+        const val KEY_CURRENCY_HISTORY_REBUILT = "currency_history_rebuilt"
     }
 }

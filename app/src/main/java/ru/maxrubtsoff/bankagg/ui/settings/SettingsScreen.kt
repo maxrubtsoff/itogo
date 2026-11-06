@@ -1,6 +1,13 @@
 package ru.maxrubtsoff.bankagg.ui.settings
 
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import ru.maxrubtsoff.bankagg.ui.common.SlitokDialog
+import ru.maxrubtsoff.bankagg.ui.common.PlateButton
+import ru.maxrubtsoff.bankagg.ui.common.BrassButton
+import ru.maxrubtsoff.bankagg.ui.common.nbsp
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeader
 import ru.maxrubtsoff.bankagg.ui.common.ScreenHeaderGap
 import androidx.compose.ui.platform.LocalContext
@@ -65,6 +72,9 @@ fun SettingsScreen(
 ) {
     val features by vm.features.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val rebuilding by vm.rebuilding.collectAsStateWithLifecycle()
+    var rebuilt by remember { mutableStateOf<Int?>(null) }
+    var confirmRebuild by remember { mutableStateOf(false) }
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
             ?.let { "${it.versionName} · сборка ${PackageInfoCompat.getLongVersionCode(it)}" }
@@ -117,6 +127,21 @@ fun SettingsScreen(
                 )
             }
             Panel(Modifier.fillMaxWidth()) {
+                // B-121: «Валюта» of the past days recounted from the deals and CBR rates.
+                SettingsRow(
+                    icon = Icons.Filled.Refresh,
+                    title = "Пересчитать историю валюты",
+                    subtitle = when {
+                        rebuilding -> "Пересчитываю…"
+                        rebuilt == null -> "Из сделок и курсов ЦБ"
+                        rebuilt!! < 0 -> "Не получилось, попробуйте ещё раз"
+                        rebuilt == 0 -> "Всё уже сходится"
+                        else -> "Исправлено дней: $rebuilt"
+                    },
+                    onClick = { if (!rebuilding) confirmRebuild = true }
+                )
+            }
+            Panel(Modifier.fillMaxWidth()) {
                 // F-29: the intro slides again, for whoever skipped them.
                 SettingsRow(
                     icon = Icons.Filled.Info,
@@ -141,6 +166,16 @@ fun SettingsScreen(
                     textAlign = TextAlign.Center
                 )
             }
+        }
+    }
+    if (confirmRebuild) {
+        SlitokDialog(
+            title = "Пересчитать историю валюты?",
+            onDismiss = { confirmRebuild = false },
+            text = "«Валюта» за прошлые дни посчитается заново из покупок и продаж и курсов ЦБ. Ручные правки прошлого в ней пропадут, счета, вклады и наличные не изменятся.".nbsp()
+        ) {
+            PlateButton(onClick = { confirmRebuild = false }) { Text("Отмена") }
+            BrassButton(onClick = { confirmRebuild = false; vm.rebuildCurrencyHistory { rebuilt = it } }) { Text("Пересчитать") }
         }
     }
 }

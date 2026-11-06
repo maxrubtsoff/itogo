@@ -72,6 +72,11 @@ interface SettingsRepository : PinStore {
 
     suspend fun markAccountsPastRepaired() {}
 
+    /** The «Валюта» part of the saved days was recounted from the deals once (B-121). */
+    suspend fun currencyHistoryRebuilt(): Boolean = true
+
+    suspend fun markCurrencyHistoryRebuilt() {}
+
     val toursDone: Flow<Set<String>> get() = kotlinx.coroutines.flow.flowOf(emptySet())
     suspend fun markTourDone(key: String) {}
 
