@@ -60,6 +60,7 @@ class RepairFromJournalTest {
             }
         }
         override suspend fun hasTransactions(accountId: String) = txs.any { it.accountId == accountId }
+        override suspend fun deleteTransactionsOf(accountId: String) = Unit
         override suspend fun deleteAccount(accountId: String) { accounts.remove(accountId) }
         override suspend fun resetBalanceBase(accountId: String) {
             accounts[accountId]?.let {

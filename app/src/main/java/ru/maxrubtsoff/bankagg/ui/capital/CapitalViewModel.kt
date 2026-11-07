@@ -37,6 +37,7 @@ import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import ru.maxrubtsoff.bankagg.domain.repository.Today
 import ru.maxrubtsoff.bankagg.domain.usecase.GetCapital
+import ru.maxrubtsoff.bankagg.domain.usecase.DeleteAccount
 import ru.maxrubtsoff.bankagg.domain.usecase.RefreshRates
 import ru.maxrubtsoff.bankagg.ui.common.UndoCenter
 import java.time.LocalDate
@@ -60,6 +61,14 @@ class CapitalViewModel(
 ) : ViewModel() {
 
     /** Leaves accounts out of the capital or brings them back (U-18). */
+    private val deleteAccount = DeleteAccount(ledger)
+
+    /** Whether the account has operations: the confirmation says they go too (F-57). */
+    suspend fun hasOperations(accountId: String): Boolean = deleteAccount.hasOperations(accountId)
+
+    /** Deletes a foreign-currency account with its operations (F-57). */
+    fun deleteAccount(accountId: String) = viewModelScope.launch { deleteAccount.delete(accountId) }
+
     /** «Сейчас на счёте» (B-29). */
     fun setBalance(accountId: String, balanceMinor: Long) = viewModelScope.launch {
         ledger.setBalance(accountId, balanceMinor, System.currentTimeMillis())

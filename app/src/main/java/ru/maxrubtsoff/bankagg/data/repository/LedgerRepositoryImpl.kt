@@ -74,6 +74,8 @@ class LedgerRepositoryImpl(
 
     override suspend fun hasTransactions(accountId: String) = dao.countTransactions(accountId) > 0
 
+    override suspend fun deleteTransactionsOf(accountId: String) = dao.deleteTransactionsOf(accountId)
+
     override suspend fun deleteAccount(accountId: String) = dao.deleteAccount(accountId)
 
     override suspend fun resetBalanceBase(accountId: String) = dao.resetBalanceBase(accountId)

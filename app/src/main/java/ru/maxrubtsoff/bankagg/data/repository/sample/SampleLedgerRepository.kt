@@ -69,6 +69,8 @@ class SampleLedgerRepository(accounts: List<Account>, transactions: List<Transac
 
     override suspend fun hasTransactions(accountId: String) = transactions.value.any { it.accountId == accountId }
 
+    override suspend fun deleteTransactionsOf(accountId: String) = transactions.update { list -> list.filterNot { it.accountId == accountId } }
+
     override suspend fun deleteAccount(accountId: String) = accounts.update { list -> list.filterNot { it.id == accountId } }
 
     override suspend fun resetBalanceBase(accountId: String) = change(accountId) {

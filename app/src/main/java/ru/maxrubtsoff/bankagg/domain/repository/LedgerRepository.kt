@@ -53,6 +53,9 @@ interface LedgerRepository {
     /** Whether any operation sits on the account (B-90). */
     suspend fun hasTransactions(accountId: String): Boolean
 
+    /** Drops every operation of the account (F-57: deleting an account takes its operations with it). */
+    suspend fun deleteTransactionsOf(accountId: String)
+
     /** Drops an account that only a false operation created (B-90). */
     suspend fun deleteAccount(accountId: String)
 

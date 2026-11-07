@@ -59,6 +59,7 @@ class RecordNotificationTest {
         override fun observeTransactions(limit: Int): Flow<List<Transaction>> = emptyFlow()
         override suspend fun clear() {}
         override suspend fun hasTransactions(accountId: String) = false
+        override suspend fun deleteTransactionsOf(accountId: String) = Unit
         override suspend fun deleteAccount(accountId: String) = Unit
         override suspend fun resetBalanceBase(accountId: String) = Unit
         override suspend fun account(accountId: String): Account? = null

@@ -60,6 +60,9 @@ interface LedgerDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE accountId = :id")
     suspend fun countTransactions(id: String): Int
 
+    @Query("DELETE FROM transactions WHERE accountId = :id")
+    suspend fun deleteTransactionsOf(id: String)
+
     @Query("DELETE FROM accounts WHERE id = :id")
     suspend fun deleteAccount(id: String)
 

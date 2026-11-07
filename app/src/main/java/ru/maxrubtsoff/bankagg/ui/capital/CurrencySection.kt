@@ -35,6 +35,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import ru.maxrubtsoff.bankagg.domain.model.Account
+import ru.maxrubtsoff.bankagg.ui.common.DangerButton
+import ru.maxrubtsoff.bankagg.ui.common.SlitokDialog
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -76,6 +82,25 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
     var sheetCurrency by rememberSaveable { mutableStateOf<String?>(null) }
     val cur = snap.currency
     val cashPositions = cur.shownPositions
+    // F-57: a foreign-currency account — its balance sheet and the confirmation of deleting it.
+    var editingHolding by remember { mutableStateOf<Account?>(null) }
+    var deleting by remember { mutableStateOf<Pair<Account, Boolean>?>(null) }
+    val scope = rememberCoroutineScope()
+    fun askDelete(a: Account) { scope.launch { deleting = a to vm.hasOperations(a.id) } }
+    editingHolding?.let { a ->
+        BalanceSheet(a, since = { vm.balanceSince(a) }, onSave = { vm.setBalance(a.id, it); editingHolding = null }, onDismiss = { editingHolding = null })
+    }
+    deleting?.let { (a, hasOps) ->
+        SlitokDialog(
+            title = "Удалить счёт «${a.title.ifBlank { a.brand.title }}»?",
+            onDismiss = { deleting = null },
+            text = if (hasOps) "У счёта есть операции — они тоже уйдут из учёта. Новое уведомление банка создаст счёт заново."
+                else "Счёт уйдёт из учёта. Новое уведомление банка создаст его заново."
+        ) {
+            PlateButton(onClick = { deleting = null }) { Text("Отмена") }
+            DangerButton(onClick = { vm.deleteAccount(a.id); deleting = null }) { Text("Удалить") }
+        }
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberTabScrollState()),
@@ -123,7 +148,11 @@ fun CurrencySection(vm: CapitalViewModel, snap: CapitalSnapshot, onOpenCurrency:
                 Panel(Modifier.fillMaxWidth()) {
                     cur.holdings.forEachIndexed { i, h ->
                         if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = Slitok.Line)
-                        HoldingRow(h)
+                        // F-57: a tap sets the balance, a long press offers «Изменить остаток» / «Удалить счёт».
+                        LongPressMenu(
+                            items = listOf("Изменить остаток" to { editingHolding = h.account }, "Удалить счёт" to { askDelete(h.account) }),
+                            danger = setOf("Удалить счёт")
+                        ) { onLong -> HoldingRow(h, onClick = { editingHolding = h.account }, onLongClick = onLong) }
                     }
                 }
             }
@@ -257,9 +286,10 @@ private fun PositionRow(p: FxPortfolio.Position, onClick: () -> Unit) {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun HoldingRow(h: CurrencyHolding) {
-    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun HoldingRow(h: CurrencyHolding, onClick: () -> Unit, onLongClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
         BankIcon(h.account.brand, size = 38.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
