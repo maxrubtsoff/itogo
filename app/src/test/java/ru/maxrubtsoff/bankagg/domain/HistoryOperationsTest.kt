@@ -253,6 +253,14 @@ class HistoryOperationsTest {
         assertEquals(2_000_000L, w.cash.get()!!.amount.minor)
     }
 
+    @Test fun `preview and check of an old cash edit write nothing`() = runTest {
+        val w = World(startCash = CashBalance(Money.ofMinor(2_000_000), ms(d18, 10)))
+        val ref = listOf(HistoryRef.Cash(ms(d18, 10)))
+        w.ops.preview(ref)
+        w.ops.check(ref)
+        assertTrue(w.cash.observeChanges().first().isEmpty())
+    }
+
     @Test fun `an old cash edit can be corrected`() = runTest {
         val w = World(startCash = CashBalance(Money.ofMinor(2_000_000), ms(d18, 10)))
         assertNull(w.ops.save(HistoryRef.Cash(ms(d18, 10)), OperationForm(true, 1_500_000, d18)))

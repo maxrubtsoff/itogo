@@ -35,7 +35,8 @@ class ViewModelFactory(
                 container.ledgerRepository,
                 container.capitalDays,
                 container.subscriptionRepository,
-                container.cashbackRepository
+                container.cashbackRepository,
+                container.deleteAccount
             ) as T
         modelClass.isAssignableFrom(CapitalHistoryViewModel::class.java) ->
             CapitalHistoryViewModel(
@@ -113,7 +114,8 @@ class SandboxViewModelFactory(
                 container.ledgerRepository,
                 container.capitalHistory,
                 container.subscriptionRepository,
-                container.cashbackRepository
+                container.cashbackRepository,
+                container.deleteAccount
             ) as T
         modelClass.isAssignableFrom(CashbackViewModel::class.java) ->
             CashbackViewModel(

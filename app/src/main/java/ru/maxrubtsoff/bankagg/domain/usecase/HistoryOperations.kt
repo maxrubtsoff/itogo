@@ -231,7 +231,7 @@ class HistoryOperations(
                 if (shift != null) note(shift.part, -shift.deltaMinor, shift.from)
                 else note(if (tx.currency == Currencies.RUB) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY, 0L, dayOf(tx.postedAt))
             }
-            is HistoryRef.Cash -> cashChange(ref.atMs)?.let {
+            is HistoryRef.Cash -> peekCashChange(ref.atMs)?.let {
                 note(CapitalPart.CASH, -it.delta.minor, dayOf(it.atMs))
             }
             is HistoryRef.TopUp -> deposits.get(ref.depositId)?.let { d ->
@@ -256,14 +256,21 @@ class HistoryOperations(
         // Cash cannot go below nothing: taking an edit out would leave less than zero, and putting it back would not restore the amount.
         val cashRefs = refs.filterIsInstance<HistoryRef.Cash>()
         if (cashRefs.isNotEmpty()) {
-            val gone = cashRefs.sumOf { r -> cashChange(r.atMs)?.delta?.minor ?: 0L }
+            val gone = cashRefs.sumOf { r -> peekCashChange(r.atMs)?.delta?.minor ?: 0L }
             val left = (cash.get()?.amount?.minor ?: 0L) - gone
             if (left < 0L) return "Тогда в наличных было бы ${cashShort(left)}: так удалить нельзя"
         }
         return null
     }
 
-    /** The logged cash edit at [atMs]; an old one (made before the log) is put into it first, without moving the amount (B-124). */
+    /** Like [cashChange] but writes nothing: preview and check only look (B-124). */
+    private suspend fun peekCashChange(atMs: Long): CashChange? {
+        val changes = cash.observeChanges().first()
+        return changes.firstOrNull { it.atMs == atMs }
+            ?: CashEdit.legacyChange(cash.get(), changes)?.takeIf { it.atMs == atMs }
+    }
+
+    /** The logged cash edit at [atMs]; an old one (made before the log) is put into it first, without moving the amount (B-124). Call inside [run] only. */
     private suspend fun cashChange(atMs: Long): CashChange? {
         val changes = cash.observeChanges().first()
         changes.firstOrNull { it.atMs == atMs }?.let { return it }

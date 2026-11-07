@@ -57,11 +57,9 @@ class CapitalViewModel(
     private val ledger: LedgerRepository,
     history: CapitalHistoryRepository,
     subscriptions: SubscriptionRepository,
-    cashback: CashbackRepository
+    cashback: CashbackRepository,
+    private val deleteAccount: DeleteAccount
 ) : ViewModel() {
-
-    /** Leaves accounts out of the capital or brings them back (U-18). */
-    private val deleteAccount = DeleteAccount(ledger)
 
     /** Whether the account has operations: the confirmation says they go too (F-57). */
     suspend fun hasOperations(accountId: String): Boolean = deleteAccount.hasOperations(accountId)
@@ -81,6 +79,7 @@ class CapitalViewModel(
         return (account.balance.minor - added) to added
     }
 
+    /** Leaves accounts out of the capital or brings them back (U-18). */
     fun setExcluded(accountIds: List<String>, excluded: Boolean) = viewModelScope.launch {
         accountIds.forEach { ledger.setExcluded(it, excluded) }
     }

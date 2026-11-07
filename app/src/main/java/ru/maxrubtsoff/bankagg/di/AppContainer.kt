@@ -76,6 +76,7 @@ import ru.maxrubtsoff.bankagg.domain.usecase.ClassifyScreenshot
 import ru.maxrubtsoff.bankagg.domain.usecase.RecognizeCashbackShot
 import ru.maxrubtsoff.bankagg.domain.usecase.RecognizeDepositShot
 import ru.maxrubtsoff.bankagg.domain.parser.NotificationParser
+import ru.maxrubtsoff.bankagg.domain.usecase.DeleteAccount
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordNotification
 import ru.maxrubtsoff.bankagg.domain.usecase.RepairFromJournal
 
@@ -170,6 +171,7 @@ class AppContainer(context: Context) {
     // Use cases
     val transactionRunner by lazy { RoomTransactionRunner(db) }
     val recordNotification by lazy { RecordNotification(eventRepository, ledgerRepository, transactionRunner, cashRepository, java.time.ZoneId.systemDefault()) }
+    val deleteAccount by lazy { DeleteAccount(ledgerRepository, transactionRunner) }
     val repairFromJournal by lazy { RepairFromJournal(eventRepository, ledgerRepository, transactionRunner, java.time.ZoneId.systemDefault()) }
 
     /** The app's own notifications and their switches (F-24). */

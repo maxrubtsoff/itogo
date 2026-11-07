@@ -16,6 +16,17 @@ import ru.maxrubtsoff.bankagg.domain.usecase.DeleteAccount
 
 class DeleteAccountTest {
 
+    private var runs = 0
+    private val direct = object : ru.maxrubtsoff.bankagg.domain.repository.TransactionRunner {
+        override suspend fun <T> run(block: suspend () -> T): T { runs++; return block() }
+    }
+
+    @Test fun deleteRunsInOneTransaction() = runTest {
+        val ledger = SampleLedgerRepository(listOf(usd), listOf(tx("t1", usd.id)))
+        DeleteAccount(ledger, direct).delete(usd.id)
+        assertEquals(1, runs)
+    }
+
     private val usd = Account("bsb:USD", BankBrand.SBER, "BSB USD", Money.ofMinor(50_000), "USD", 0L)
     private val rub = Account("sber:RUB", BankBrand.SBER, "Сбер", Money.ofMinor(1_000_000), "RUB", 0L)
 
@@ -25,20 +36,20 @@ class DeleteAccountTest {
 
     @Test fun hasOperationsTrueFalse() = runTest {
         val ledger = SampleLedgerRepository(listOf(usd, rub), listOf(tx("t1", usd.id)))
-        val use = DeleteAccount(ledger)
+        val use = DeleteAccount(ledger, direct)
         assertTrue(use.hasOperations(usd.id))
         assertFalse(use.hasOperations(rub.id))
     }
 
     @Test fun deleteRemovesAccount() = runTest {
         val ledger = SampleLedgerRepository(listOf(usd, rub), emptyList())
-        DeleteAccount(ledger).delete(usd.id)
+        DeleteAccount(ledger, direct).delete(usd.id)
         assertEquals(listOf(rub.id), ledger.observeAccounts().first().map { it.id })
     }
 
     @Test fun deleteRemovesItsOperationsOnly() = runTest {
         val ledger = SampleLedgerRepository(listOf(usd, rub), listOf(tx("t1", usd.id), tx("t2", rub.id)))
-        DeleteAccount(ledger).delete(usd.id)
+        DeleteAccount(ledger, direct).delete(usd.id)
         assertEquals(listOf("t2"), ledger.observeTransactions().first().map { it.id })
     }
 

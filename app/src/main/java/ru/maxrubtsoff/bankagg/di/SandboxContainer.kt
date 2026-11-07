@@ -70,6 +70,11 @@ class SandboxContainer(context: Context, val today: Today, features: Features) {
     val recognizeCashbackShot by lazy { RecognizeCashbackShot(SampleOcrEngine, categoryResolver) }
     val recognizeDepositShot by lazy { RecognizeDepositShot(SampleOcrEngine) }
     val refreshRates by lazy { RefreshRates(SampleRatesSource, ratesRepository, settings) }
+    val deleteAccount by lazy {
+        ru.maxrubtsoff.bankagg.domain.usecase.DeleteAccount(ledgerRepository, object : ru.maxrubtsoff.bankagg.domain.repository.TransactionRunner {
+            override suspend fun <T> run(block: suspend () -> T): T = block()
+        })
+    }
     val getCapital by lazy {
         GetCapital(ledgerRepository, depositRepository, fxRepository, ratesRepository, cashRepository, settings, today)
     }
