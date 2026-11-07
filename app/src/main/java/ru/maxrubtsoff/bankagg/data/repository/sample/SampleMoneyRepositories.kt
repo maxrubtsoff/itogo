@@ -84,6 +84,10 @@ class SampleCashRepository(balance: CashBalance?) : CashRepository {
         return row
     }
 
+    override suspend fun materializeChange(change: CashChange) {
+        if (changes.value.none { it.atMs == change.atMs }) changes.update { it + change }
+    }
+
     override suspend fun addChange(change: CashChange) {
         val cash = state.value
         changes.update { it + change }

@@ -238,7 +238,11 @@ object CapitalEvents {
             out += HistoryEvent(dayOf(c.atMs, zone), CapitalPart.CASH, "Наличные", "изменили вручную", c.delta.minor, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = HistoryRef.Cash(c.atMs))
         }
         if (cash != null && cash.updatedAt > 0L && cashChanges.none { it.atMs == cash.updatedAt }) {
-            out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", null, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH))
+            // B-124: the old edit gets its delta and a ref, so it opens, edits and deletes like any other (it is put into the log on first touch).
+            val legacy = CashEdit.legacyDelta(cash, cashChanges)
+            if (legacy != 0L) {
+                out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", legacy, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = HistoryRef.Cash(cash.updatedAt))
+            }
         }
         accounts.filterNot { it.excluded }.forEach { a ->
             val opening = CapitalReconstruction.openingOf(a, transactions)

@@ -233,6 +233,32 @@ class HistoryOperationsTest {
         assertNotNull(w.ops.save(ref, OperationForm(false, 1_500_000, d18)))
     }
 
+    @Test fun `materialize does not move the amount`() = runTest {
+        val w = World(startCash = CashBalance(Money.ofMinor(2_000_000), ms(d18, 10)))
+        w.cash.materializeChange(CashChange(ms(d18, 10), Money.ofMinor(2_000_000), Money.ofMinor(2_000_000)))
+        assertEquals(2_000_000L, w.cash.get()!!.amount.minor)
+        assertEquals(1, w.cash.observeChanges().first().size)
+    }
+
+    @Test fun `deleting an old cash edit zeroes the cash and leaves no event`() = runTest {
+        val w = World(startCash = CashBalance(Money.ofMinor(2_000_000), ms(d18, 10)))
+        val ref = HistoryRef.Cash(ms(d18, 10))
+        assertNull(w.ops.check(listOf(ref)))
+        val removed = w.ops.delete(listOf(ref))
+        assertEquals(1, removed.items.size)
+        assertEquals(0L, w.cash.get()!!.amount.minor)
+        assertTrue(w.cash.observeChanges().first().isEmpty())
+        // Put back: the amount is what it was.
+        w.ops.restore(removed)
+        assertEquals(2_000_000L, w.cash.get()!!.amount.minor)
+    }
+
+    @Test fun `an old cash edit can be corrected`() = runTest {
+        val w = World(startCash = CashBalance(Money.ofMinor(2_000_000), ms(d18, 10)))
+        assertNull(w.ops.save(HistoryRef.Cash(ms(d18, 10)), OperationForm(true, 1_500_000, d18)))
+        assertEquals(1_500_000L, w.cash.get()!!.amount.minor)
+    }
+
     @Test fun `the detail of an operation carries the banks text with the sum marked`() = runTest {
         val text = "Поступление 5 000 ₽ на счёт"
         val w = World(

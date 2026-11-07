@@ -456,10 +456,31 @@ class CapitalEventsTest {
         assertEquals(d1, e.single().date)
     }
 
-    @Test fun legacyCashEventOnlyWithoutChanges() {
-        val legacy = build(cash = CashBalance(Money.ofMinor(9_000), cashAt)).filter { it.kind == HistoryKind.CASH }
+    @Test fun legacyEventGetsRefAndDelta() {
+        val legacy = build(cash = CashBalance(Money.ofMinor(2_000_000), cashAt)).filter { it.kind == HistoryKind.CASH }
         assertEquals(1, legacy.size)
-        assertNull(legacy.single().amountMinor)
+        assertEquals(2_000_000L, legacy.single().amountMinor)
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Cash(cashAt), legacy.single().ref)
+    }
+
+    @Test fun legacyDeltaWithOtherChanges() {
+        val c = ru.maxrubtsoff.bankagg.domain.model.CashChange(cashAt - 1_000, Money.ofMinor(100_000), Money.ofMinor(100_000))
+        val e = build(cash = CashBalance(Money.ofMinor(2_000_000), cashAt), cashChanges = listOf(c)).filter { it.kind == HistoryKind.CASH }
+        assertEquals(2, e.size)
+        assertEquals(1_900_000L, e.single { it.ref == ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Cash(cashAt) }.amountMinor)
+    }
+
+    @Test fun noLegacyEventWhenUpdatedAtMatchesChange() {
+        val c = ru.maxrubtsoff.bankagg.domain.model.CashChange(cashAt, Money.ofMinor(9_000), Money.ofMinor(9_000))
+        val e = build(cash = CashBalance(Money.ofMinor(9_000), cashAt), cashChanges = listOf(c)).filter { it.kind == HistoryKind.CASH }
+        assertEquals(1, e.size)
+    }
+
+    @Test fun noLegacyEventWhenDeltaZero() {
+        val c = ru.maxrubtsoff.bankagg.domain.model.CashChange(cashAt - 1_000, Money.ofMinor(9_000), Money.ofMinor(9_000))
+        val e = build(cash = CashBalance(Money.ofMinor(9_000), cashAt), cashChanges = listOf(c)).filter { it.kind == HistoryKind.CASH }
+        assertEquals(1, e.size)
+        assertEquals(cashAt - 1_000, (e.single().ref as ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Cash).atMs)
     }
 
     // B-86: operations of a foreign-currency account.

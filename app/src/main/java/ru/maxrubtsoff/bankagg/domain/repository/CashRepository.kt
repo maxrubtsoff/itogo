@@ -17,4 +17,7 @@ interface CashRepository {
 
     /** Puts a hand edit into the log and moves the amount by its delta (F-51). */
     suspend fun addChange(change: CashChange)
+
+    /** Puts an old edit into the log without moving the amount (B-124). */
+    suspend fun materializeChange(change: CashChange)
 }

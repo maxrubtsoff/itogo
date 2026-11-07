@@ -57,6 +57,11 @@ class CashRepositoryImpl(private val db: AppDatabase) : CashRepository {
         row.toDomain()
     }
 
+    override suspend fun materializeChange(change: CashChange) = db.withTransaction {
+        if (dao.cashChangeAt(change.atMs) == null) dao.insertCashChange(change.toEntity())
+        Unit
+    }
+
     override suspend fun addChange(change: CashChange) = db.withTransaction {
         val cash = dao.cash()
         dao.insertCashChange(change.toEntity())

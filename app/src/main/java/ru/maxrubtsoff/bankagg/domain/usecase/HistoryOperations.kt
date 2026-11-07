@@ -8,6 +8,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalPast
 import ru.maxrubtsoff.bankagg.domain.model.CapitalReconstruction
 import ru.maxrubtsoff.bankagg.domain.model.CapitalShift
 import ru.maxrubtsoff.bankagg.domain.model.CashChange
+import ru.maxrubtsoff.bankagg.domain.model.CashEdit
 import ru.maxrubtsoff.bankagg.domain.model.Currencies
 import ru.maxrubtsoff.bankagg.domain.model.DeletePreview
 import ru.maxrubtsoff.bankagg.domain.model.DepositMath
@@ -230,7 +231,7 @@ class HistoryOperations(
                 if (shift != null) note(shift.part, -shift.deltaMinor, shift.from)
                 else note(if (tx.currency == Currencies.RUB) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY, 0L, dayOf(tx.postedAt))
             }
-            is HistoryRef.Cash -> cash.observeChanges().first().firstOrNull { it.atMs == ref.atMs }?.let {
+            is HistoryRef.Cash -> cashChange(ref.atMs)?.let {
                 note(CapitalPart.CASH, -it.delta.minor, dayOf(it.atMs))
             }
             is HistoryRef.TopUp -> deposits.get(ref.depositId)?.let { d ->
@@ -255,12 +256,20 @@ class HistoryOperations(
         // Cash cannot go below nothing: taking an edit out would leave less than zero, and putting it back would not restore the amount.
         val cashRefs = refs.filterIsInstance<HistoryRef.Cash>()
         if (cashRefs.isNotEmpty()) {
-            val changes = cash.observeChanges().first()
-            val gone = cashRefs.sumOf { r -> changes.firstOrNull { it.atMs == r.atMs }?.delta?.minor ?: 0L }
+            val gone = cashRefs.sumOf { r -> cashChange(r.atMs)?.delta?.minor ?: 0L }
             val left = (cash.get()?.amount?.minor ?: 0L) - gone
             if (left < 0L) return "Тогда в наличных было бы ${cashShort(left)}: так удалить нельзя"
         }
         return null
+    }
+
+    /** The logged cash edit at [atMs]; an old one (made before the log) is put into it first, without moving the amount (B-124). */
+    private suspend fun cashChange(atMs: Long): CashChange? {
+        val changes = cash.observeChanges().first()
+        changes.firstOrNull { it.atMs == atMs }?.let { return it }
+        val legacy = CashEdit.legacyChange(cash.get(), changes)?.takeIf { it.atMs == atMs } ?: return null
+        cash.materializeChange(legacy)
+        return legacy
     }
 
     private fun cashShort(minor: Long) = (if (minor < 0L) "−" else "") + Money.ofMinor(kotlin.math.abs(minor)).format()
@@ -279,7 +288,7 @@ class HistoryOperations(
                 ledger.deleteTransaction(tx.id)
                 taken += Removed.Item.Tx(tx)
             }
-            is HistoryRef.Cash -> cash.removeChange(ref.atMs)?.let {
+            is HistoryRef.Cash -> cashChange(ref.atMs)?.let { cash.removeChange(ref.atMs) }?.let {
                 shifts += CapitalShift(CapitalPart.CASH, dayOf(it.atMs), -it.delta.minor)
                 taken += Removed.Item.Cash(it)
             }
@@ -326,7 +335,7 @@ class HistoryOperations(
             when (ref) {
                 is HistoryRef.Tx -> saveTx(ref, form)
                 is HistoryRef.Cash -> {
-                    val old = cash.observeChanges().first().firstOrNull { it.atMs == ref.atMs } ?: return@run null
+                    val old = cashChange(ref.atMs) ?: return@run null
                     val next = HistoryEdits.cashChange(old, form, zone)
                     val left = (cash.get()?.amount?.minor ?: 0L) - old.delta.minor + next.delta.minor
                     if (left < 0L) return@run "Тогда в наличных было бы ${cashShort(left)}"
