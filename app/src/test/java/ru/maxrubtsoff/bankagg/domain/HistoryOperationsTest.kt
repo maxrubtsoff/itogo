@@ -29,6 +29,8 @@ import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.domain.model.FxKind
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
 import ru.maxrubtsoff.bankagg.domain.model.HistoryEvent
+import ru.maxrubtsoff.bankagg.domain.model.HistoryKind
+import ru.maxrubtsoff.bankagg.domain.model.HistoryTarget
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRef
 import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.OperationForm
@@ -278,6 +280,18 @@ class HistoryOperationsTest {
         assertNull(w.ops.save(ref, OperationForm(true, 150_000_000, d18)))
         assertEquals(150_000_000L, w.cash.get()!!.amount.minor)
         assertEquals(ms(d18, 0).let { w.cash.get()!!.updatedAt >= it }, true)
+    }
+
+    // B-127: the sheet shows «Изменить»/«Удалить» only when the detail has a form.
+    @Test fun `detail of an unstamped cash amount has a form to edit`() = runTest {
+        val w = World(startCash = CashBalance(Money.ofMinor(200_000_000), 0L))
+        val ref = HistoryRef.Cash(CashEdit.LEGACY_AT)
+        val event = HistoryEvent(d18, CapitalPart.CASH, "Наличные", "изменили вручную", 200_000_000L, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = ref)
+        val form = w.ops.detail(event).form
+        assertNotNull(form)
+        assertEquals(200_000_000L, form!!.amountMinor)
+        assertTrue(form.income)
+        assertTrue(w.cash.observeChanges().first().isEmpty())
     }
 
     @Test fun `moving an unstamped cash amount to a past date puts it on the chart from that day`() = runTest {

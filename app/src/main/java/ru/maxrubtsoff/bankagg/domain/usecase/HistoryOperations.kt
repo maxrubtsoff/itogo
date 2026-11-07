@@ -129,7 +129,10 @@ class HistoryOperations(
             }
             is HistoryRef.Cash -> {
                 val all = cash.observeChanges().first()
-                val c = all.firstOrNull { it.atMs == ref.atMs } ?: return none
+                // B-127: an old edit (no log row yet) opens like any other, so «Изменить»/«Удалить» show.
+                val c = all.firstOrNull { it.atMs == ref.atMs }
+                    ?: CashEdit.legacyChange(cash.get(), all)?.takeIf { it.atMs == ref.atMs }
+                    ?: return none
                 val partner = HistoryEdits.cashPartner(all, ref.atMs, zone)
                 none.copy(
                     form = OperationForm(c.delta.minor >= 0L, kotlin.math.abs(c.delta.minor), event.date),
