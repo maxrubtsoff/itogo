@@ -310,4 +310,20 @@ class NotificationParserTest {
         val op = NotificationParser.parse(null, "Поступило 500 ₽. Доступно 1 000 ₽")
         assertEquals(TransactionKind.UNKNOWN, op!!.kind)
     }
+
+    // ---- B-125: «Перевод в Кубышку» ----
+
+    @Test fun kubyshkaTransferIsOutWithBalance() {
+        val p = NotificationParser.parse("Т-Банк", "Перевод в Кубышку 20 000 ₽, счет RUB Баланс: 59 342,18 ₽")!!
+        assertEquals(OpDirection.OUT, p.direction)
+        assertEquals(TransactionKind.TRANSFER, p.kind)
+        assertEquals(-2_000_000L, p.amount.minor)
+        assertEquals(5_934_218L, p.balance!!.minor)
+        assertEquals("RUB", p.accountCurrency)
+    }
+
+    @Test fun bareTransferInIsNotOutByItself() {
+        // «Перевод в» alone stays unread: too wide.
+        assertNull(NotificationParser.parse("Банк", "Перевод в 20 000 ₽ Баланс: 5 000 ₽"))
+    }
 }

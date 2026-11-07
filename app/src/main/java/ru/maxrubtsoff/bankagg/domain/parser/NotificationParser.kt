@@ -47,8 +47,9 @@ object NotificationParser {
      * follows the direction.
      * 5 — BSB "Товары и услуги" is a purchase (B-118).
      * 6 — Альфа-Бизнес «Поступило … счет … от … счет …»; operation time from the text (B-122, B-123).
+     * 7 — «Перевод в Кубышку» is an outgoing transfer (B-125).
      */
-    const val VERSION = 6
+    const val VERSION = 7
 
 
     /**
@@ -128,7 +129,9 @@ object NotificationParser {
     private val OUT_MARKS = listOf(
         "товары и услуги", "списание", "списан", "снятие", "оплата", "покупка", "платеж", "платёж", "комисси",
         "получатель", "отправлен", "исходящ", "вы перевели", "перевод на карту", "перевод со счет",
-        "перевод с карты", "перевод на счет получателя"
+        "перевод с карты", "перевод на счет получателя",
+        // B-125: into one's own savings pot; a bare «перевод в» is too wide.
+        "перевод в кубышк", "перевод в копилк", "перевод в накопительн", "перевод на накопительн"
     )
 
     /** Money came into the account. */
