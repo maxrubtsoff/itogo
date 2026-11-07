@@ -326,4 +326,43 @@ class NotificationParserTest {
         // «Перевод в» alone stays unread: too wide.
         assertNull(NotificationParser.parse("Банк", "Перевод в 20 000 ₽ Баланс: 5 000 ₽"))
     }
+
+    // ---- B-126: parseBare / CashWithdrawal ----
+
+    private val sberBare = "70 000 ₽ — Баланс: 9 821,66 ₽"
+
+    @Test fun bareAmountBalanceParsesAsBareOp() {
+        val b = NotificationParser.parseBare("Сбербанк", sberBare)!!
+        assertEquals(7_000_000L, b.amountMinor)
+        assertEquals(982_166L, b.balanceMinor)
+        val tail = NotificationParser.parseBare(null, "100 000 ₽ — Баланс: 79 821,66 ₽ Счёт карты МИР •• 0402")!!
+        assertEquals(10_000_000L, tail.amountMinor)
+        assertEquals(7_982_166L, tail.balanceMinor)
+        assertEquals(5_000L * 100, NotificationParser.parseBare(null, "5 000 ₽ - Баланс: 10 000 ₽")!!.amountMinor)
+    }
+
+    @Test fun bareRejectsExtraWords() {
+        listOf(
+            "Покупка 70 000 ₽ — Баланс: 9 821,66 ₽",
+            "70 000 ₽ — Баланс: 9 821,66 ₽ Оплатите в приложении",
+            "70 000 ₽ — Остаток: 9 821,66 ₽",
+            "70 000 ₽ Баланс: 9 821,66 ₽",
+            "70 000 ₽ — Баланс: 9 821,66 $",
+            "70 000 $ — Баланс: 9 821,66 $",
+            "Получите до 5 000 ₽ — Баланс: 9 821,66 ₽",
+            "70 000 ₽ — Баланс: 9 821,66 ₽ Акция: кэшбэк до 10%",
+            "6106.66 ₽ Татэнергосбыт Оплатите в приложении"
+        ).forEach { assertNull(it, NotificationParser.parseBare(null, it)) }
+    }
+
+    @Test fun bareParseIsNullInMainParse() {
+        assertNull(NotificationParser.parse("Сбербанк", sberBare))
+        assertNull(NotificationParser.parse("Сбербанк", "100 000 ₽ — Баланс: 79 821,66 ₽ Счёт карты МИР •• 0402"))
+    }
+
+    @Test fun billIsNull() {
+        assertNull(NotificationParser.parse("Татэнергосбыт", "6106.66 ₽ Татэнергосбыт Оплатите в приложении"))
+        assertNull(NotificationParser.parse(null, "Счёт на оплату 1 200 ₽ ЖКХ"))
+        assertNull(NotificationParser.parse(null, "К оплате 1 200 ₽ до 25 числа"))
+    }
 }

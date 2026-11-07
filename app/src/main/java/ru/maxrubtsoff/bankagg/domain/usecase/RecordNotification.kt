@@ -1,12 +1,17 @@
 package ru.maxrubtsoff.bankagg.domain.usecase
 
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.CapturedEvent
+import ru.maxrubtsoff.bankagg.domain.model.CashChange
+import ru.maxrubtsoff.bankagg.domain.model.CashWithdrawal
+import ru.maxrubtsoff.bankagg.domain.model.Money
 import ru.maxrubtsoff.bankagg.domain.model.Transaction
 import ru.maxrubtsoff.bankagg.domain.parser.NotificationParser
 import ru.maxrubtsoff.bankagg.domain.parser.ParsedOp
+import ru.maxrubtsoff.bankagg.domain.repository.CashRepository
 import ru.maxrubtsoff.bankagg.domain.repository.EventRepository
 import ru.maxrubtsoff.bankagg.domain.repository.LedgerRepository
 import ru.maxrubtsoff.bankagg.domain.repository.TransactionRunner
@@ -28,6 +33,7 @@ class RecordNotification(
     private val events: EventRepository,
     private val ledger: LedgerRepository,
     private val tx: TransactionRunner,
+    private val cash: CashRepository,
     private val zone: ZoneId = ZoneId.systemDefault()
 ) {
     private val mutex = Mutex()
@@ -43,14 +49,23 @@ class RecordNotification(
         if (normalized.isEmpty()) return@withLock false
 
         val brand = BankBrand.fromPackage(packageName)
-        val op = NotificationParser.parse(title, normalized, brand.defaultCurrency)
-        val content = contentHash(packageName, normalized, op)
+        // B-126: «сумма — Баланс» has no word of direction; it is a cash withdrawal only when the
+        // account's balance fell by exactly that amount. The reading is under the Mutex, before any write.
+        val bare = NotificationParser.parseBare(title, normalized)
+        val parsed = NotificationParser.parse(title, normalized, brand.defaultCurrency)
+        val op = parsed ?: bare?.let { b ->
+            val prev = ledger.account("${brand.key}:${b.currency}")?.takeUnless { it.needsBalance }?.balance?.minor
+            CashWithdrawal.resolve(b, prev)
+        }
+        // A bare push keeps one identity whether it was read or not, so a repeat of it is a repeat.
+        val content = if (parsed == null && bare != null) contentHash(packageName, normalized, -bare.amountMinor, bare.balanceMinor)
+            else contentHash(packageName, normalized, op)
         val hash = eventHash(content, postedAt)
 
         tx.run {
             // Banks re-post the same push (updates, group re-sorts): the same text,
             // amount and balance within a couple of minutes is one operation.
-            if (events.hasSimilar(content, postedAt - DEDUP_WINDOW_MS, postedAt + DEDUP_WINDOW_MS, dedupKey(op, notificationKey))) {
+            if (events.hasSimilar(content, postedAt - DEDUP_WINDOW_MS, postedAt + DEDUP_WINDOW_MS, dedupKey(op, notificationKey, bare != null && parsed == null))) {
                 return@run false
             }
             val stored = events.record(
@@ -82,6 +97,14 @@ class RecordNotification(
                     balanceMinor = op.balance?.minor,
                     postedAt = at
                 )
+                if (parsed == null && CashWithdrawal.isWithdrawal(op)) {
+                    // The money went into the pocket: the cash grows by the amount (a hand edit of the log).
+                    val taken = cash.observeChanges().first().map { it.atMs }.toSet()
+                    var cashAt = at
+                    while (cashAt in taken) cashAt++
+                    val now = (cash.get()?.amount?.minor ?: 0L) - op.amount.minor
+                    cash.addChange(CashChange(cashAt, Money.ofMinor(now), Money.ofMinor(-op.amount.minor)))
+                }
                 if (!op.foreignAmount) ledger.addTransaction(
                     Transaction(
                         id = hash,
@@ -105,8 +128,8 @@ class RecordNotification(
          * Key to compare in dedup: a push with a balance is told apart by its content,
          * one without — only by the notification key. null — compare the content only.
          */
-        fun dedupKey(op: ParsedOp?, notificationKey: String?): String? =
-            if (op?.balance != null) null else notificationKey
+        fun dedupKey(op: ParsedOp?, notificationKey: String?, bareBalance: Boolean = false): String? =
+            if (op?.balance != null || bareBalance) null else notificationKey
 
         /** Window in which an identical push counts as a repeat (±2 minutes). */
         const val DEDUP_WINDOW_MS = 2 * 60_000L

@@ -34,6 +34,9 @@ data class ParsedOp(
     val foreignAmount: Boolean get() = accountCurrency != currency
 }
 
+/** «100 000 ₽ — Баланс: 79 821,66 ₽»: an amount and a balance with no word of direction (B-126). Minor units, RUB. */
+data class BareOp(val amountMinor: Long, val balanceMinor: Long, val currency: String = Currencies.RUB)
+
 object NotificationParser {
 
     /**
@@ -166,6 +169,23 @@ object NotificationParser {
         Regex("""получите[^.!?]{0,20}\d""", RegexOption.IGNORE_CASE)
     )
 
+    /**
+     * A bill to be paid, not a payment made: "Оплатите в приложении" has the word
+     * «оплат…» but nothing left the account. Checked before the direction.
+     */
+    private val BILL_MARKS = listOf("оплатите", "к оплате", "счет на оплату", "счёт на оплату")
+
+    /**
+     * The strict shape of a bare push (B-126): the text STARTS with an amount, then a
+     * dash, «Баланс:» and a balance in the same currency, then at most our own card
+     * tail ("Счёт карты МИР •• 0402"). Any other word — no match.
+     */
+    private val BARE = Regex(
+        """^\s*$NUM[   ]?($MARK_ALT)(?![a-zа-яё])\s*[—–-]\s*баланс\s*:?\s*$NUM[   ]?($MARK_ALT)(?![a-zа-яё])""" +
+            """(?:\s+(?:сч[её]т|карт[аы])[^.!?\d]{0,30}[*•·]{1,3}\s?\d{4})?\s*$""",
+        RegexOption.IGNORE_CASE
+    )
+
     private val CP_STOP = (TRANSFER + INCOME + EXPENSE + listOf(
         "банк", "сбербанк", "альфа", "тинькофф", "счет", "счёт", "карты", "карта",
         "доступно", "остаток", "баланс", "руб"
@@ -185,7 +205,7 @@ object NotificationParser {
         val clean = MASK.replace(PHONE.replace(blob) { " ".repeat(it.value.length) }) { " ".repeat(it.value.length) }
 
         val low = clean.lowercase()
-        if (isPromo(low)) return null
+        if (isPromo(low) || isBill(low)) return null
 
         val detected = detectKind(blob)
         val counterparty0 = counterparty(text)
@@ -247,6 +267,25 @@ object NotificationParser {
             Hit(it.range.first, it.groupValues[2], codeOf(it.groupValues[1]))
         }
         return (after + before).sortedBy { it.start }.toList()
+    }
+
+    private fun isBill(low: String): Boolean = BILL_MARKS.any { it in low }
+
+    /**
+     * «100 000 ₽ — Баланс: 79 821,66 ₽» in the strict shape only (B-126). The direction
+     * is NOT guessed here: [ru.maxrubtsoff.bankagg.domain.model.CashWithdrawal] decides it
+     * against the balance the account had before. Null for anything else.
+     */
+    fun parseBare(title: String?, text: String): BareOp? {
+        val blob = "${title ?: ""} $text".trim()
+        val low = blob.lowercase()
+        if (isPromo(low) || isBill(low)) return null
+        val m = BARE.find(text.trim()) ?: return null
+        val amountCcy = codeOf(m.groupValues[2])
+        if (amountCcy != Currencies.RUB || codeOf(m.groupValues[4]) != amountCcy) return null
+        val amount = toMinor(m.groupValues[1])?.takeIf { it > 0L } ?: return null
+        val balance = toMinor(m.groupValues[3]) ?: return null
+        return BareOp(amount, balance, amountCcy)
     }
 
     private fun isPromo(low: String): Boolean =

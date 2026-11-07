@@ -32,6 +32,9 @@ class RepairFromJournal(
     /** Returns how many log entries were fixed. */
     suspend operator fun invoke(): Int = tx.run {
         val changes = events.all().mapNotNull { event ->
+            // B-126: «сумма — Баланс» was decided against the balance of that day, which the log does not
+            // hold; what was recorded then (a withdrawal, or nothing) stands.
+            if (NotificationParser.parseBare(event.title, event.text) != null) return@mapNotNull null
             val op = NotificationParser.parse(event.title, event.text, event.brand.defaultCurrency)
             val content = RecordNotification.contentHash(event.packageName, event.text, op)
             // Same content, but the stored operation sits at the arrival time while the text

@@ -61,7 +61,7 @@ class NewBankAnswersTest {
     // A blank text makes RecordNotification return before touching the stores.
     private fun answers(banks: BankRepository) = NewBankAnswers(
         banks, FakeCandidates(), settings(),
-        RecordNotification(stub(EventRepository::class.java), stub(LedgerRepository::class.java), stub(TransactionRunner::class.java)),
+        RecordNotification(stub(EventRepository::class.java), stub(LedgerRepository::class.java), stub(TransactionRunner::class.java), stub(ru.maxrubtsoff.bankagg.domain.repository.CashRepository::class.java)),
         "own"
     )
 

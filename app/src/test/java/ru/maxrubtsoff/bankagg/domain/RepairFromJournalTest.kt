@@ -146,6 +146,27 @@ class RepairFromJournalTest {
         assertTrue(events.stored.single().parsed)
     }
 
+    @Test fun cash_withdrawal_without_a_word_is_left_alone() = runTest {
+        // B-126: «сумма — Баланс» was resolved against the balance of its day; Repair has no such balance and must not undo it.
+        val (event, tx) = stored(id = 9, text = "70 000 ₽ — Баланс: 9 821,66 ₽", postedAt = 2_000L, oldAmountMinor = -7_000_000L, oldBalanceMinor = 982_166L)
+        val ledger = FakeLedger(
+            accounts = mutableMapOf(
+                account to Account(
+                    id = account, brand = brand, title = brand.title, balance = Money.ofMinor(982_166L),
+                    currency = "RUB", updatedAt = 2_000L, checkedAt = 2_000L
+                )
+            ),
+            txs = mutableListOf(tx!!)
+        )
+        val events = FakeEvents(listOf(event))
+
+        assertEquals(0, RepairFromJournal(events, ledger, direct)())
+
+        assertEquals(1, ledger.txs.size)
+        assertEquals(982_166L, ledger.accounts[account]!!.balance.minor)
+        assertTrue(events.stored.single().parsed)
+    }
+
     @Test fun advertisement_recorded_as_income_isRemoved() = runTest {
         val (event, tx) = stored(
             id = 7,
