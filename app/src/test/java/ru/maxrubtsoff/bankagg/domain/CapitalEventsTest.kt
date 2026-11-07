@@ -483,6 +483,16 @@ class CapitalEventsTest {
         assertEquals(cashAt - 1_000, (e.single().ref as ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Cash).atMs)
     }
 
+    @Test fun unstampedCashAmountGivesARowOnAnOrdinaryDay() {
+        val tx = txOf("RUB")
+        val e = build(tx = listOf(tx), cash = CashBalance(Money.ofMinor(200_000_000), 0L)).filter { it.kind == HistoryKind.CASH }
+        assertEquals(1, e.size)
+        assertEquals(200_000_000L, e.single().amountMinor)
+        assertEquals(ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Cash(ru.maxrubtsoff.bankagg.domain.model.CashEdit.LEGACY_AT), e.single().ref)
+        assertEquals(d1, e.single().date)
+        assertEquals(today, build(cash = CashBalance(Money.ofMinor(5_000), 0L)).single { it.kind == HistoryKind.CASH }.date)
+    }
+
     // B-86: operations of a foreign-currency account.
     private val uzs = Account("u", BankBrand.SBER, "Сбер UZS", Money.ofMinor(-2_026_300_000L), "UZS", 0L)
     private val uzsRate = 7_500L // 0,0075 ₽ for 1 UZS, micro-rubles

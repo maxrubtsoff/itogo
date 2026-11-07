@@ -232,7 +232,7 @@ class HistoryOperations(
                 else note(if (tx.currency == Currencies.RUB) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY, 0L, dayOf(tx.postedAt))
             }
             is HistoryRef.Cash -> peekCashChange(ref.atMs)?.let {
-                note(CapitalPart.CASH, -it.delta.minor, dayOf(it.atMs))
+                note(CapitalPart.CASH, -it.delta.minor, cashDay(it.atMs))
             }
             is HistoryRef.TopUp -> deposits.get(ref.depositId)?.let { d ->
                 d.topUps.firstOrNull { it.id == ref.topUpId }?.let { up ->
@@ -296,7 +296,7 @@ class HistoryOperations(
                 taken += Removed.Item.Tx(tx)
             }
             is HistoryRef.Cash -> cashChange(ref.atMs)?.let { cash.removeChange(ref.atMs) }?.let {
-                shifts += CapitalShift(CapitalPart.CASH, dayOf(it.atMs), -it.delta.minor)
+                shifts += CapitalShift(CapitalPart.CASH, cashFrom(it.atMs), -it.delta.minor)
                 taken += Removed.Item.Cash(it)
             }
             is HistoryRef.TopUp -> deposits.get(ref.depositId)?.topUps?.firstOrNull { it.id == ref.topUpId }?.let {
@@ -326,7 +326,7 @@ class HistoryOperations(
             }
             is Removed.Item.Cash -> {
                 cash.addChange(item.change)
-                shifts += CapitalShift(CapitalPart.CASH, dayOf(item.change.atMs), item.change.delta.minor)
+                shifts += CapitalShift(CapitalPart.CASH, cashFrom(item.change.atMs), item.change.delta.minor)
             }
             is Removed.Item.TopUp -> deposits.addTopUp(item.depositId, item.topUp)
             is Removed.Item.Fx -> fx.upsert(item.op)
@@ -350,7 +350,7 @@ class HistoryOperations(
                     cash.addChange(next)
                     shift(
                         listOf(
-                            CapitalShift(CapitalPart.CASH, dayOf(old.atMs), -old.delta.minor),
+                            CapitalShift(CapitalPart.CASH, cashFrom(old.atMs), -old.delta.minor),
                             CapitalShift(CapitalPart.CASH, dayOf(next.atMs), next.delta.minor)
                         )
                     )
@@ -407,6 +407,12 @@ class HistoryOperations(
             if (changed.isNotEmpty()) history.upsertAll(changed)
         }
     }
+
+    /** Where a cash edit moves the chart from: the sentinel (an amount that was there from the start) — the whole history (B-127). */
+    private fun cashFrom(atMs: Long): LocalDate = if (atMs == CashEdit.LEGACY_AT) LocalDate.EPOCH else dayOf(atMs)
+
+    /** The day of a cash edit; the sentinel (an old amount with no stamp) counts from today, never 1970 (B-127). */
+    private fun cashDay(atMs: Long): LocalDate = if (atMs == CashEdit.LEGACY_AT) today.date.value else dayOf(atMs)
 
     private fun dayOf(ms: Long): LocalDate = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
 }

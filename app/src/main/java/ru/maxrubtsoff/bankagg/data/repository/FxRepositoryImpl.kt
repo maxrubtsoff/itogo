@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.data.repository
 
+import ru.maxrubtsoff.bankagg.domain.model.CashEdit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import androidx.room.withTransaction
@@ -51,7 +52,7 @@ class CashRepositoryImpl(private val db: AppDatabase) : CashRepository {
         val row = dao.cashChangeAt(atMs) ?: return@withTransaction null
         dao.deleteCashChangeAt(atMs)
         val cash = dao.cash()
-        val left = dao.cashChanges().maxOfOrNull { it.atMs } ?: 0L
+        val left = dao.cashChanges().filter { it.atMs != CashEdit.LEGACY_AT }.maxOfOrNull { it.atMs } ?: 0L
         // The amount cannot go below nothing; the stamp falls back to the newest edit left.
         dao.setCash(CashEntity(amountMinor = ((cash?.amountMinor ?: 0L) - row.deltaMinor).coerceAtLeast(0L), updatedAt = if (cash?.updatedAt == atMs) left else cash?.updatedAt ?: left))
         row.toDomain()
@@ -65,7 +66,7 @@ class CashRepositoryImpl(private val db: AppDatabase) : CashRepository {
     override suspend fun addChange(change: CashChange) = db.withTransaction {
         val cash = dao.cash()
         dao.insertCashChange(change.toEntity())
-        dao.setCash(CashEntity(amountMinor = ((cash?.amountMinor ?: 0L) + change.delta.minor).coerceAtLeast(0L), updatedAt = maxOf(cash?.updatedAt ?: 0L, change.atMs)))
+        dao.setCash(CashEntity(amountMinor = ((cash?.amountMinor ?: 0L) + change.delta.minor).coerceAtLeast(0L), updatedAt = if (change.atMs == CashEdit.LEGACY_AT) cash?.updatedAt ?: 0L else maxOf(cash?.updatedAt ?: 0L, change.atMs)))
         Unit
     }
 }

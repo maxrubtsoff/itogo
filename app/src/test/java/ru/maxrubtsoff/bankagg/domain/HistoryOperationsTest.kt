@@ -24,6 +24,7 @@ import ru.maxrubtsoff.bankagg.domain.model.CapitalPoint
 import ru.maxrubtsoff.bankagg.domain.model.CapturedEvent
 import ru.maxrubtsoff.bankagg.domain.model.CashBalance
 import ru.maxrubtsoff.bankagg.domain.model.CashChange
+import ru.maxrubtsoff.bankagg.domain.model.CashEdit
 import ru.maxrubtsoff.bankagg.domain.model.Features
 import ru.maxrubtsoff.bankagg.domain.model.FxKind
 import ru.maxrubtsoff.bankagg.domain.model.FxOperation
@@ -259,6 +260,38 @@ class HistoryOperationsTest {
         w.ops.preview(ref)
         w.ops.check(ref)
         assertTrue(w.cash.observeChanges().first().isEmpty())
+    }
+
+    // B-127: an old amount with no stamp at all.
+    @Test fun `an unstamped cash amount is a row that can be corrected and deleted`() = runTest {
+        val w = World(startCash = CashBalance(Money.ofMinor(200_000_000), 0L))
+        val ref = HistoryRef.Cash(CashEdit.LEGACY_AT)
+        assertNull(w.ops.check(listOf(ref)))
+        assertTrue(w.cash.observeChanges().first().isEmpty())
+        val removed = w.ops.delete(listOf(ref))
+        assertEquals(1, removed.items.size)
+        assertEquals(0L, w.cash.get()!!.amount.minor)
+        assertEquals(0L, w.cash.get()!!.updatedAt)
+        w.ops.restore(removed)
+        assertEquals(200_000_000L, w.cash.get()!!.amount.minor)
+        assertEquals(0L, w.cash.get()!!.updatedAt)
+        assertNull(w.ops.save(ref, OperationForm(true, 150_000_000, d18)))
+        assertEquals(150_000_000L, w.cash.get()!!.amount.minor)
+        assertEquals(ms(d18, 0).let { w.cash.get()!!.updatedAt >= it }, true)
+    }
+
+    @Test fun `moving an unstamped cash amount to a past date puts it on the chart from that day`() = runTest {
+        val w = World(startCash = CashBalance(Money.ofMinor(200_000_000), 0L))
+        w.seed(point(d14, 0, 200_000_000), point(d17, 0, 200_000_000), point(d19, 0, 200_000_000))
+        assertNull(w.ops.save(HistoryRef.Cash(CashEdit.LEGACY_AT), OperationForm(true, 200_000_000, d17)))
+        val changes = w.cash.observeChanges().first()
+        assertEquals(1, changes.size)
+        assertEquals(200_000_000L, changes.sumOf { it.delta.minor })
+        assertEquals(200_000_000L, w.cash.get()!!.amount.minor)
+        assertEquals(changes.single().atMs, w.cash.get()!!.updatedAt)
+        assertEquals(0L, w.days().getValue(d14).parts[CapitalPart.CASH] ?: 0L)
+        assertEquals(200_000_000L, w.days().getValue(d17).parts[CapitalPart.CASH])
+        assertEquals(200_000_000L, w.days().getValue(d19).parts[CapitalPart.CASH])
     }
 
     @Test fun `an old cash edit can be corrected`() = runTest {

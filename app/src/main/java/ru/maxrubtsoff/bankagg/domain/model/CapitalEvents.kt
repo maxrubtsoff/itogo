@@ -233,17 +233,6 @@ object CapitalEvents {
             }
             if (d.endDate.isBefore(today)) out += HistoryEvent(d.endDate, CapitalPart.DEPOSITS, "Вклад закрыт", name, -DepositMath.valueOn(d, d.endDate), kind = HistoryKind.DEPOSIT_CLOSE, target = to, bank = d.brand)
         }
-        // F-48: every hand edit is an event with its delta; the lone «updatedAt» one is for cash edited before the log.
-        cashChanges.forEach { c ->
-            out += HistoryEvent(dayOf(c.atMs, zone), CapitalPart.CASH, "Наличные", "изменили вручную", c.delta.minor, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = HistoryRef.Cash(c.atMs))
-        }
-        if (cash != null && cash.updatedAt > 0L && cashChanges.none { it.atMs == cash.updatedAt }) {
-            // B-124: the old edit gets its delta and a ref, so it opens, edits and deletes like any other (it is put into the log on first touch).
-            val legacy = CashEdit.legacyDelta(cash, cashChanges)
-            if (legacy != 0L) {
-                out += HistoryEvent(dayOf(cash.updatedAt, zone), CapitalPart.CASH, "Наличные", "изменили вручную", legacy, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = HistoryRef.Cash(cash.updatedAt))
-            }
-        }
         accounts.filterNot { it.excluded }.forEach { a ->
             val opening = CapitalReconstruction.openingOf(a, transactions)
             if (opening == 0L) return@forEach
@@ -258,6 +247,14 @@ object CapitalEvents {
             )
         }
         out += moved(points, fxOps, deposits, rates, transactions, zone, accounts)
+        // F-48: every hand edit is an event with its delta. B-124/B-127: the old edit (before the log, maybe with no stamp) too.
+        // A row with no real time (the sentinel stamp) sits on the earliest other day, else today — never 1970.
+        val noTime = out.minOfOrNull { it.date } ?: today
+        fun cashDay(atMs: Long) = if (atMs == CashEdit.LEGACY_AT) noTime else dayOf(atMs, zone)
+        val cashRows = cashChanges + listOfNotNull(CashEdit.legacyChange(cash, cashChanges))
+        cashRows.forEach { c ->
+            out += HistoryEvent(cashDay(c.atMs), CapitalPart.CASH, "Наличные", "изменили вручную", c.delta.minor, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = HistoryRef.Cash(c.atMs))
+        }
         return out.filter { !it.date.isAfter(today) }.sortedByDescending { it.date }
     }
 

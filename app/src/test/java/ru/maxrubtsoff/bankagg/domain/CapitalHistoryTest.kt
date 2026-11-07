@@ -105,10 +105,13 @@ class CapitalHistoryTest {
             listOf(tx), listOf(acc), emptyList(), emptyList(), CashBalance(Money.ofMinor(100), 0L),
             emptyList(), today, ZoneOffset.UTC
         )
-        assertEquals(1, events.size)
-        assertEquals("Пополнение", events[0].title)
-        assertEquals("Работа", events[0].subtitle)
-        assertEquals(5000L, events[0].amountMinor)
+        // The cash amount with no stamp is a row of its own (B-127); the operation is the other.
+        assertEquals(1, events.count { it.kind != ru.maxrubtsoff.bankagg.domain.model.HistoryKind.CASH })
+        events.filter { it.kind != ru.maxrubtsoff.bankagg.domain.model.HistoryKind.CASH }.let { e ->
+        assertEquals("Пополнение", e[0].title)
+        assertEquals("Работа", e[0].subtitle)
+        assertEquals(5000L, e[0].amountMinor)
+        }
     }
 
     @Test fun reconstruction_walksAccountBackByOperations() {

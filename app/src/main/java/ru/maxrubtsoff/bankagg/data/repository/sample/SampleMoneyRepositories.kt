@@ -1,5 +1,6 @@
 package ru.maxrubtsoff.bankagg.data.repository.sample
 
+import ru.maxrubtsoff.bankagg.domain.model.CashEdit
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,7 +77,7 @@ class SampleCashRepository(balance: CashBalance?) : CashRepository {
         val row = changes.value.firstOrNull { it.atMs == atMs } ?: return null
         changes.update { l -> l.filterNot { it.atMs == atMs } }
         val cash = state.value
-        val left = changes.value.maxOfOrNull { it.atMs } ?: 0L
+        val left = changes.value.filter { it.atMs != CashEdit.LEGACY_AT }.maxOfOrNull { it.atMs } ?: 0L
         state.value = CashBalance(
             Money.ofMinor(((cash?.amount?.minor ?: 0L) - row.delta.minor).coerceAtLeast(0L)),
             if (cash?.updatedAt == atMs) left else cash?.updatedAt ?: left
@@ -93,7 +94,7 @@ class SampleCashRepository(balance: CashBalance?) : CashRepository {
         changes.update { it + change }
         state.value = CashBalance(
             Money.ofMinor(((cash?.amount?.minor ?: 0L) + change.delta.minor).coerceAtLeast(0L)),
-            maxOf(cash?.updatedAt ?: 0L, change.atMs)
+            if (change.atMs == CashEdit.LEGACY_AT) cash?.updatedAt ?: 0L else maxOf(cash?.updatedAt ?: 0L, change.atMs)
         )
     }
 }
