@@ -156,11 +156,13 @@ class CapitalHistoryViewModel(
 
     /** Pinch: [factor] above 1 brings closer, around [focus] (0..1 across the window). A small step waits for the next. */
     fun zoom(factor: Double, focus: Double) = move { w, b ->
-        val total = zoomRest * factor
-        val next = ChartWindow.zoom(w, b, total, focus)
-        zoomRest = if (next.days == w.days) total else 1.0
-        next
+        val step = ChartWindow.zoomStep(w, b, zoomRest, factor, focus)
+        zoomRest = step.rest
+        step.window
     }
+
+    /** A new two-finger gesture: nothing is left over from the one before. */
+    fun startGesture() = forget()
 
     /** Two fingers: by [shiftFraction] of the window (positive — to later days); the part of a day is kept. */
     fun pan(shiftFraction: Double) = move { w, b -> shiftDays(w, b, shiftFraction * w.days) }

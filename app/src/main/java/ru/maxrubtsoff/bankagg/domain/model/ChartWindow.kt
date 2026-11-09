@@ -32,6 +32,20 @@ object ChartWindow {
         return fit(DaySpan(from, from.plusDays(len - 1L)), bounds)
     }
 
+    /** The window after a pinch step and the part of the pinch still waiting for a whole day of length. */
+    data class ZoomStep(val window: DaySpan, val rest: Double)
+
+    /**
+     * A pinch step on top of the [rest] the earlier ones left: a small one waits until the length changes by a day.
+     * A window against its limit (the shortest, or the whole period) keeps no rest — the way back starts at once.
+     */
+    fun zoomStep(window: DaySpan, bounds: DaySpan, rest: Double, factor: Double, focus: Double): ZoomStep {
+        val total = rest * factor
+        val next = zoom(window, bounds, total, focus)
+        val limit = (total > 1.0 && next.days == minOf(MIN_DAYS, bounds.days)) || (total < 1.0 && next.days == bounds.days)
+        return ZoomStep(next, if (next.days == window.days && !limit) total else 1.0)
+    }
+
     /** [window] moved by [shiftFraction] of its own length (positive — to later days); the length stays. */
     fun pan(window: DaySpan, bounds: DaySpan, shiftFraction: Double): DaySpan =
         shift(window, bounds, Math.round(shiftFraction * window.days).toInt())

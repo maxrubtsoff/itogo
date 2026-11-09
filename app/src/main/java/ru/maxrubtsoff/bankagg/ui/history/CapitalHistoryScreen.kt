@@ -349,7 +349,7 @@ private fun Hero(
                     marks = u.marks, markColor = { it.color() },
                     range = if (selected != null && span != null && span.days > 1) (selected - 1)..selected else null,
                     height = lerp(150.dp, 64.dp, t), labels = t < 0.02f, axisShown = { 1f - collapse.fraction },
-                    onZoom = { f, focus -> vm.zoom(f.toDouble(), focus.toDouble()) }, onPan = { vm.pan(it.toDouble()) },
+                    onZoom = { f, focus -> vm.zoom(f.toDouble(), focus.toDouble()) }, onPan = { vm.pan(it.toDouble()) }, onGestureStart = vm::startGesture,
                     growKey = u.period to u.part
                 )
                 Column(Modifier.collapseHeight { 1f - collapse.fraction }) {

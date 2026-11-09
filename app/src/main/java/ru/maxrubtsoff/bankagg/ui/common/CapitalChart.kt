@@ -102,6 +102,8 @@ fun CapitalChart(
     axisShown: () -> Float = { 1f },
     onZoom: ((factor: Float, focusFraction: Float) -> Unit)? = null,
     onPan: ((shiftFraction: Float) -> Unit)? = null,
+    /** A new touch begins: what the owner of the window kept from a pinch before is dropped. */
+    onGestureStart: () -> Unit = {},
     growKey: Any? = points
 ) {
     // The band of days a point stands for (F-46) comes in on Motion.NORMAL and goes out the same way.
@@ -112,6 +114,7 @@ fun CapitalChart(
     val released by rememberUpdatedState(onRelease)
     val zoomed by rememberUpdatedState(onZoom)
     val panned by rememberUpdatedState(onPan)
+    val gestureStarted by rememberUpdatedState(onGestureStart)
     var lastTouched by remember { mutableStateOf<Int?>(null) }
     val grow = remember { Animatable(0f) }
     LaunchedEffect(growKey) {
@@ -155,6 +158,7 @@ fun CapitalChart(
                     if (zoomed == null && panned == null) return@pointerInput
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        gestureStarted()
                         do {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             if (event.changes.count { it.pressed } >= 2 && size.width > 0) {

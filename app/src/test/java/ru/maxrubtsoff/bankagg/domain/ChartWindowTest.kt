@@ -87,6 +87,30 @@ class ChartWindowTest {
         assertNull(ChartWindow.fractions(null, b))
     }
 
+    @Test fun zoomOutAtBoundThenInNarrowsAtOnce() {
+        // The window is the whole period: pinching out further keeps nothing for the way back.
+        var step = ChartWindow.zoomStep(bounds, bounds, 1.0, 0.5, 0.5)
+        assertEquals(bounds, step.window)
+        assertEquals(1.0, step.rest, 0.0)
+        step = ChartWindow.zoomStep(step.window, bounds, step.rest, 1.5, 0.5)
+        assertTrue(step.window.days < bounds.days)
+    }
+
+    @Test fun zoomInAtMinThenOutWidensAtOnce() {
+        val min = DaySpan(start.plusDays(10), start.plusDays(10 + ChartWindow.MIN_DAYS - 1L))
+        var step = ChartWindow.zoomStep(min, bounds, 1.0, 3.0, 0.5)
+        assertEquals(1.0, step.rest, 0.0)
+        step = ChartWindow.zoomStep(step.window, bounds, step.rest, 0.5, 0.5)
+        assertTrue(step.window.days > ChartWindow.MIN_DAYS)
+    }
+
+    @Test fun smallStepsAddUp() {
+        val w = span(100)
+        val a = ChartWindow.zoomStep(w, bounds, 1.0, 1.001, 0.5)
+        assertEquals(w, a.window)
+        assertTrue(a.rest > 1.0)
+    }
+
     @Test fun visibleNullWindowIsWhole() {
         val full = series(50)
         assertEquals(full, ChartWindow.visible(full, null))
