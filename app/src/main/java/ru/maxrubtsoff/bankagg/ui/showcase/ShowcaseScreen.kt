@@ -75,6 +75,8 @@ import ru.maxrubtsoff.bankagg.ui.common.LinkLine
 import ru.maxrubtsoff.bankagg.ui.common.WasBecomeLine
 import ru.maxrubtsoff.bankagg.ui.common.HistoryLine
 import ru.maxrubtsoff.bankagg.ui.common.SpendCard
+import ru.maxrubtsoff.bankagg.ui.common.ChartOverview
+import ru.maxrubtsoff.bankagg.ui.common.Edge
 import ru.maxrubtsoff.bankagg.domain.model.BankSpend
 import ru.maxrubtsoff.bankagg.domain.model.MonthSpending
 import java.time.YearMonth
@@ -366,6 +368,17 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             HistoryLine("Сбер", "Проценты", 21_000, RowKind.GO, nested = true)
             HistoryLine("Списания", "4 операции", -320_000, RowKind.SUM)
             HistoryLine("Пополнение", "Иван", 500_000, RowKind.SUM, highlighted = true)
+            Caption("Мини-карта окна графика (ChartOverview)")
+            var overview by remember { mutableStateOf(20..50) }
+            ChartOverview(
+                (0..80).map { (it * it / 8 + (it % 7) * 5).toLong() }, overview,
+                onPan = { f -> val d = (f * 80).toInt(); overview = (overview.first + d).coerceIn(0, 80 - overview.count() + 1).let { it..it + overview.count() - 1 } },
+                onResize = { e, f ->
+                    val i = (f * 80).toInt()
+                    overview = if (e == Edge.START) i.coerceAtMost(overview.last - 7)..overview.last else overview.first..i.coerceAtLeast(overview.first + 7)
+                },
+                onJump = { f -> val w = overview.count(); val s = ((f * 80).toInt() - w / 2).coerceIn(0, 80 - w + 1); overview = s..s + w - 1 }
+            )
             Caption("Траты за месяц (SpendCard)")
             SpendCardDemo()
             Caption("Полоса «смотри сюда» (accentBar)")

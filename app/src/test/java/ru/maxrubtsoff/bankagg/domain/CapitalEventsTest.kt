@@ -330,6 +330,12 @@ class CapitalEventsTest {
         assertTrue(e.isEmpty())
     }
 
+    @Test fun withinUpperBound() {
+        val e = eventsOf(op("1", "a", -100, TransactionKind.EXPENSE, day = d0), op("2", "a", -200, TransactionKind.EXPENSE, day = d1))
+        assertEquals(1, CapitalEvents.within(e, null, null, to = d0).size)
+        assertEquals(2, CapitalEvents.within(e, null, null).size)
+    }
+
     @Test fun transferToStrangerStays() {
         val e = eventsOf(op("1", "a", -5000, TransactionKind.TRANSFER, who = "Иван"))
         assertEquals(1, e.size)

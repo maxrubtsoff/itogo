@@ -434,8 +434,8 @@ object CapitalEvents {
         target !is HistoryTarget.Deposit || deposits.any { it.id == target.id }
 
     /** Events of [period] (and of one [part], null — all), newest first. */
-    fun within(events: List<HistoryEvent>, from: LocalDate?, part: CapitalPart?): List<HistoryEvent> =
-        events.filter { (from == null || !it.date.isBefore(from)) && (part == null || it.part == part) }
+    fun within(events: List<HistoryEvent>, from: LocalDate?, part: CapitalPart?, to: LocalDate? = null): List<HistoryEvent> =
+        events.filter { (from == null || !it.date.isBefore(from)) && (to == null || !it.date.isAfter(to)) && (part == null || it.part == part) }
 
     /** Months with their events, newest first; the delta of each month comes from [points]. */
     fun byMonth(events: List<HistoryEvent>, points: List<CapitalPoint>, part: CapitalPart?): List<MonthEvents> =

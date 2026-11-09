@@ -48,6 +48,8 @@ import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import ru.maxrubtsoff.bankagg.domain.repository.Today
 import java.time.LocalDate
 import java.time.YearMonth
+import ru.maxrubtsoff.bankagg.domain.model.ChartWindow
+import ru.maxrubtsoff.bankagg.domain.model.DaySpan
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.BankSpend
 import ru.maxrubtsoff.bankagg.domain.model.MonthSpending
@@ -100,7 +102,11 @@ data class HistoryUi(
     /** Rows by month, for a year and for everything (F-48). */
     val months: List<HistoryMonth>,
     /** The spending card of the «Счета» page (F-58); null on other pages and when there is nothing spent yet. */
-    val spending: SpendUi? = null
+    val spending: SpendUi? = null,
+    /** The window the person zoomed to (U-77); null — the whole period. */
+    val window: DaySpan? = null,
+    /** The whole period for the little map under the chart (thinned like the chart). */
+    val overview: List<DayValue> = emptyList()
 ) {
     val drawable: Boolean get() = CapitalHistory.drawable(series)
 }
@@ -125,7 +131,34 @@ class CapitalHistoryViewModel(
     private val _bank = MutableStateFlow<BankBrand?>(null)
     private val _includeTransfers = settings.spendWithTransfers
 
-    fun setPeriod(period: HistoryPeriod) { _period.value = period }
+    /** A period — even the same one — shows all of it again (U-77). */
+    fun setPeriod(period: HistoryPeriod) { _window.value = null; _period.value = period }
+
+    private val _window = MutableStateFlow<DaySpan?>(null)
+
+    /** The days of the period on the chart now; the window cannot go out of them. */
+    @Volatile private var bounds: DaySpan? = null
+
+    private fun move(f: (DaySpan, DaySpan) -> DaySpan) {
+        val b = bounds ?: return
+        val next = f(_window.value ?: b, b)
+        _window.value = if (ChartWindow.isWhole(next, b)) null else next
+    }
+
+    /** Pinch: [factor] above 1 brings closer, around [focus] (0..1 across the window). */
+    fun zoom(factor: Double, focus: Double) = move { w, b -> ChartWindow.zoom(w, b, factor, focus) }
+
+    /** Two fingers: by [shiftFraction] of the window (positive — to later days). */
+    fun pan(shiftFraction: Double) = move { w, b -> ChartWindow.pan(w, b, shiftFraction) }
+
+    /** The little map: the window dragged by [shiftFraction] of the whole period. */
+    fun panOverview(shiftFraction: Double) = move { w, b -> ChartWindow.shift(w, b, Math.round(shiftFraction * b.days).toInt()) }
+
+    /** The little map: an edge pulled to [fraction] of the whole period. */
+    fun resizeWindow(startEdge: Boolean, fraction: Double) = move { w, b -> ChartWindow.resize(w, b, startEdge, fraction) }
+
+    /** The little map: a touch outside the window carries it there. */
+    fun centerWindow(fraction: Double) = move { w, b -> ChartWindow.centerAt(w, b, fraction) }
 
     /** The route's part, once; null — the total. */
     fun open(part: CapitalPart?) { _part.value = part }
@@ -147,6 +180,7 @@ class CapitalHistoryViewModel(
         .combine(cash.observe()) { i, c -> i.copy(cash = c) }
         .combine(cash.observeChanges()) { i, c -> i.copy(cashChanges = c) }
         .combine(rates.observeAll()) { i, r -> i.copy(rates = r) }
+        .combine(_window) { i, w -> i.copy(window = w) }
         .combine(ownMarks.observe()) { i, m -> i.copy(ownMarks = m) }
         .combine(combine(_spendMonth, _bank, _includeTransfers) { m, b, t -> SpendChoice(m, b, t) }) { i, c -> i.copy(choice = c) }
 
@@ -157,21 +191,25 @@ class CapitalHistoryViewModel(
         val long = period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL
         val pages = CapitalHistory.sections(kept).map { p ->
             val full = CapitalHistory.series(i.days, period, day, p)
-            val allShown = CapitalEvents.within(all, CapitalHistory.startOf(period, i.days, day), p)
+            val whole = ChartWindow.bounds(full)
+            bounds = whole
+            val window = i.window?.takeIf { whole != null && !ChartWindow.isWhole(it, whole) }
+            val visible = ChartWindow.visible(full, window)
+            val allShown = CapitalEvents.within(all, window?.from ?: CapitalHistory.startOf(period, i.days, day), p, window?.to)
             val spending = if (p == CapitalPart.ACCOUNTS) spendUi(i, own, day) else null
             val bank = spending?.bank
             // F-58: the list narrows to one bank; the chart and its dots stay.
             val shown = if (bank == null) allShown else allShown.filter { it.source == bank }
-            // A year and all-time are drawn by weeks: a point stands for the week behind it (F-46).
-            val drawn = CapitalHistory.thin(if (long) CapitalHistory.weekly(full) else full)
+            // The chart: days inside a narrow window, weeks in a wide one (U-77).
+            val drawn = ChartWindow.drawn(visible)
             HistoryUi(
                 period = period, part = p, kept = kept, today = day,
-                series = drawn, change = CapitalHistory.change(full),
+                series = drawn, change = CapitalHistory.change(visible),
                 events = shown,
                 marks = ChartMarks.of(drawn, allShown, p, CapitalHistory.average(CapitalHistory.series(i.days, period, day, CapitalPart.ACCOUNTS))),
                 days = if (long) emptyList() else HistoryRows.days(shown, p),
                 months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList(),
-                spending = spending
+                spending = spending, window = window, overview = ChartWindow.drawn(full)
             )
         }
         HistoryScreenUi(period, part, kept, day, pages, i.deps.map { it.id }.toSet(), features.showCaptureLog)
@@ -249,7 +287,8 @@ class CapitalHistoryViewModel(
         val rates: List<FxRate>,
         val cashChanges: List<CashChange>,
         val ownMarks: Set<String>,
-        val choice: SpendChoice = SpendChoice(null, null, false)
+        val choice: SpendChoice = SpendChoice(null, null, false),
+        val window: DaySpan? = null
     )
 
     private data class SpendChoice(val month: YearMonth?, val bank: BankBrand?, val transfers: Boolean)
