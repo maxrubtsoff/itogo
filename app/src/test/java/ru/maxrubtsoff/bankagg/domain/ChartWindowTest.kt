@@ -78,10 +78,13 @@ class ChartWindowTest {
         assertEquals(w.from, d.first().date); assertEquals(w.to, d.last().date)
     }
 
-    @Test fun indexRangeOfWindow() {
-        val full = series(30)
-        assertEquals(5..9, ChartWindow.indexRange(full, DaySpan(start.plusDays(5), start.plusDays(9))))
-        assertNull(ChartWindow.indexRange(full, DaySpan(start.plusDays(40), start.plusDays(50))))
+    @Test fun fractionsAreByDaysNotByThinnedPoints() {
+        // A narrow window of a long period: by days it is a sliver at its place, whatever the thinned points are.
+        val b = span(1001)
+        val f = ChartWindow.fractions(DaySpan(start.plusDays(500), start.plusDays(530)), b)!!
+        assertEquals(0.5f, f.start, 0.0001f)
+        assertEquals(0.53f, f.endInclusive, 0.0001f)
+        assertNull(ChartWindow.fractions(null, b))
     }
 
     @Test fun visibleNullWindowIsWhole() {

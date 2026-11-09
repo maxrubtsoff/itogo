@@ -298,17 +298,26 @@ private fun Hero(
                 // never changes the height of the hero: the chart stays where it is under the finger (U-67).
                 Spacer(Modifier.height(2.dp))
                 val picked = at != null && span != null
-                Text(
-                    when {
-                        picked -> if (span!!.days == 1) RuDays.dayWeekday(at!!.date, u.today) else RuDays.span(span.from, span.to, u.today)
-                        // A window of its own: its days stand on the line of the change, below (U-77).
-                        u.window != null -> " "
-                        change.deltaMinor != 0L -> "с ${RuDays.dayMonth(change.from.date, u.today)}"
-                        else -> " "
-                    },
-                    style = MaterialTheme.typography.labelMedium, color = if (picked) Slitok.Brass2 else Slitok.Muted,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
+                if (!picked && change.deltaMinor != 0L) {
+                    // The change and where it counts from are one line: «+96 300 ₽ · +8,8 % с 10 октября» / the window's days (U-77).
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                        MoneyText(
+                            deltaText(change), Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium,
+                            color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
+                            compact = deltaText(change, compact = true)
+                        )
+                        Text(
+                            u.window?.let { RuDays.span(it.from, it.to, u.today) } ?: "с ${RuDays.dayMonth(change.from.date, u.today)}",
+                            style = MaterialTheme.typography.bodySmall, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
+                    Text(
+                        if (picked) { if (span!!.days == 1) RuDays.dayWeekday(at!!.date, u.today) else RuDays.span(span.from, span.to, u.today) } else " ",
+                        style = MaterialTheme.typography.labelMedium, color = if (picked) Slitok.Brass2 else Slitok.Muted,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
                 // What the point moved, and the period's change: folds away in the strip.
                 Column(Modifier.collapseHeight { 1f - collapse.fraction }.heightIn(min = 24.dp)) {
                     if (picked) {
@@ -332,21 +341,6 @@ private fun Hero(
                             if (w == null) "без изменений ${u.period.spanWord}" else "без изменений · " + RuDays.span(w.from, w.to, u.today),
                             style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
-                    } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-                            MoneyText(
-                                deltaText(change), Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium,
-                                color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
-                                compact = deltaText(change, compact = true)
-                            )
-                            // The days of the window sit right after the change on the same line (U-77).
-                            if (u.window != null) {
-                                Text(
-                                    RuDays.span(u.window.from, u.window.to, u.today), style = MaterialTheme.typography.bodySmall,
-                                    color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
                     }
                 }
                 Spacer(Modifier.height(lerp(12.dp, 6.dp, t)))
@@ -360,8 +354,10 @@ private fun Hero(
                 )
                 Column(Modifier.collapseHeight { 1f - collapse.fraction }) {
                     Spacer(Modifier.height(4.dp))
+                    val overviewPoints = remember(u.overview) { u.overview.map { it.minor } }
+                    val overviewFrame = remember(u.window, u.bounds) { ChartWindow.fractions(u.window, u.bounds) }
                     ChartOverview(
-                        u.overview.map { it.minor }, u.window?.let { ChartWindow.indexRange(u.overview, it) },
+                        overviewPoints, overviewFrame,
                         onPan = { vm.panOverview(it.toDouble()) },
                         onResize = { edge, f -> vm.resizeWindow(edge == Edge.START, f.toDouble()) },
                         onJump = { vm.centerWindow(it.toDouble()) },

@@ -32,13 +32,13 @@ enum class Edge { START, END }
  * The little map of the whole period under the history chart (U-77): the line of everything on `Inset` and the
  * window in a brass frame with a handle at each edge. A finger on the window moves it ([onPan], the share of the
  * whole map per move), on a handle pulls that edge ([onResize], where across the map the finger is), outside the
- * window carries it there ([onJump], where the middle should be) and goes on moving it. [window] is the indexes of
- * [points] inside the frame; null — all of them. The bar is 28 dp, the touch 44 dp; the pager does not see the touch.
+ * window carries it there ([onJump], where the middle should be) and goes on moving it. [window] is where the frame
+ * stands across the map (0..1, by days, not by the thinned points); null — all of it. The bar is 28 dp, the touch 44 dp; the pager does not see the touch.
  */
 @Composable
 fun ChartOverview(
     points: List<Long>,
-    window: IntRange?,
+    window: ClosedFloatingPointRange<Float>?,
     onPan: (shiftFraction: Float) -> Unit,
     onResize: (edge: Edge, fraction: Float) -> Unit,
     onJump: (centerFraction: Float) -> Unit,
@@ -50,19 +50,18 @@ fun ChartOverview(
     val resize by rememberUpdatedState(onResize)
     val jump by rememberUpdatedState(onJump)
     val n = points.size
-    val frame by rememberUpdatedState(window ?: 0..(n - 1).coerceAtLeast(0))
+    val frame by rememberUpdatedState(window ?: 0f..1f)
     Canvas(
         modifier.fillMaxWidth().height(44.dp).padding(vertical = 8.dp)
             .semantics { contentDescription = description }
             .pointerInput(n) {
                 if (n < 2) return@pointerInput
                 val slop = 22.dp.toPx()
-                fun xOf(i: Int) = i.toFloat() / (n - 1) * size.width
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val w = size.width.toFloat()
-                    val left = xOf(frame.first)
-                    val right = xOf(frame.last)
+                    val left = frame.start * w
+                    val right = frame.endInclusive * w
                     val dx = down.position.x
                     // 0 — the left handle, 1 — the right one, 2 — the window itself.
                     val mode = when {
@@ -101,8 +100,8 @@ fun ChartOverview(
         val line = Path()
         points.indices.forEach { i -> if (i == 0) line.moveTo(x(i), y(i)) else line.lineTo(x(i), y(i)) }
         drawPath(line, color, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        val a = x(frame.first)
-        val b = x(frame.last)
+        val a = frame.start * size.width
+        val b = frame.endInclusive * size.width
         val corner = CornerRadius(6.dp.toPx())
         drawRoundRect(Slitok.BrassTint, Offset(a, 0f), Size(b - a, size.height), corner)
         drawRoundRect(Slitok.BrassEdge, Offset(a, 0f), Size(b - a, size.height), corner, style = Stroke(1.5.dp.toPx()))

@@ -68,11 +68,11 @@ object ChartWindow {
     fun drawn(visible: List<DayValue>): List<DayValue> =
         CapitalHistory.thin(if (visible.size > WEEKLY_AFTER_DAYS) CapitalHistory.weekly(visible) else visible)
 
-    /** The points of [series] inside [window], as indexes for the little map; null — nothing inside. */
-    fun indexRange(series: List<DayValue>, window: DaySpan): IntRange? {
-        val a = series.indexOfFirst { !it.date.isBefore(window.from) }
-        val b = series.indexOfLast { !it.date.isAfter(window.to) }
-        return if (a < 0 || b < a) null else a..b
+    /** Where [window] stands across [bounds] by days (0..1, both ends); null — the whole period. */
+    fun fractions(window: DaySpan?, bounds: DaySpan?): ClosedFloatingPointRange<Float>? {
+        if (window == null || bounds == null || bounds.days < 2) return null
+        val span = (bounds.days - 1).toFloat()
+        return (daysBetween(bounds.from, window.from) / span).coerceIn(0f, 1f)..(daysBetween(bounds.from, window.to) / span).coerceIn(0f, 1f)
     }
 
     private operator fun DaySpan.contains(v: DayValue) = v.date in this

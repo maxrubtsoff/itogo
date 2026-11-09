@@ -369,15 +369,23 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             HistoryLine("Списания", "4 операции", -320_000, RowKind.SUM)
             HistoryLine("Пополнение", "Иван", 500_000, RowKind.SUM, highlighted = true)
             Caption("Мини-карта окна графика (ChartOverview)")
-            var overview by remember { mutableStateOf(20..50) }
+            var overview by remember { mutableStateOf(0.25f..0.6f) }
             ChartOverview(
                 (0..80).map { (it * it / 8 + (it % 7) * 5).toLong() }, overview,
-                onPan = { f -> val d = (f * 80).toInt(); overview = (overview.first + d).coerceIn(0, 80 - overview.count() + 1).let { it..it + overview.count() - 1 } },
-                onResize = { e, f ->
-                    val i = (f * 80).toInt()
-                    overview = if (e == Edge.START) i.coerceAtMost(overview.last - 7)..overview.last else overview.first..i.coerceAtLeast(overview.first + 7)
+                onPan = { f ->
+                    val w = overview.endInclusive - overview.start
+                    val from = (overview.start + f).coerceIn(0f, 1f - w)
+                    overview = from..from + w
                 },
-                onJump = { f -> val w = overview.count(); val s = ((f * 80).toInt() - w / 2).coerceIn(0, 80 - w + 1); overview = s..s + w - 1 }
+                onResize = { e, f ->
+                    overview = if (e == Edge.START) f.coerceAtMost(overview.endInclusive - 0.1f)..overview.endInclusive
+                    else overview.start..f.coerceAtLeast(overview.start + 0.1f)
+                },
+                onJump = { f ->
+                    val w = overview.endInclusive - overview.start
+                    val from = (f - w / 2).coerceIn(0f, 1f - w)
+                    overview = from..from + w
+                }
             )
             Caption("Траты за месяц (SpendCard)")
             SpendCardDemo()

@@ -92,7 +92,8 @@ fun SwitchRow(
         icon?.invoke()
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg)
-            if (hint != null) Text(hint, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
+            // A sum in the hint hides with the others (a plain line is left as it is).
+            if (hint != null) MoneyText(hint, style = MaterialTheme.typography.bodySmall, color = Slitok.Muted)
         }
         SlitokSwitch(checked, onChange = null, enabled = enabled)
     }

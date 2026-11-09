@@ -106,7 +106,9 @@ data class HistoryUi(
     /** The window the person zoomed to (U-77); null — the whole period. */
     val window: DaySpan? = null,
     /** The whole period for the little map under the chart (thinned like the chart). */
-    val overview: List<DayValue> = emptyList()
+    val overview: List<DayValue> = emptyList(),
+    /** The days of the whole period: what the window may move in; null — no history yet. */
+    val bounds: DaySpan? = null
 ) {
     val drawable: Boolean get() = CapitalHistory.drawable(series)
 }
@@ -132,33 +134,52 @@ class CapitalHistoryViewModel(
     private val _includeTransfers = settings.spendWithTransfers
 
     /** A period — even the same one — shows all of it again (U-77). */
-    fun setPeriod(period: HistoryPeriod) { _window.value = null; _period.value = period }
+    fun setPeriod(period: HistoryPeriod) { forget(); _window.value = null; _period.value = period }
 
     private val _window = MutableStateFlow<DaySpan?>(null)
 
-    /** The days of the period on the chart now; the window cannot go out of them. */
-    @Volatile private var bounds: DaySpan? = null
+    /** The days of the period on the chart now (the state knows them; they are not kept on the side). */
+    private val bounds: DaySpan? get() = state.value?.pages?.firstOrNull()?.bounds
+
+    // What a gesture gave beyond whole days / whole days of length is kept for the next step, not lost.
+    private var panDays = 0.0
+    private var zoomRest = 1.0
 
     private fun move(f: (DaySpan, DaySpan) -> DaySpan) {
         val b = bounds ?: return
-        val next = f(_window.value ?: b, b)
+        val now = _window.value?.takeIf { !it.from.isBefore(b.from) && !it.to.isAfter(b.to) } ?: b
+        val next = f(now, b)
         _window.value = if (ChartWindow.isWhole(next, b)) null else next
     }
 
-    /** Pinch: [factor] above 1 brings closer, around [focus] (0..1 across the window). */
-    fun zoom(factor: Double, focus: Double) = move { w, b -> ChartWindow.zoom(w, b, factor, focus) }
+    private fun forget() { panDays = 0.0; zoomRest = 1.0 }
 
-    /** Two fingers: by [shiftFraction] of the window (positive — to later days). */
-    fun pan(shiftFraction: Double) = move { w, b -> ChartWindow.pan(w, b, shiftFraction) }
+    /** Pinch: [factor] above 1 brings closer, around [focus] (0..1 across the window). A small step waits for the next. */
+    fun zoom(factor: Double, focus: Double) = move { w, b ->
+        val total = zoomRest * factor
+        val next = ChartWindow.zoom(w, b, total, focus)
+        zoomRest = if (next.days == w.days) total else 1.0
+        next
+    }
+
+    /** Two fingers: by [shiftFraction] of the window (positive — to later days); the part of a day is kept. */
+    fun pan(shiftFraction: Double) = move { w, b -> shiftDays(w, b, shiftFraction * w.days) }
 
     /** The little map: the window dragged by [shiftFraction] of the whole period. */
-    fun panOverview(shiftFraction: Double) = move { w, b -> ChartWindow.shift(w, b, Math.round(shiftFraction * b.days).toInt()) }
+    fun panOverview(shiftFraction: Double) = move { w, b -> shiftDays(w, b, shiftFraction * b.days) }
+
+    private fun shiftDays(w: DaySpan, b: DaySpan, days: Double): DaySpan {
+        val total = panDays + days
+        val whole = total.toInt()
+        panDays = total - whole
+        return ChartWindow.shift(w, b, whole)
+    }
 
     /** The little map: an edge pulled to [fraction] of the whole period. */
-    fun resizeWindow(startEdge: Boolean, fraction: Double) = move { w, b -> ChartWindow.resize(w, b, startEdge, fraction) }
+    fun resizeWindow(startEdge: Boolean, fraction: Double) { forget(); move { w, b -> ChartWindow.resize(w, b, startEdge, fraction) } }
 
     /** The little map: a touch outside the window carries it there. */
-    fun centerWindow(fraction: Double) = move { w, b -> ChartWindow.centerAt(w, b, fraction) }
+    fun centerWindow(fraction: Double) { forget(); move { w, b -> ChartWindow.centerAt(w, b, fraction) } }
 
     /** The route's part, once; null — the total. */
     fun open(part: CapitalPart?) { _part.value = part }
@@ -180,23 +201,42 @@ class CapitalHistoryViewModel(
         .combine(cash.observe()) { i, c -> i.copy(cash = c) }
         .combine(cash.observeChanges()) { i, c -> i.copy(cashChanges = c) }
         .combine(rates.observeAll()) { i, r -> i.copy(rates = r) }
-        .combine(_window) { i, w -> i.copy(window = w) }
         .combine(ownMarks.observe()) { i, m -> i.copy(ownMarks = m) }
-        .combine(combine(_spendMonth, _bank, _includeTransfers) { m, b, t -> SpendChoice(m, b, t) }) { i, c -> i.copy(choice = c) }
 
-    val state: StateFlow<HistoryScreenUi?> = combine(inputs, settings.features, _period, _part, today.date) { i, features, period, part, day ->
-        val kept = CapitalPart.entries.filter { it in features.capitalParts }
-        val own = OwnTransfers.ids(i.tx, i.accounts, i.ownMarks, java.time.ZoneId.systemDefault())
+    /** What the data alone gives: the heavy part, worked out once per change of data, not per touch of a chip or a window. */
+    private class Base(
+        val i: Inputs, val day: LocalDate, val all: List<HistoryEvent>, val spend: List<MonthSpending>?, val transfers: Boolean
+    )
+
+    private val base: Flow<Base> = combine(inputs, today.date, _includeTransfers) { i, day, transfers ->
+        val zone = java.time.ZoneId.systemDefault()
+        val own = OwnTransfers.ids(i.tx, i.accounts, i.ownMarks, zone)
         val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day, rates = i.rates, cashChanges = i.cashChanges, ownIds = own)
+        val spend = if (Spending.hasAny(i.tx, i.accounts, own)) {
+            Spending.window(day).map { Spending.month(i.tx, i.accounts, own, it, transfers, zone) }
+        } else null
+        Base(i, day, all, spend, transfers)
+    }
+
+    /** What the person chose on the screen: window, month of the card, bank. */
+    private val picks = combine(_window, _spendMonth, _bank) { w, m, b -> Picks(w, m, b) }
+
+    val state: StateFlow<HistoryScreenUi?> = combine(base, settings.features, _period, _part, picks) { base, features, period, part, pick ->
+        val i = base.i
+        val day = base.day
+        val kept = CapitalPart.entries.filter { it in features.capitalParts }
+        val all = base.all
         val long = period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL
         val pages = CapitalHistory.sections(kept).map { p ->
             val full = CapitalHistory.series(i.days, period, day, p)
             val whole = ChartWindow.bounds(full)
-            bounds = whole
-            val window = i.window?.takeIf { whole != null && !ChartWindow.isWhole(it, whole) }
+            // A window out of the days of the period (it changed under it) is no window.
+            val window = pick.window?.takeIf {
+                whole != null && !ChartWindow.isWhole(it, whole) && !it.from.isBefore(whole.from) && !it.to.isAfter(whole.to)
+            }
             val visible = ChartWindow.visible(full, window)
             val allShown = CapitalEvents.within(all, window?.from ?: CapitalHistory.startOf(period, i.days, day), p, window?.to)
-            val spending = if (p == CapitalPart.ACCOUNTS) spendUi(i, own, day) else null
+            val spending = if (p == CapitalPart.ACCOUNTS) spendUi(base, pick) else null
             val bank = spending?.bank
             // F-58: the list narrows to one bank; the chart and its dots stay.
             val shown = if (bank == null) allShown else allShown.filter { e -> e.source == bank || e.parts.any { it.source == bank } }
@@ -209,20 +249,17 @@ class CapitalHistoryViewModel(
                 marks = ChartMarks.of(drawn, allShown, p, CapitalHistory.average(CapitalHistory.series(i.days, period, day, CapitalPart.ACCOUNTS))),
                 days = if (long) emptyList() else HistoryRows.days(shown, p),
                 months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList(),
-                spending = spending, window = window, overview = ChartWindow.drawn(full)
+                spending = spending, window = window, overview = ChartWindow.drawn(full), bounds = whole
             )
         }
         HistoryScreenUi(period, part, kept, day, pages, i.deps.map { it.id }.toSet(), features.showCaptureLog)
     }.stateIn<HistoryScreenUi?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private fun spendUi(i: Inputs, own: Set<String>, day: LocalDate): SpendUi? {
-        if (!Spending.hasAny(i.tx, i.accounts, own)) return null
-        val zone = java.time.ZoneId.systemDefault()
-        val window = Spending.window(day)
-        val months = window.map { Spending.month(i.tx, i.accounts, own, it, i.choice.transfers, zone) }
-        val selected = window.indexOf(i.choice.month).takeIf { it >= 0 } ?: window.lastIndex
-        val bank = i.choice.bank
-        return SpendUi(months, selected, i.choice.transfers, bank, bank?.let { b -> months[selected].byBank.firstOrNull { it.brand == b } })
+    private fun spendUi(base: Base, pick: Picks): SpendUi? {
+        val months = base.spend ?: return null
+        val selected = months.indexOfFirst { it.month == pick.month }.takeIf { it >= 0 } ?: months.lastIndex
+        val bank = pick.bank
+        return SpendUi(months, selected, base.transfers, bank, bank?.let { b -> months[selected].byBank.firstOrNull { it.brand == b } })
     }
 
     /** The sheet of an operation (F-51): everything it shows besides the line. */
@@ -286,10 +323,8 @@ class CapitalHistoryViewModel(
         val cash: CashBalance?,
         val rates: List<FxRate>,
         val cashChanges: List<CashChange>,
-        val ownMarks: Set<String>,
-        val choice: SpendChoice = SpendChoice(null, null, false),
-        val window: DaySpan? = null
+        val ownMarks: Set<String>
     )
 
-    private data class SpendChoice(val month: YearMonth?, val bank: BankBrand?, val transfers: Boolean)
+    private data class Picks(val window: DaySpan?, val month: YearMonth?, val bank: BankBrand?)
 }

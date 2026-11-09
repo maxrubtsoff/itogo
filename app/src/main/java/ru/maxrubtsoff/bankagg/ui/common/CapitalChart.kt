@@ -112,7 +112,6 @@ fun CapitalChart(
     val released by rememberUpdatedState(onRelease)
     val zoomed by rememberUpdatedState(onZoom)
     val panned by rememberUpdatedState(onPan)
-    val pointCount by rememberUpdatedState(points.size)
     var lastTouched by remember { mutableStateOf<Int?>(null) }
     val grow = remember { Animatable(0f) }
     LaunchedEffect(growKey) {
@@ -156,19 +155,15 @@ fun CapitalChart(
                     if (zoomed == null && panned == null) return@pointerInput
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                        var zoomAcc = 1f
-                        var panAcc = 0f
                         do {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             if (event.changes.count { it.pressed } >= 2 && size.width > 0) {
-                                // Small steps add up: a window of days moves by whole days.
-                                zoomAcc *= event.calculateZoom()
-                                panAcc += -event.calculatePan().x / size.width
+                                // Every step goes on as it is: the one who owns the window adds the small ones up (whole days).
+                                val zoom = event.calculateZoom()
                                 val c = event.calculateCentroid()
-                                if (Math.abs(zoomAcc - 1f) >= ZOOM_STEP && c.isSpecified) {
-                                    zoomed?.invoke(zoomAcc, (c.x / size.width).coerceIn(0f, 1f)); zoomAcc = 1f
-                                }
-                                if (Math.abs(panAcc) >= 1f / pointCount.coerceAtLeast(1)) { panned?.invoke(panAcc); panAcc = 0f }
+                                if (zoom != 1f && c.isSpecified) zoomed?.invoke(zoom, (c.x / size.width).coerceIn(0f, 1f))
+                                val pan = event.calculatePan().x
+                                if (pan != 0f) panned?.invoke(-pan / size.width)
                                 event.changes.forEach { if (it.positionChanged()) it.consume() }
                                 // The scrubbing finger is not a pick any more, and nothing is released.
                                 lastTouched = null
@@ -280,9 +275,6 @@ private fun plotOf(points: List<Long>, width: Float, height: Float, dp: Float, m
 }
 
 private const val LABEL_PAD_DP = 6
-
-/** A pinch smaller than this is kept and added to the next one (U-77). */
-private const val ZOOM_STEP = 0.03f
 private const val LABEL_HEIGHT_DP = 20
 
 /** The plate of a sum set on the chart: [plate] is its rectangle in pixels. */
