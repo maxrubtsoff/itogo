@@ -365,4 +365,11 @@ class NotificationParserTest {
         assertNull(NotificationParser.parse(null, "Счёт на оплату 1 200 ₽ ЖКХ"))
         assertNull(NotificationParser.parse(null, "К оплате 1 200 ₽ до 25 числа"))
     }
+
+    // B-128: «до N ₽» with a balance is a real push, not an advertisement.
+    @Test fun promoUpToAmountWithBalanceIsStillOperation() {
+        val p = NotificationParser.parse("Т-Банк", "Зачисление 1 500 ₽. Лимит до 15 000 ₽. Доступно 10 000 ₽")
+        assertEquals(OpDirection.IN, p?.direction)
+        assertEquals(150_000L, p?.amount?.minor)
+    }
 }

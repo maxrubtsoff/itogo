@@ -346,6 +346,21 @@ class RepairFromJournalTest {
         assertEquals(10_029L, ledger.accounts[eur]!!.balance.minor)
     }
 
+    // B-128: «Купите любой ОПИФ…» was booked as a top-up; after the parser bump repair removes it.
+    @Test fun promoOperationIsRemovedOnRepair() = runTest {
+        val text = "Купите любой ОПИФ и мы вернём до 1500 ₽ с учётом суммы пополнения 👉"
+        val (e, tx) = stored(1, text, 3_000L, 150_000L)
+        val event = e.copy(title = "Кешбэк за ОПИФ")
+        val ledger = FakeLedger(mutableMapOf(account to acc(0L, null)), mutableListOf(tx!!))
+        val events = FakeEvents(listOf(event))
+
+        assertEquals(1, RepairFromJournal(events, ledger, direct)())
+
+        assertTrue(ledger.txs.isEmpty())
+        assertFalse(events.stored.single().parsed)
+        assertNull(ledger.accounts[account])
+    }
+
     @Test fun repairPicksBalanceByOperationTime() = runTest {
         val zone = ZoneId.of("Europe/Moscow")
         fun ms(h: Int, m: Int) = LocalDateTime.of(2026, 11, 3, h, m).atZone(zone).toInstant().toEpochMilli()

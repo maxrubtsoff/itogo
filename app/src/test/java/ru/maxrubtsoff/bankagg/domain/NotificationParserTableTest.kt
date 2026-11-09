@@ -55,6 +55,9 @@ class NotificationParserTableTest {
         Case("no cents", "Т-Банк", "Покупка 440 ₽. Доступно 1000 ₽", O, EXP, -44_000, 100_000)
     )
 
+    private fun opif(title: String) =
+        title to "Купите любой ОПИФ и мы вернём до 1500 ₽ с учётом суммы пополнения 👉"
+
     private val negatives = listOf(
         "sber utilities promo" to ("Сбербанк" to "Платите за ЖКХ с картой Сбербанка и получайте до 5% бонусами"),
         "tbank 25 brands" to ("Т-Банк" to "25 брендов с кэшбэком до 30% — выберите категории на месяц"),
@@ -63,6 +66,13 @@ class NotificationParserTableTest {
         "tatenergosbyt bill" to ("Татэнергосбыт" to "6106.66 ₽ Татэнергосбыт Оплатите в приложении"),
         "no amount" to ("Т-Банк" to "Вход в приложение выполнен с нового устройства"),
         "bare number" to ("Т-Банк" to "Ваш код 1234. Никому не сообщайте"),
+        // B-128: «купите / вернём до» is an advertisement whatever the title says.
+        "alfa opif promo" to opif("Альфа-Банк"),
+        "alfa opif promo cashback title" to opif("Кешбэк за ОПИФ"),
+        "alfa opif promo refund title" to opif("Возврат до 1500 ₽"),
+        "alfa opif promo from title" to opif("Подарок от Альфа-Банка"),
+        "up to amount no balance" to ("Т-Банк" to "Вернём до 3 000 ₽ за первую покупку"),
+        "emoji promo" to ("Т-Банк" to "Пополните счёт на 1 000 ₽ и получите подарок 🎁"),
         "bare amount balance" to ("Сбербанк" to "100 000 ₽ — Баланс: 79 821,66 ₽ Счёт карты МИР •• 0402")
     )
 

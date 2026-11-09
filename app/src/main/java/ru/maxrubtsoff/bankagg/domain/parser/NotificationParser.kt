@@ -51,8 +51,9 @@ object NotificationParser {
      * 5 — BSB "Товары и услуги" is a purchase (B-118).
      * 6 — Альфа-Бизнес «Поступило … счет … от … счет …»; operation time from the text (B-122, B-123).
      * 7 — «Перевод в Кубышку» is an outgoing transfer (B-125).
+     * 8 — «купите / вернём до / до N ₽ без остатка / эмодзи без остатка» is not an operation (B-128).
      */
-    const val VERSION = 7
+    const val VERSION = 8
 
 
     /**
@@ -162,10 +163,16 @@ object NotificationParser {
     private val PROMO_MARKS = listOf(
         "розыгрыш", "выиграй", "получите до", "получить до", "акция", "акции", "предложение",
         "оцените", "оформите", "подключите", "ставьте", "успейте", "только до", "промокод",
-        "приглашай", "скидка", "скидку"
+        "приглашай", "скидка", "скидку",
+        // B-128
+        "купите", "вернём до", "вернем до", "мы вернём", "мы вернем", "с учётом суммы", "с учетом суммы"
     )
 
+    /** «до 1 500 ₽» — an upper bound of an offer (B-128). */
+    private val UP_TO_AMOUNT = Regex("""(?<![а-яё])до[  ]?$NUM[  ]?(?:₽|руб|р\.)""", RegexOption.IGNORE_CASE)
+
     private val PROMO_PATTERNS = listOf(
+        Regex("""верн[её]м[^.!?]{0,30}\d""", RegexOption.IGNORE_CASE),
         Regex("""до[  ]?\d+([.,]\d+)?[  ]?%""", RegexOption.IGNORE_CASE),
         Regex("""(кешб|кэшб)[а-яё]*[^.!?]{0,40}в категори""", RegexOption.IGNORE_CASE),
         Regex("""получите[^.!?]{0,20}\d""", RegexOption.IGNORE_CASE)
@@ -207,7 +214,7 @@ object NotificationParser {
         val clean = MASK.replace(PHONE.replace(blob) { " ".repeat(it.value.length) }) { " ".repeat(it.value.length) }
 
         val low = clean.lowercase()
-        if (isPromo(low) || isBill(low)) return null
+        if (isPromo(low, blob) || isBill(low)) return null
 
         val detected = detectKind(blob)
         val counterparty0 = counterparty(text)
@@ -281,8 +288,8 @@ object NotificationParser {
     fun parseBare(title: String?, text: String): BareOp? {
         val blob = "${title ?: ""} $text".trim()
         val low = blob.lowercase()
-        if (isPromo(low) || isBill(low)) return null
-        val m = BARE.find(text.trim()) ?: return null
+        if (isPromo(low, blob) || isBill(low)) return null
+        val m =BARE.find(text.trim()) ?: return null
         val amountCcy = codeOf(m.groupValues[2])
         if (amountCcy != Currencies.RUB || codeOf(m.groupValues[4]) != amountCcy) return null
         val amount = toMinor(m.groupValues[1])?.takeIf { it > 0L } ?: return null
@@ -290,8 +297,20 @@ object NotificationParser {
         return BareOp(amount, balance, amountCcy)
     }
 
-    private fun isPromo(low: String): Boolean =
-        PROMO_MARKS.any { it in low } || PROMO_PATTERNS.any { it.containsMatchIn(low) }
+    /** [low] is the masked lower-case text, [blob] the original (masks and emoji are looked up there). */
+    private fun isPromo(low: String, blob: String): Boolean =
+        PROMO_MARKS.any { it in low } || PROMO_PATTERNS.any { it.containsMatchIn(low) } ||
+            isUpToAmountPromo(low, blob) || isPictographPromo(low, blob)
+
+    private fun hasBalance(low: String) = BALANCE_MARKERS.any { it in low }
+
+    /** «Вернём до 1 500 ₽» with neither a balance nor an account mask: an offer, not an operation (B-128). */
+    private fun isUpToAmountPromo(low: String, blob: String): Boolean =
+        UP_TO_AMOUNT.containsMatchIn(low) && !hasBalance(low) && !MASK.containsMatchIn(blob)
+
+    /** An emoji in a push without a balance is an advertisement (B-128). */
+    private fun isPictographPromo(low: String, blob: String): Boolean =
+        !hasBalance(low) && blob.codePoints().anyMatch { it in 0x1F300..0x1FAFF || it in 0x2600..0x27BF }
 
     /**
      * Direction of the money. An explicit word ("списание", "зачисление") wins
