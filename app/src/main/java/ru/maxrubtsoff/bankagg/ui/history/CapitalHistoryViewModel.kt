@@ -47,6 +47,11 @@ import ru.maxrubtsoff.bankagg.domain.repository.RatesRepository
 import ru.maxrubtsoff.bankagg.domain.repository.SettingsRepository
 import ru.maxrubtsoff.bankagg.domain.repository.Today
 import java.time.LocalDate
+import java.time.YearMonth
+import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.BankSpend
+import ru.maxrubtsoff.bankagg.domain.model.MonthSpending
+import ru.maxrubtsoff.bankagg.domain.model.Spending
 
 /** The screen: one page per section, the total first, then each kept part (F-45). */
 data class HistoryScreenUi(
@@ -61,6 +66,20 @@ data class HistoryScreenUi(
     val showLog: Boolean = false
 ) {
     val sections: List<CapitalPart?> get() = CapitalHistory.sections(kept)
+}
+
+/** The card of the month's spending and the bank the list is narrowed to (F-58). */
+data class SpendUi(
+    /** The last months, the current one last; each with the transfers switch applied (columns). */
+    val months: List<MonthSpending>,
+    val selected: Int,
+    val includeTransfers: Boolean,
+    /** The bank the list is filtered by; null — all. */
+    val bank: BankBrand?,
+    /** What [bank] spent in the chosen month, for the header over the list. */
+    val bankSpend: BankSpend?
+) {
+    val month: MonthSpending get() = months[selected]
 }
 
 /** Everything one page of the «История капитала» screen shows for the chosen period and part (F-36). */
@@ -79,7 +98,9 @@ data class HistoryUi(
     /** Rows by day, for a week and a month (F-48). */
     val days: List<HistoryDay>,
     /** Rows by month, for a year and for everything (F-48). */
-    val months: List<HistoryMonth>
+    val months: List<HistoryMonth>,
+    /** The spending card of the «Счета» page (F-58); null on other pages and when there is nothing spent yet. */
+    val spending: SpendUi? = null
 ) {
     val drawable: Boolean get() = CapitalHistory.drawable(series)
 }
@@ -91,7 +112,7 @@ class CapitalHistoryViewModel(
     rates: RatesRepository,
     deposits: DepositRepository,
     cash: CashRepository,
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
     private val today: Today,
     private val operations: HistoryOperations,
     private val undo: UndoCenter,
@@ -100,6 +121,9 @@ class CapitalHistoryViewModel(
 
     private val _period = MutableStateFlow(HistoryPeriod.MONTH)
     private val _part = MutableStateFlow<CapitalPart?>(null)
+    private val _spendMonth = MutableStateFlow<YearMonth?>(null)
+    private val _bank = MutableStateFlow<BankBrand?>(null)
+    private val _includeTransfers = settings.spendWithTransfers
 
     fun setPeriod(period: HistoryPeriod) { _period.value = period }
 
@@ -108,6 +132,15 @@ class CapitalHistoryViewModel(
 
     fun setPart(part: CapitalPart?) { _part.value = part }
 
+    /** A column of the spending card (F-58). */
+    fun setSpendMonth(month: YearMonth) { _spendMonth.value = month }
+
+    /** «Переводы людям» in the card's sums; remembered (F-58). */
+    fun setIncludeTransfers(on: Boolean) { viewModelScope.launch { settings.setSpendWithTransfers(on) } }
+
+    /** Narrows the list to one bank; null — all (F-58). */
+    fun setBank(bank: BankBrand?) { _bank.value = bank }
+
     private val inputs: Flow<Inputs> = combine(
         history.observeDays(), ledger.observeTransactions(Int.MAX_VALUE), ledger.observeAccounts(), fx.observeAll(), deposits.observeAll()
     ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null, emptyList(), emptyList(), emptySet()) }
@@ -115,6 +148,7 @@ class CapitalHistoryViewModel(
         .combine(cash.observeChanges()) { i, c -> i.copy(cashChanges = c) }
         .combine(rates.observeAll()) { i, r -> i.copy(rates = r) }
         .combine(ownMarks.observe()) { i, m -> i.copy(ownMarks = m) }
+        .combine(combine(_spendMonth, _bank, _includeTransfers) { m, b, t -> SpendChoice(m, b, t) }) { i, c -> i.copy(choice = c) }
 
     val state: StateFlow<HistoryScreenUi?> = combine(inputs, settings.features, _period, _part, today.date) { i, features, period, part, day ->
         val kept = CapitalPart.entries.filter { it in features.capitalParts }
@@ -123,20 +157,35 @@ class CapitalHistoryViewModel(
         val long = period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL
         val pages = CapitalHistory.sections(kept).map { p ->
             val full = CapitalHistory.series(i.days, period, day, p)
-            val shown = CapitalEvents.within(all, CapitalHistory.startOf(period, i.days, day), p)
+            val allShown = CapitalEvents.within(all, CapitalHistory.startOf(period, i.days, day), p)
+            val spending = if (p == CapitalPart.ACCOUNTS) spendUi(i, own, day) else null
+            val bank = spending?.bank
+            // F-58: the list narrows to one bank; the chart and its dots stay.
+            val shown = if (bank == null) allShown else allShown.filter { it.source == bank }
             // A year and all-time are drawn by weeks: a point stands for the week behind it (F-46).
             val drawn = CapitalHistory.thin(if (long) CapitalHistory.weekly(full) else full)
             HistoryUi(
                 period = period, part = p, kept = kept, today = day,
                 series = drawn, change = CapitalHistory.change(full),
                 events = shown,
-                marks = ChartMarks.of(drawn, shown, p, CapitalHistory.average(CapitalHistory.series(i.days, period, day, CapitalPart.ACCOUNTS))),
+                marks = ChartMarks.of(drawn, allShown, p, CapitalHistory.average(CapitalHistory.series(i.days, period, day, CapitalPart.ACCOUNTS))),
                 days = if (long) emptyList() else HistoryRows.days(shown, p),
-                months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList()
+                months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList(),
+                spending = spending
             )
         }
         HistoryScreenUi(period, part, kept, day, pages, i.deps.map { it.id }.toSet(), features.showCaptureLog)
     }.stateIn<HistoryScreenUi?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private fun spendUi(i: Inputs, own: Set<String>, day: LocalDate): SpendUi? {
+        if (!Spending.hasAny(i.tx, i.accounts, own)) return null
+        val zone = java.time.ZoneId.systemDefault()
+        val window = Spending.window(day)
+        val months = window.map { Spending.month(i.tx, i.accounts, own, it, i.choice.transfers, zone) }
+        val selected = window.indexOf(i.choice.month).takeIf { it >= 0 } ?: window.lastIndex
+        val bank = i.choice.bank
+        return SpendUi(months, selected, i.choice.transfers, bank, bank?.let { b -> months[selected].byBank.firstOrNull { it.brand == b } })
+    }
 
     /** The sheet of an operation (F-51): everything it shows besides the line. */
     suspend fun detail(event: HistoryEvent): OperationDetail = operations.detail(event)
@@ -199,6 +248,9 @@ class CapitalHistoryViewModel(
         val cash: CashBalance?,
         val rates: List<FxRate>,
         val cashChanges: List<CashChange>,
-        val ownMarks: Set<String>
+        val ownMarks: Set<String>,
+        val choice: SpendChoice = SpendChoice(null, null, false)
     )
+
+    private data class SpendChoice(val month: YearMonth?, val bank: BankBrand?, val transfers: Boolean)
 }

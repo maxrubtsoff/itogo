@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +53,7 @@ import ru.maxrubtsoff.bankagg.ui.common.Motion
 import ru.maxrubtsoff.bankagg.ui.common.collapseHeight
 import ru.maxrubtsoff.bankagg.ui.common.rememberHeroCollapse
 import ru.maxrubtsoff.bankagg.ui.common.SlitokChip
+import ru.maxrubtsoff.bankagg.ui.common.SpendCard
 import java.time.YearMonth
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -230,10 +232,39 @@ private fun HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (Histo
                 Modifier.onPlaced { anchors["root"] = it },
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                u.spending?.let { SpendSection(it, vm) }
                 Events(u, span, open, { open = it }, anchors, onReset = { picked = null }, onTap = onTap)
                 Spacer(Modifier.height(16.dp + tail))
             }
         }
+    }
+}
+
+/** The card of the month's spending, or — with a bank picked — the header of the list narrowed to it (F-58). */
+@Composable
+private fun SpendSection(s: SpendUi, vm: CapitalHistoryViewModel) {
+    val bank = s.bank
+    if (bank == null) {
+        SpendCard(
+            s.months, s.selected, s.includeTransfers,
+            onPickMonth = { vm.setSpendMonth(s.months[it].month) },
+            onIncludeTransfers = vm::setIncludeTransfers,
+            onBank = vm::setBank
+        )
+        return
+    }
+    BackHandler { vm.setBank(null) }
+    val spent = s.bankSpend
+    Row(Modifier.fillMaxWidth().padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        BankIcon(bank, 32.dp)
+        Column(Modifier.weight(1f)) {
+            Text(bank.title, style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            MoneyText(
+                if (spent == null) "Трат за месяц нет" else RuPlural.operations(spent.count) + " · " + Money.ofMinor(spent.minor).format() + " трат",
+                style = MaterialTheme.typography.bodySmall, color = Slitok.Muted
+            )
+        }
+        SlitokChip("Сбросить", selected = false, onClick = { vm.setBank(null) }, compact = true)
     }
 }
 

@@ -25,7 +25,9 @@ data class HistoryEvent(
     /** A currency deal's sum in its own currency (F-48). */
     val foreign: ForeignAmount? = null,
     /** The record behind the line, for the sheet of the operation (F-51); null — nothing of its own to open. */
-    val ref: HistoryRef? = null
+    val ref: HistoryRef? = null,
+    /** The bank an operation came from — for the filter by bank (F-58); not an icon, unlike [bank]. */
+    val source: BankBrand? = null
 )
 
 /** The stored record an event stands for (F-51): what the sheet of an operation edits and deletes. */
@@ -207,7 +209,8 @@ object CapitalEvents {
                 },
                 target = target,
                 foreign = if (foreignOp) ForeignAmount(t.currency, t.amount.minor) else null,
-                ref = HistoryRef.Tx(t.id)
+                ref = HistoryRef.Tx(t.id),
+                source = t.brand
             )
         }
         fxOps.forEach { o ->
