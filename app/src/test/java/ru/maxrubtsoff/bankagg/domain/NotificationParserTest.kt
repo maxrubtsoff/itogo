@@ -372,4 +372,21 @@ class NotificationParserTest {
         assertEquals(OpDirection.IN, p?.direction)
         assertEquals(150_000L, p?.amount?.minor)
     }
+
+    // B-128 review: an emoji does not make a true operation an advertisement.
+    @Test fun emojiWithOperationWordIsOperation() {
+        assertEquals(500_000L, NotificationParser.parse("Т-Банк", "💰 Вам перевели 5 000 ₽")?.amount?.minor)
+    }
+
+    @Test fun checkMarkWithCardMaskIsOperation() {
+        assertEquals(-50_000L, NotificationParser.parse("Сбер", "✅ Оплата 500 ₽ *1234")?.amount?.minor)
+    }
+
+    @Test fun emojiOfferStillAdvertisement() {
+        assertNull(NotificationParser.parse("Банк", "🎁 Получите 500 ₽ за друга"))
+    }
+
+    @Test fun buyWordNeedsBoundary() {
+        assertNull(NotificationParser.parse("Банк", "Купите ОПИФ и получите 1 500 ₽"))
+    }
 }

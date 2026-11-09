@@ -165,7 +165,7 @@ object NotificationParser {
         "оцените", "оформите", "подключите", "ставьте", "успейте", "только до", "промокод",
         "приглашай", "скидка", "скидку",
         // B-128
-        "купите", "вернём до", "вернем до", "мы вернём", "мы вернем", "с учётом суммы", "с учетом суммы"
+        "вернём до", "вернем до", "мы вернём", "мы вернем", "с учётом суммы", "с учетом суммы"
     )
 
     /** «до 1 500 ₽» — an upper bound of an offer (B-128). */
@@ -175,7 +175,9 @@ object NotificationParser {
         Regex("""верн[её]м[^.!?]{0,30}\d""", RegexOption.IGNORE_CASE),
         Regex("""до[  ]?\d+([.,]\d+)?[  ]?%""", RegexOption.IGNORE_CASE),
         Regex("""(кешб|кэшб)[а-яё]*[^.!?]{0,40}в категори""", RegexOption.IGNORE_CASE),
-        Regex("""получите[^.!?]{0,20}\d""", RegexOption.IGNORE_CASE)
+        Regex("""получите[^.!?]{0,20}\d""", RegexOption.IGNORE_CASE),
+        // A word of its own: «Купите» is an offer (B-128).
+        Regex("""(?<![а-яё])купите(?![а-яё])""", RegexOption.IGNORE_CASE)
     )
 
     /**
@@ -289,7 +291,7 @@ object NotificationParser {
         val blob = "${title ?: ""} $text".trim()
         val low = blob.lowercase()
         if (isPromo(low, blob) || isBill(low)) return null
-        val m =BARE.find(text.trim()) ?: return null
+        val m = BARE.find(text.trim()) ?: return null
         val amountCcy = codeOf(m.groupValues[2])
         if (amountCcy != Currencies.RUB || codeOf(m.groupValues[4]) != amountCcy) return null
         val amount = toMinor(m.groupValues[1])?.takeIf { it > 0L } ?: return null
@@ -308,9 +310,16 @@ object NotificationParser {
     private fun isUpToAmountPromo(low: String, blob: String): Boolean =
         UP_TO_AMOUNT.containsMatchIn(low) && !hasBalance(low) && !MASK.containsMatchIn(blob)
 
-    /** An emoji in a push without a balance is an advertisement (B-128). */
+    /**
+     * An emoji in a push with neither a balance, nor a card mask, nor a word of an operation is an advertisement (B-128).
+     * Real pictographs only (not dingbats such as a check mark): a bank may decorate a true operation.
+     */
     private fun isPictographPromo(low: String, blob: String): Boolean =
-        !hasBalance(low) && blob.codePoints().anyMatch { it in 0x1F300..0x1FAFF || it in 0x2600..0x27BF }
+        !hasBalance(low) && !MASK.containsMatchIn(blob) && !hasOperationWord(low, blob) &&
+            blob.codePoints().anyMatch { it in 0x1F300..0x1FAFF }
+
+    private fun hasOperationWord(low: String, blob: String): Boolean =
+        OUT_MARKS.any { it in low } || IN_MARKS.any { it in low } || detectKind(blob) != TransactionKind.UNKNOWN
 
     /**
      * Direction of the money. An explicit word ("списание", "зачисление") wins
