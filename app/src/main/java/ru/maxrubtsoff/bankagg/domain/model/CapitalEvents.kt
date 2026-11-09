@@ -184,22 +184,28 @@ object CapitalEvents {
         val out = ArrayList<HistoryEvent>()
 
         val own = ownIds ?: OwnTransfers.ids(transactions, accounts, emptySet(), zone)
-        transactions.filter { it.id !in own }.forEach { t ->
-            val title = when (t.kind) {
+        // [named]: the line says who the money went to or came from, the bank under it; a leg of an own transfer says its kind.
+        fun txEvent(t: Transaction, named: Boolean): HistoryEvent {
+            val kindTitle = when (t.kind) {
                 TransactionKind.INCOME -> "Пополнение"
                 TransactionKind.EXPENSE -> "Списание"
                 TransactionKind.TRANSFER -> "Перевод"
                 TransactionKind.UNKNOWN -> "Операция"
+            }
+            val title = when {
+                !named || t.counterparty == null -> kindTitle
+                t.kind == TransactionKind.TRANSFER -> "$kindTitle · ${t.counterparty}"
+                else -> t.counterparty
             }
             val part = if (t.currency == Currencies.RUB) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY
             // A ruble operation leads nowhere: the whole of «Счета» says nothing about it (F-50).
             val target = if (t.currency == Currencies.RUB) null else HistoryTarget.Currency(t.currency)
             val foreignOp = t.currency != Currencies.RUB
             // B-86: an account in a currency is shown in rubles at the CBR rate of its day; the own sum goes to the subtitle.
-            val who = t.counterparty ?: titleOf[t.accountId]
-            out += HistoryEvent(
+            val bank = titleOf[t.accountId] ?: t.brand.title
+            return HistoryEvent(
                 dayOf(t.postedAt, zone), part, title,
-                if (foreignOp) listOfNotNull(who, Money.ofMinor(t.amount.minor).format(t.currency)).joinToString(" · ") else who,
+                if (foreignOp) listOf(bank, Money.ofMinor(t.amount.minor).format(t.currency)).joinToString(" · ") else bank,
                 if (foreignOp) rubOf(t, rates, zone) else t.amount.minor,
                 kind = when (t.kind) {
                     TransactionKind.INCOME -> HistoryKind.INCOME
@@ -211,6 +217,16 @@ object CapitalEvents {
                 foreign = if (foreignOp) ForeignAmount(t.currency, t.amount.minor) else null,
                 ref = HistoryRef.Tx(t.id),
                 source = t.brand
+            )
+        }
+        transactions.filter { it.id !in own }.forEach { out += txEvent(it, named = true) }
+        // Own transfers are one line «Между своими», opening into the two legs (F-58, F-59).
+        OwnTransfers.groups(transactions.filter { it.id in own }, accounts, zone).forEach { legs ->
+            val first = txEvent(legs.first(), named = false)
+            val subtitle = legs.joinToString(" → ") { titleOf[it.accountId] ?: it.brand.title }
+            out += HistoryEvent(
+                first.date, first.part, "Между своими", subtitle, Math.abs(first.amountMinor ?: 0L),
+                kind = HistoryKind.OWN_TRANSFER, parts = legs.map { txEvent(it, named = false) }
             )
         }
         fxOps.forEach { o ->

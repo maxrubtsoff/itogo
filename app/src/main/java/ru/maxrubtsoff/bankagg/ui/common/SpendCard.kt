@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -193,7 +195,8 @@ private fun SpendBanks(m: MonthSpending, onBank: (BankBrand) -> Unit) {
                     title = "Ещё " + RuPlural.banks(fold.rest.size),
                     valueMinor = fold.rest.sumOf { it.minor },
                     line = SummaryLine(fold.rest.joinToString(", ") { it.brand.title }),
-                    onClick = { open = !open }
+                    onClick = { open = !open }, chevron = false,
+                    detailIcon = if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown
                 )
                 if (open) fold.rest.forEach { b -> BankSpendRow(b, onBank) }
             }
@@ -214,7 +217,7 @@ private fun BankSpendRow(b: BankSpend, onBank: (BankBrand) -> Unit) {
         tile = { BankIcon(b.brand, 40.dp) },
         title = b.brand.title, valueMinor = b.minor,
         line = SummaryLine(RuPlural.operations(b.count)),
-        onClick = { onBank(b.brand) }
+        onClick = { onBank(b.brand) }, chevron = false
     )
 }
 

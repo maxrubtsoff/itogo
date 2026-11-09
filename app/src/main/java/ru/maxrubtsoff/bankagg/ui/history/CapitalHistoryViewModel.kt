@@ -199,7 +199,7 @@ class CapitalHistoryViewModel(
             val spending = if (p == CapitalPart.ACCOUNTS) spendUi(i, own, day) else null
             val bank = spending?.bank
             // F-58: the list narrows to one bank; the chart and its dots stay.
-            val shown = if (bank == null) allShown else allShown.filter { it.source == bank }
+            val shown = if (bank == null) allShown else allShown.filter { e -> e.source == bank || e.parts.any { it.source == bank } }
             // The chart: days inside a narrow window, weeks in a wide one (U-77).
             val drawn = ChartWindow.drawn(visible)
             HistoryUi(

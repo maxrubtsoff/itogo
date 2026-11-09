@@ -32,6 +32,9 @@ class HeroCollapse internal constructor(private val rangePx: Float) {
 
     val fraction: Float get() = if (rangePx <= 0f) 0f else (collapsed / rangePx).coerceIn(0f, 1f)
 
+    /** Folds the hero to the strip at once, as when a bank narrows the list (F-58). */
+    fun collapseAll() { collapsed = rangePx }
+
     val connection = object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
             val dy = available.y

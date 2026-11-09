@@ -82,6 +82,7 @@ import ru.maxrubtsoff.bankagg.domain.model.HistoryPeriod
 import ru.maxrubtsoff.bankagg.domain.model.HistoryRow
 import ru.maxrubtsoff.bankagg.domain.model.HistoryTarget
 import ru.maxrubtsoff.bankagg.domain.model.Money
+import ru.maxrubtsoff.bankagg.domain.model.HistoryKind
 import ru.maxrubtsoff.bankagg.domain.model.MoneyCompact
 import ru.maxrubtsoff.bankagg.domain.model.RuDays
 import ru.maxrubtsoff.bankagg.domain.model.RuPlural
@@ -201,6 +202,9 @@ private fun HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (Histo
     val span = selected?.let { CapitalHistory.spanAt(u.series, it) }
     val list = rememberScrollState()
     val collapse = rememberHeroCollapse()
+    // A bank picked narrows the list: the hero folds to the strip to give it room (F-58).
+    val bankPicked = u.spending?.bank != null
+    LaunchedEffect(bankPicked) { if (bankPicked) collapse.collapseAll() }
     // The finger is still on the chart: the list moves to what touches the span at once (U-67), and the
     // chart stays where it is. A folded month opens first. Each new day takes over from the one before.
     LaunchedEffect(span) {
@@ -297,8 +301,8 @@ private fun Hero(
                 Text(
                     when {
                         picked -> if (span!!.days == 1) RuDays.dayWeekday(at!!.date, u.today) else RuDays.span(span.from, span.to, u.today)
-                        // A window of its own is named by its days, a whole period by where it starts (U-77).
-                        u.window != null -> RuDays.span(u.window.from, u.window.to, u.today)
+                        // A window of its own: its days stand on the line of the change, below (U-77).
+                        u.window != null -> " "
                         change.deltaMinor != 0L -> "с ${RuDays.dayMonth(change.from.date, u.today)}"
                         else -> " "
                     },
@@ -323,13 +327,26 @@ private fun Hero(
                             Text("без изменений $word", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     } else if (change.deltaMinor == 0L) {
-                        Text("без изменений ${u.period.spanWord}", style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    } else {
-                        MoneyText(
-                            deltaText(change), style = MaterialTheme.typography.bodyMedium,
-                            color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
-                            compact = deltaText(change, compact = true)
+                        val w = u.window
+                        Text(
+                            if (w == null) "без изменений ${u.period.spanWord}" else "без изменений · " + RuDays.span(w.from, w.to, u.today),
+                            style = MaterialTheme.typography.bodyMedium, color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                            MoneyText(
+                                deltaText(change), Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium,
+                                color = if (change.deltaMinor > 0L) Slitok.Mint else Slitok.Fg, fontWeight = FontWeight.SemiBold,
+                                compact = deltaText(change, compact = true)
+                            )
+                            // The days of the window sit right after the change on the same line (U-77).
+                            if (u.window != null) {
+                                Text(
+                                    RuDays.span(u.window.from, u.window.to, u.today), style = MaterialTheme.typography.bodySmall,
+                                    color = Slitok.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
                 Spacer(Modifier.height(lerp(12.dp, 6.dp, t)))
@@ -456,9 +473,11 @@ private fun EventRow(
     HistoryLine(
         e.title, e.subtitle, e.amountMinor, kind, nested = nested, expanded = expanded, highlighted = highlighted,
         subtitleLines = if (e.reason != null) 2 else 1,
+        quiet = e.kind == HistoryKind.OWN_TRANSFER,
         tag = if (e.ref is ru.maxrubtsoff.bankagg.domain.model.HistoryRef.Manual) "вручную" else null,
         lead = {
             when {
+                e.kind == HistoryKind.OWN_TRANSFER -> Dot(Slitok.Faint)
                 e.bank != null -> BankIcon(e.bank, 28.dp)
                 target is HistoryTarget.Currency && nested -> CurrencyBadge(target.code, 28.dp)
                 else -> Dot(e.part.color())

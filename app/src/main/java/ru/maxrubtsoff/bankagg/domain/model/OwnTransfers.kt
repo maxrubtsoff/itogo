@@ -37,26 +37,40 @@ object OwnTransfers {
         textMarked: Set<String> = emptySet(),
         zone: ZoneId = ZoneId.systemDefault()
     ): Set<String> {
+        val marked = transactions.filter { it.id in textMarked }.map { it.id }.toSet()
+        val rest = transactions.filter { it.id !in marked }
+        return marked + pairs(rest, accounts, zone).flatMap { listOf(it.first.id, it.second.id) }
+    }
+
+    /** The legs of own transfers as the list shows them: a pair (the outgoing leg first) or a lone leg. */
+    fun groups(legs: List<Transaction>, accounts: List<Account>, zone: ZoneId = ZoneId.systemDefault()): List<List<Transaction>> {
+        val pairs = pairs(legs, accounts, zone)
+        val used = pairs.flatMap { listOf(it.first.id, it.second.id) }.toSet()
+        return pairs.map { listOf(it.first, it.second) } + legs.filter { it.id !in used }.map { listOf(it) }
+    }
+
+    /** 1:1 pairs (outgoing, incoming); each outgoing takes the nearest free incoming. */
+    private fun pairs(transactions: List<Transaction>, accounts: List<Account>, zone: ZoneId): List<Pair<Transaction, Transaction>> {
         val known = accounts.map { it.id }.toSet()
         val used = HashSet<String>()
-        transactions.forEach { if (it.id in textMarked) used += it.id }
-
-        val legs = transactions.filter { it.accountId in known && it.amount.minor != 0L && it.id !in used }
+        val out = ArrayList<Pair<Transaction, Transaction>>()
+        val legs = transactions.filter { it.accountId in known && it.amount.minor != 0L }
         val outs = legs.filter { it.amount.minor < 0L && it.kind in OUT_KINDS }.sortedBy { it.postedAt }
         val ins = legs.filter { it.amount.minor > 0L && it.kind in IN_KINDS }
-        for (out in outs) {
-            val day = dayOf(out.postedAt, zone)
+        for (o in outs) {
+            val day = dayOf(o.postedAt, zone)
             val back = ins
                 .filter {
-                    it.id !in used && it.currency == out.currency && it.amount.minor == -out.amount.minor &&
-                        it.accountId != out.accountId &&
-                        (dayOf(it.postedAt, zone) == day || Math.abs(it.postedAt - out.postedAt) <= PAIR_WINDOW_MS)
+                    it.id !in used && it.currency == o.currency && it.amount.minor == -o.amount.minor &&
+                        it.accountId != o.accountId &&
+                        (dayOf(it.postedAt, zone) == day || Math.abs(it.postedAt - o.postedAt) <= PAIR_WINDOW_MS)
                 }
-                .minByOrNull { Math.abs(it.postedAt - out.postedAt) } ?: continue
-            used += out.id
+                .minByOrNull { Math.abs(it.postedAt - o.postedAt) } ?: continue
+            used += o.id
             used += back.id
+            out += o to back
         }
-        return used
+        return out
     }
 
     private fun dayOf(ms: Long, zone: ZoneId) = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
