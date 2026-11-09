@@ -322,7 +322,24 @@ class CapitalEventsTest {
 
     @Test fun ownTransferPairIsHidden() {
         val e = eventsOf(op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "b", 5000, TransactionKind.TRANSFER))
-        assertTrue(e.isEmpty())
+        // F-58: one line «Между своими», opening into its two legs.
+        val line = e.single()
+        assertEquals(HistoryKind.OWN_TRANSFER, line.kind)
+        assertEquals("Между своими", line.title)
+        assertEquals("Сбер → Тинькофф", line.subtitle)
+        assertEquals(5000L, line.amountMinor)
+        assertEquals(2, line.parts.size)
+    }
+
+    @Test fun ownPairTransferIncomeHidden() {
+        val e = eventsOf(op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "b", 5000, TransactionKind.INCOME))
+        assertEquals(HistoryKind.OWN_TRANSFER, e.single().kind)
+    }
+
+    @Test fun withinUpperBound() {
+        val e = eventsOf(op("1", "a", -100, TransactionKind.EXPENSE, day = d0), op("2", "a", -200, TransactionKind.EXPENSE, day = d1))
+        assertEquals(1, CapitalEvents.within(e, null, null, to = d0).size)
+        assertEquals(2, CapitalEvents.within(e, null, null).size)
     }
 
     @Test fun transferToStrangerStays() {
@@ -349,7 +366,9 @@ class CapitalEventsTest {
             op("3", "a", -5000, TransactionKind.TRANSFER), op("4", "b", 5000, TransactionKind.TRANSFER),
             op("5", "a", -5000, TransactionKind.TRANSFER)
         )
-        assertEquals(1, e.size)
+        // Two pairs are two lines «Между своими» (folded into one group of the day); the lone leg stays as it is.
+        assertEquals(3, e.size)
+        assertEquals(2, e.count { it.kind == HistoryKind.OWN_TRANSFER })
     }
 
     @Test fun spendGroupedPerDay() {

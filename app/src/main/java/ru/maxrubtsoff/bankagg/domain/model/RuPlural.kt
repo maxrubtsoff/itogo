@@ -46,6 +46,9 @@ object RuPlural {
 
     fun operations(n: Int): String = "$n " + form(n, "операция", "операции", "операций")
 
+    /** "1 перевод", "2 перевода", "5 переводов". */
+    fun transfers(n: Int): String = "$n " + form(n, "перевод", "перевода", "переводов")
+
     fun banks(n: Int): String = "$n " + form(n, "банк", "банка", "банков")
 
     /** «30 секунд», «1 минута», «1 час» — how long the lock keypad rests (B-27). */

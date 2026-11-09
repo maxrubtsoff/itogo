@@ -74,6 +74,12 @@ import ru.maxrubtsoff.bankagg.ui.common.BankNote
 import ru.maxrubtsoff.bankagg.ui.common.LinkLine
 import ru.maxrubtsoff.bankagg.ui.common.WasBecomeLine
 import ru.maxrubtsoff.bankagg.ui.common.HistoryLine
+import ru.maxrubtsoff.bankagg.ui.common.SpendCard
+import ru.maxrubtsoff.bankagg.ui.common.ChartOverview
+import ru.maxrubtsoff.bankagg.ui.common.Edge
+import ru.maxrubtsoff.bankagg.domain.model.BankSpend
+import ru.maxrubtsoff.bankagg.domain.model.MonthSpending
+import java.time.YearMonth
 import ru.maxrubtsoff.bankagg.ui.common.accentBar
 import ru.maxrubtsoff.bankagg.ui.common.collapseHeight
 import ru.maxrubtsoff.bankagg.domain.model.RowKind
@@ -362,6 +368,19 @@ fun ShowcaseScreen(onBack: () -> Unit) {
             HistoryLine("Сбер", "Проценты", 21_000, RowKind.GO, nested = true)
             HistoryLine("Списания", "4 операции", -320_000, RowKind.SUM)
             HistoryLine("Пополнение", "Иван", 500_000, RowKind.SUM, highlighted = true)
+            Caption("Мини-карта окна графика (ChartOverview)")
+            var overview by remember { mutableStateOf(20..50) }
+            ChartOverview(
+                (0..80).map { (it * it / 8 + (it % 7) * 5).toLong() }, overview,
+                onPan = { f -> val d = (f * 80).toInt(); overview = (overview.first + d).coerceIn(0, 80 - overview.count() + 1).let { it..it + overview.count() - 1 } },
+                onResize = { e, f ->
+                    val i = (f * 80).toInt()
+                    overview = if (e == Edge.START) i.coerceAtMost(overview.last - 7)..overview.last else overview.first..i.coerceAtLeast(overview.first + 7)
+                },
+                onJump = { f -> val w = overview.count(); val s = ((f * 80).toInt() - w / 2).coerceIn(0, 80 - w + 1); overview = s..s + w - 1 }
+            )
+            Caption("Траты за месяц (SpendCard)")
+            SpendCardDemo()
             Caption("Полоса «смотри сюда» (accentBar)")
             Panel(Modifier.fillMaxWidth()) {
                 Text("Вклад после скана", Modifier.accentBar(true).fillMaxWidth().padding(16.dp), color = Slitok.Fg)
@@ -389,6 +408,21 @@ fun ShowcaseScreen(onBack: () -> Unit) {
 }
 
 /** U-65: a thumbnail carried between two cards; the zone opens under them while it is in the air. */
+@Composable
+private fun SpendCardDemo() {
+    var picked by remember { mutableIntStateOf(5) }
+    var withTransfers by remember { mutableStateOf(false) }
+    val banks = listOf(BankSpend(BankBrand.TBANK, 842_000, 14), BankSpend(BankBrand.SBER, 513_000, 9), BankSpend(BankBrand.ALFA, 324_550, 6))
+    val months = (0..5).map { i ->
+        val purchases = if (i == 5) banks.sumOf { it.minor } else 4_900_000L + i * 120_000L
+        MonthSpending(
+            YearMonth.of(2026, 6 + i), purchases + if (withTransfers) 300_000L else 0L, purchases, 300_000L, 1, 9_500_000L,
+            banks.sumOf { it.count }, banks, withTransfers
+        )
+    }
+    SpendCard(months, picked, withTransfers, onPickMonth = { picked = it }, onIncludeTransfers = { withTransfers = it }, onBank = {})
+}
+
 @Composable
 private fun ShotDragDemo() {
     var inSecond by remember { mutableStateOf(false) }

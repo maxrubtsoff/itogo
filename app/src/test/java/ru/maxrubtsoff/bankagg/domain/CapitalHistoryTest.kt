@@ -108,8 +108,9 @@ class CapitalHistoryTest {
         // The cash amount with no stamp is a row of its own (B-127); the operation is the other.
         assertEquals(1, events.count { it.kind != ru.maxrubtsoff.bankagg.domain.model.HistoryKind.CASH })
         events.filter { it.kind != ru.maxrubtsoff.bankagg.domain.model.HistoryKind.CASH }.let { e ->
-        assertEquals("Пополнение", e[0].title)
-        assertEquals("Работа", e[0].subtitle)
+        // F-58: the line says who, the bank is under it.
+        assertEquals("Работа", e[0].title)
+        assertEquals("Сбер", e[0].subtitle)
         assertEquals(5000L, e[0].amountMinor)
         }
     }

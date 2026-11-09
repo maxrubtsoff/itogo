@@ -25,7 +25,9 @@ data class HistoryEvent(
     /** A currency deal's sum in its own currency (F-48). */
     val foreign: ForeignAmount? = null,
     /** The record behind the line, for the sheet of the operation (F-51); null — nothing of its own to open. */
-    val ref: HistoryRef? = null
+    val ref: HistoryRef? = null,
+    /** The bank an operation came from — for the filter by bank (F-58); not an icon, unlike [bank]. */
+    val source: BankBrand? = null
 )
 
 /** The stored record an event stands for (F-51): what the sheet of an operation edits and deletes. */
@@ -175,28 +177,35 @@ object CapitalEvents {
         today: LocalDate,
         zone: ZoneId = ZoneId.systemDefault(),
         rates: List<FxRate> = emptyList(),
-        cashChanges: List<CashChange> = emptyList()
+        cashChanges: List<CashChange> = emptyList(),
+        ownIds: Set<String>? = null
     ): List<HistoryEvent> {
         val titleOf = accounts.associate { it.id to it.title }
         val out = ArrayList<HistoryEvent>()
 
-        val own = ownTransferIds(transactions, accounts, zone)
-        transactions.filter { it.id !in own }.forEach { t ->
-            val title = when (t.kind) {
+        val own = ownIds ?: OwnTransfers.ids(transactions, accounts, emptySet(), zone)
+        // [named]: the line says who the money went to or came from, the bank under it; a leg of an own transfer says its kind.
+        fun txEvent(t: Transaction, named: Boolean): HistoryEvent {
+            val kindTitle = when (t.kind) {
                 TransactionKind.INCOME -> "Пополнение"
                 TransactionKind.EXPENSE -> "Списание"
                 TransactionKind.TRANSFER -> "Перевод"
                 TransactionKind.UNKNOWN -> "Операция"
+            }
+            val title = when {
+                !named || t.counterparty == null -> kindTitle
+                t.kind == TransactionKind.TRANSFER -> "$kindTitle · ${t.counterparty}"
+                else -> t.counterparty
             }
             val part = if (t.currency == Currencies.RUB) CapitalPart.ACCOUNTS else CapitalPart.CURRENCY
             // A ruble operation leads nowhere: the whole of «Счета» says nothing about it (F-50).
             val target = if (t.currency == Currencies.RUB) null else HistoryTarget.Currency(t.currency)
             val foreignOp = t.currency != Currencies.RUB
             // B-86: an account in a currency is shown in rubles at the CBR rate of its day; the own sum goes to the subtitle.
-            val who = t.counterparty ?: titleOf[t.accountId]
-            out += HistoryEvent(
+            val bank = titleOf[t.accountId] ?: t.brand.title
+            return HistoryEvent(
                 dayOf(t.postedAt, zone), part, title,
-                if (foreignOp) listOfNotNull(who, Money.ofMinor(t.amount.minor).format(t.currency)).joinToString(" · ") else who,
+                if (foreignOp) listOf(bank, Money.ofMinor(t.amount.minor).format(t.currency)).joinToString(" · ") else bank,
                 if (foreignOp) rubOf(t, rates, zone) else t.amount.minor,
                 kind = when (t.kind) {
                     TransactionKind.INCOME -> HistoryKind.INCOME
@@ -206,7 +215,18 @@ object CapitalEvents {
                 },
                 target = target,
                 foreign = if (foreignOp) ForeignAmount(t.currency, t.amount.minor) else null,
-                ref = HistoryRef.Tx(t.id)
+                ref = HistoryRef.Tx(t.id),
+                source = t.brand
+            )
+        }
+        transactions.filter { it.id !in own }.forEach { out += txEvent(it, named = true) }
+        // Own transfers are one line «Между своими», opening into the two legs (F-58, F-59).
+        OwnTransfers.groups(transactions.filter { it.id in own }, accounts, zone).forEach { legs ->
+            val first = txEvent(legs.first(), named = false)
+            val subtitle = legs.joinToString(" → ") { titleOf[it.accountId] ?: it.brand.title }
+            out += HistoryEvent(
+                first.date, first.part, "Между своими", subtitle, Math.abs(first.amountMinor ?: 0L),
+                kind = HistoryKind.OWN_TRANSFER, parts = legs.map { txEvent(it, named = false) }
             )
         }
         fxOps.forEach { o ->
@@ -256,28 +276,6 @@ object CapitalEvents {
             out += HistoryEvent(cashDay(c.atMs), CapitalPart.CASH, "Наличные", "изменили вручную", c.delta.minor, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = HistoryRef.Cash(c.atMs))
         }
         return out.filter { !it.date.isAfter(today) }.sortedByDescending { it.date }
-    }
-
-    /**
-     * Ruble transfers that left one of the person's accounts and arrived at another the same day
-     * for the same sum: both legs are the same money, so neither is listed. Pairs are 1:1.
-     */
-    private fun ownTransferIds(transactions: List<Transaction>, accounts: List<Account>, zone: ZoneId): Set<String> {
-        val known = accounts.map { it.id }.toSet()
-        val legs = transactions.filter {
-            it.currency == Currencies.RUB && it.kind == TransactionKind.TRANSFER && it.accountId in known && it.amount.minor != 0L
-        }
-        val used = HashSet<String>()
-        for (out in legs.filter { it.amount.minor < 0L }) {
-            if (out.id in used) continue
-            val day = dayOf(out.postedAt, zone)
-            val back = legs.firstOrNull {
-                it.id !in used && it.amount.minor == -out.amount.minor && it.accountId != out.accountId && dayOf(it.postedAt, zone) == day
-            } ?: continue
-            used += out.id
-            used += back.id
-        }
-        return used
     }
 
     /** «Проценты» and «Переоценка валюты»: what a part moved from one day to the next beyond the deals themselves. */
@@ -452,8 +450,8 @@ object CapitalEvents {
         target !is HistoryTarget.Deposit || deposits.any { it.id == target.id }
 
     /** Events of [period] (and of one [part], null — all), newest first. */
-    fun within(events: List<HistoryEvent>, from: LocalDate?, part: CapitalPart?): List<HistoryEvent> =
-        events.filter { (from == null || !it.date.isBefore(from)) && (part == null || it.part == part) }
+    fun within(events: List<HistoryEvent>, from: LocalDate?, part: CapitalPart?, to: LocalDate? = null): List<HistoryEvent> =
+        events.filter { (from == null || !it.date.isBefore(from)) && (to == null || !it.date.isAfter(to)) && (part == null || it.part == part) }
 
     /** Months with their events, newest first; the delta of each month comes from [points]. */
     fun byMonth(events: List<HistoryEvent>, points: List<CapitalPoint>, part: CapitalPart?): List<MonthEvents> =

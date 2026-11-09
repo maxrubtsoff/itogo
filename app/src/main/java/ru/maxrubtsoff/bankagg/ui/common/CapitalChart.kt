@@ -3,6 +3,11 @@ package ru.maxrubtsoff.bankagg.ui.common
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +38,9 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -67,6 +75,11 @@ import ru.maxrubtsoff.bankagg.ui.theme.Slitok
  * sum on a plate, set where it touches neither the line, another dot nor the edge —
  * nowhere to put it, no sum (F-49). A touch within
  * 12 dp of a dot picks the dot's day.
+ *
+ * Two fingers (U-77): a pinch gives [onZoom] (factor above 1 — closer, and where across the chart it is) and a
+ * sideways move gives [onPan] (the share of the chart width, positive — to later days); the touches are taken so
+ * the scrub and the pager do not see them. One finger works as before. Null — the gestures are off. [growKey] is
+ * what makes the line grow in again; the default is the points, a screen that zooms passes what does not change per step.
  */
 @Composable
 fun CapitalChart(
@@ -86,7 +99,10 @@ fun CapitalChart(
     /** The sums on the dots; off in the strip, where they would not fit. */
     labels: Boolean = true,
     /** How much of the axis row is shown (1 — all), for the shrinking hero (U-67). */
-    axisShown: () -> Float = { 1f }
+    axisShown: () -> Float = { 1f },
+    onZoom: ((factor: Float, focusFraction: Float) -> Unit)? = null,
+    onPan: ((shiftFraction: Float) -> Unit)? = null,
+    growKey: Any? = points
 ) {
     // The band of days a point stands for (F-46) comes in on Motion.NORMAL and goes out the same way.
     val band by animateFloatAsState(if (range != null && range.first < range.last) 1f else 0f, Motion.tween(Motion.NORMAL), label = "band")
@@ -94,9 +110,12 @@ fun CapitalChart(
     if (range != null && range.first < range.last) lastRange[0] = range
     val scrubbed by rememberUpdatedState(onScrub)
     val released by rememberUpdatedState(onRelease)
+    val zoomed by rememberUpdatedState(onZoom)
+    val panned by rememberUpdatedState(onPan)
+    val pointCount by rememberUpdatedState(points.size)
     var lastTouched by remember { mutableStateOf<Int?>(null) }
     val grow = remember { Animatable(0f) }
-    LaunchedEffect(points) {
+    LaunchedEffect(growKey) {
         grow.snapTo(0f)
         grow.animateTo(1f, Motion.tween(Motion.SLOW))
     }
@@ -133,6 +152,30 @@ fun CapitalChart(
                 .fillMaxWidth()
                 .height(height)
                 .onSizeChanged { canvasSize = it }
+                .pointerInput(onZoom != null || onPan != null) {
+                    if (zoomed == null && panned == null) return@pointerInput
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        var zoomAcc = 1f
+                        var panAcc = 0f
+                        do {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.changes.count { it.pressed } >= 2 && size.width > 0) {
+                                // Small steps add up: a window of days moves by whole days.
+                                zoomAcc *= event.calculateZoom()
+                                panAcc += -event.calculatePan().x / size.width
+                                val c = event.calculateCentroid()
+                                if (Math.abs(zoomAcc - 1f) >= ZOOM_STEP && c.isSpecified) {
+                                    zoomed?.invoke(zoomAcc, (c.x / size.width).coerceIn(0f, 1f)); zoomAcc = 1f
+                                }
+                                if (Math.abs(panAcc) >= 1f / pointCount.coerceAtLeast(1)) { panned?.invoke(panAcc); panAcc = 0f }
+                                event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                // The scrubbing finger is not a pick any more, and nothing is released.
+                                lastTouched = null
+                            }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
                 .pointerInput(points, markAt) {
                     detectTapGestures(onPress = { p ->
                         lastTouched = null
@@ -237,6 +280,9 @@ private fun plotOf(points: List<Long>, width: Float, height: Float, dp: Float, m
 }
 
 private const val LABEL_PAD_DP = 6
+
+/** A pinch smaller than this is kept and added to the next one (U-77). */
+private const val ZOOM_STEP = 0.03f
 private const val LABEL_HEIGHT_DP = 20
 
 /** The plate of a sum set on the chart: [plate] is its rectangle in pixels. */

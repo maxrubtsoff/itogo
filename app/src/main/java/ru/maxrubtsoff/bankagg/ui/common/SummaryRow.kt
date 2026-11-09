@@ -49,7 +49,11 @@ fun SummaryRow(
     modifier: Modifier = Modifier,
     dimmed: Boolean = false,
     onClick: (() -> Unit)? = null,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    /** The arrow at the end of a touchable row; off where the row answers the touch without leading anywhere (F-58). */
+    chevron: Boolean = true,
+    /** A small arrow after the detail line, «⌄» of a row that opens in place (F-58). */
+    detailIcon: ImageVector? = null
 ) {
     Row(
         modifier
@@ -85,8 +89,9 @@ fun SummaryRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (line.warn) Slitok.Brass2 else Slitok.Faint,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f, fill = detailIcon == null)
                 )
+                if (detailIcon != null) Icon(detailIcon, contentDescription = null, tint = Slitok.Faint, modifier = Modifier.size(14.dp))
                 line.moveMinor?.let { m ->
                     Spacer(Modifier.width(8.dp))
                     MoneyText(
@@ -100,8 +105,8 @@ fun SummaryRow(
                 }
             }
         }
-        if (onClick != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Faint)
-        else Spacer(Modifier.width(24.dp))
+        if (onClick != null && chevron) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Slitok.Faint)
+        else if (chevron) Spacer(Modifier.width(24.dp))
     }
 }
 

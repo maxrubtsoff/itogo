@@ -84,6 +84,10 @@ interface SettingsRepository : PinStore {
     val hideInRecents: Flow<Boolean> get() = kotlinx.coroutines.flow.flowOf(false)
     suspend fun setHideInRecents(on: Boolean) {}
 
+    /** F-58: transfers to other people are counted in the month's spending. Off unless chosen. */
+    val spendWithTransfers: Flow<Boolean> get() = kotlinx.coroutines.flow.flowOf(false)
+    suspend fun setSpendWithTransfers(on: Boolean) {}
+
     /** When the automatic backup last wrote a copy (epoch ms; 0 if never). */
     suspend fun lastBackupAt(): Long
     suspend fun setLastBackupAt(at: Long)

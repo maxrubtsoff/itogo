@@ -206,6 +206,14 @@ class SettingsStore(context: Context) : SettingsRepository {
         _swipe.value = on
     }
 
+    private val _spendTransfers = MutableStateFlow(prefs.getBoolean(KEY_SPEND_TRANSFERS, false))
+    override val spendWithTransfers: Flow<Boolean> = _spendTransfers.asStateFlow()
+
+    override suspend fun setSpendWithTransfers(on: Boolean) {
+        prefs.edit().putBoolean(KEY_SPEND_TRANSFERS, on).apply()
+        _spendTransfers.value = on
+    }
+
     private val _tours = MutableStateFlow(prefs.getStringSet(KEY_TOURS_DONE, emptySet()).orEmpty().toSet())
     override val toursDone: Flow<Set<String>> = _tours.asStateFlow()
 
@@ -286,6 +294,7 @@ class SettingsStore(context: Context) : SettingsRepository {
         const val KEY_HIDE_FLIP = "hide_on_flip"
         const val KEY_HIDE_SWIPE = "hide_by_swipe"
         const val KEY_HIDE_RECENTS = "hide_in_recents"
+        const val KEY_SPEND_TRANSFERS = "spend_with_transfers"
         const val KEY_TOURS_DONE = "tours_done"
         const val KEY_PARSER_VERSION = "parser_version"
         const val KEY_INTRO_SHOWN = "intro_shown"

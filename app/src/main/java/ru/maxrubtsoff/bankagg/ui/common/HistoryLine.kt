@@ -55,6 +55,8 @@ fun HistoryLine(
     /** A small label after the title, «вручную» on a hand change (B-121). */
     tag: String? = null,
     lead: (@Composable () -> Unit)? = null,
+    /** A line that is not spending or income, an own transfer (F-58): the title and the sum are `Muted`, the sum without a sign. */
+    quiet: Boolean = false,
     onClick: () -> Unit = {}
 ) {
     val guide = Slitok.Line
@@ -83,7 +85,7 @@ fun HistoryLine(
             // No line under the title: the chevron closes the title instead of hanging alone below it.
             val inTitle = subtitle == null && kind != RowKind.SUM
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyLarge, color = if (quiet) Slitok.Muted else Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (tag != null) { Spacer(Modifier.width(8.dp)); SlitokTag(tag, TagTone.Brass) }
                 if (inTitle) { Spacer(Modifier.width(4.dp)); chevron() }
             }
@@ -95,7 +97,8 @@ fun HistoryLine(
             }
         }
         amountMinor?.let {
-            MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg, compact = MoneyCompact.short(it, signed = true))
+            if (quiet) MoneyText(Money.ofMinor(it).format(), style = Amounts.Small, color = Slitok.Muted, compact = MoneyCompact.short(it))
+            else MoneyText(signedSum(it), style = Amounts.Small, color = if (it > 0L) Slitok.Mint else Slitok.Fg, compact = MoneyCompact.short(it, signed = true))
         }
     }
 }
