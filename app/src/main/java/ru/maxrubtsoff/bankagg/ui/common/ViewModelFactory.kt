@@ -42,7 +42,7 @@ class ViewModelFactory(
             CapitalHistoryViewModel(
                 container.capitalDays, container.ledgerRepository, container.fxRepository, container.ratesRepository,
                 container.depositRepository, container.cashRepository, container.settings, container.today,
-                container.historyOperations, container.undo
+                container.historyOperations, container.undo, container.ownTransferMarks
             ) as T
         modelClass.isAssignableFrom(StorageErrorViewModel::class.java) ->
             StorageErrorViewModel(

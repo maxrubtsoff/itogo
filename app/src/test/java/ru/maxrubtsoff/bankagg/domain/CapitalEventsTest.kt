@@ -325,6 +325,11 @@ class CapitalEventsTest {
         assertTrue(e.isEmpty())
     }
 
+    @Test fun ownPairTransferIncomeHidden() {
+        val e = eventsOf(op("1", "a", -5000, TransactionKind.TRANSFER), op("2", "b", 5000, TransactionKind.INCOME))
+        assertTrue(e.isEmpty())
+    }
+
     @Test fun transferToStrangerStays() {
         val e = eventsOf(op("1", "a", -5000, TransactionKind.TRANSFER, who = "Иван"))
         assertEquals(1, e.size)

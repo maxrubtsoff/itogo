@@ -175,12 +175,13 @@ object CapitalEvents {
         today: LocalDate,
         zone: ZoneId = ZoneId.systemDefault(),
         rates: List<FxRate> = emptyList(),
-        cashChanges: List<CashChange> = emptyList()
+        cashChanges: List<CashChange> = emptyList(),
+        ownIds: Set<String>? = null
     ): List<HistoryEvent> {
         val titleOf = accounts.associate { it.id to it.title }
         val out = ArrayList<HistoryEvent>()
 
-        val own = ownTransferIds(transactions, accounts, zone)
+        val own = ownIds ?: OwnTransfers.ids(transactions, accounts, emptySet(), zone)
         transactions.filter { it.id !in own }.forEach { t ->
             val title = when (t.kind) {
                 TransactionKind.INCOME -> "Пополнение"
@@ -256,28 +257,6 @@ object CapitalEvents {
             out += HistoryEvent(cashDay(c.atMs), CapitalPart.CASH, "Наличные", "изменили вручную", c.delta.minor, kind = HistoryKind.CASH, target = HistoryTarget.Section(CapitalPart.CASH), ref = HistoryRef.Cash(c.atMs))
         }
         return out.filter { !it.date.isAfter(today) }.sortedByDescending { it.date }
-    }
-
-    /**
-     * Ruble transfers that left one of the person's accounts and arrived at another the same day
-     * for the same sum: both legs are the same money, so neither is listed. Pairs are 1:1.
-     */
-    private fun ownTransferIds(transactions: List<Transaction>, accounts: List<Account>, zone: ZoneId): Set<String> {
-        val known = accounts.map { it.id }.toSet()
-        val legs = transactions.filter {
-            it.currency == Currencies.RUB && it.kind == TransactionKind.TRANSFER && it.accountId in known && it.amount.minor != 0L
-        }
-        val used = HashSet<String>()
-        for (out in legs.filter { it.amount.minor < 0L }) {
-            if (out.id in used) continue
-            val day = dayOf(out.postedAt, zone)
-            val back = legs.firstOrNull {
-                it.id !in used && it.amount.minor == -out.amount.minor && it.accountId != out.accountId && dayOf(it.postedAt, zone) == day
-            } ?: continue
-            used += out.id
-            used += back.id
-        }
-        return used
     }
 
     /** «Проценты» and «Переоценка валюты»: what a part moved from one day to the next beyond the deals themselves. */

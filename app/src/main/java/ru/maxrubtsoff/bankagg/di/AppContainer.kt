@@ -52,6 +52,7 @@ import ru.maxrubtsoff.bankagg.domain.usecase.CapitalDaysScope
 import ru.maxrubtsoff.bankagg.domain.usecase.HistoryLock
 import ru.maxrubtsoff.bankagg.domain.usecase.HistoryOperations
 import ru.maxrubtsoff.bankagg.domain.usecase.BuildCapitalHistory
+import ru.maxrubtsoff.bankagg.domain.usecase.OwnTransferMarks
 import ru.maxrubtsoff.bankagg.domain.usecase.RecordCapitalDay
 import ru.maxrubtsoff.bankagg.domain.usecase.SyncCapitalPast
 import ru.maxrubtsoff.bankagg.data.repository.CapitalHistoryRepositoryImpl
@@ -201,6 +202,7 @@ class AppContainer(context: Context) {
             ratesRepository, settings, getCapital, transactionRunner, today, lock = historyLock
         )
     }
+    val ownTransferMarks by lazy { OwnTransferMarks(eventRepository) }
     val recordCapitalDay by lazy { RecordCapitalDay(getCapital, capitalHistory, historyLock) }
     val buildCapitalHistory by lazy {
         BuildCapitalHistory(capitalHistory, ledgerRepository, depositRepository, fxRepository, ratesRepository, CbrRatesSource(), cashRepository, settings, today)

@@ -14,6 +14,8 @@ import ru.maxrubtsoff.bankagg.domain.model.HistoryRef
 import ru.maxrubtsoff.bankagg.domain.usecase.ManualDetail
 import ru.maxrubtsoff.bankagg.domain.model.OperationForm
 import ru.maxrubtsoff.bankagg.domain.usecase.HistoryOperations
+import ru.maxrubtsoff.bankagg.domain.usecase.OwnTransferMarks
+import ru.maxrubtsoff.bankagg.domain.model.OwnTransfers
 import ru.maxrubtsoff.bankagg.domain.usecase.OperationDetail
 import ru.maxrubtsoff.bankagg.ui.common.UndoCenter
 import ru.maxrubtsoff.bankagg.domain.model.Account
@@ -92,7 +94,8 @@ class CapitalHistoryViewModel(
     settings: SettingsRepository,
     private val today: Today,
     private val operations: HistoryOperations,
-    private val undo: UndoCenter
+    private val undo: UndoCenter,
+    ownMarks: OwnTransferMarks
 ) : ViewModel() {
 
     private val _period = MutableStateFlow(HistoryPeriod.MONTH)
@@ -107,14 +110,16 @@ class CapitalHistoryViewModel(
 
     private val inputs: Flow<Inputs> = combine(
         history.observeDays(), ledger.observeTransactions(Int.MAX_VALUE), ledger.observeAccounts(), fx.observeAll(), deposits.observeAll()
-    ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null, emptyList(), emptyList()) }
+    ) { days, tx, accounts, ops, deps -> Inputs(days, tx, accounts, ops, deps, null, emptyList(), emptyList(), emptySet()) }
         .combine(cash.observe()) { i, c -> i.copy(cash = c) }
         .combine(cash.observeChanges()) { i, c -> i.copy(cashChanges = c) }
         .combine(rates.observeAll()) { i, r -> i.copy(rates = r) }
+        .combine(ownMarks.observe()) { i, m -> i.copy(ownMarks = m) }
 
     val state: StateFlow<HistoryScreenUi?> = combine(inputs, settings.features, _period, _part, today.date) { i, features, period, part, day ->
         val kept = CapitalPart.entries.filter { it in features.capitalParts }
-        val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day, rates = i.rates, cashChanges = i.cashChanges)
+        val own = OwnTransfers.ids(i.tx, i.accounts, i.ownMarks, java.time.ZoneId.systemDefault())
+        val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day, rates = i.rates, cashChanges = i.cashChanges, ownIds = own)
         val long = period == HistoryPeriod.YEAR || period == HistoryPeriod.ALL
         val pages = CapitalHistory.sections(kept).map { p ->
             val full = CapitalHistory.series(i.days, period, day, p)
@@ -193,6 +198,7 @@ class CapitalHistoryViewModel(
         val deps: List<Deposit>,
         val cash: CashBalance?,
         val rates: List<FxRate>,
-        val cashChanges: List<CashChange>
+        val cashChanges: List<CashChange>,
+        val ownMarks: Set<String>
     )
 }
