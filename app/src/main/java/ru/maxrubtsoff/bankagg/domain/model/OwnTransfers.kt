@@ -15,7 +15,7 @@ object OwnTransfers {
 
     private val markers = listOf(
         "перевод себе", "себе на", "между своими", "между счетами",
-        "на свой счёт", "на свой счет", "на свою карту", "с вашего счёта в", "с вашего счета в"
+        "на свой счёт", "на свой счет", "на свою карту"
     )
 
     private val OUT_KINDS = setOf(TransactionKind.TRANSFER, TransactionKind.UNKNOWN)
@@ -37,7 +37,8 @@ object OwnTransfers {
         textMarked: Set<String> = emptySet(),
         zone: ZoneId = ZoneId.systemDefault()
     ): Set<String> {
-        val marked = transactions.filter { it.id in textMarked }.map { it.id }.toSet()
+        // The words only mark a transfer; a purchase is never an own transfer.
+        val marked = transactions.filter { it.id in textMarked && it.kind in OUT_KINDS }.map { it.id }.toSet()
         val rest = transactions.filter { it.id !in marked }
         return marked + pairs(rest, accounts, zone).flatMap { listOf(it.first.id, it.second.id) }
     }
@@ -49,21 +50,27 @@ object OwnTransfers {
         return pairs.map { listOf(it.first, it.second) } + legs.filter { it.id !in used }.map { listOf(it) }
     }
 
-    /** 1:1 pairs (outgoing, incoming); each outgoing takes the nearest free incoming. */
+    /**
+     * 1:1 pairs (outgoing, incoming); each outgoing takes the nearest free incoming. Inside [PAIR_WINDOW_MS] any
+     * incoming kind pairs; further apart — only a transfer with a transfer on the same day (a friend's 3000 and a
+     * salary of 3000 on one day are not one move).
+     */
     private fun pairs(transactions: List<Transaction>, accounts: List<Account>, zone: ZoneId): List<Pair<Transaction, Transaction>> {
         val known = accounts.map { it.id }.toSet()
         val used = HashSet<String>()
         val out = ArrayList<Pair<Transaction, Transaction>>()
         val legs = transactions.filter { it.accountId in known && it.amount.minor != 0L }
         val outs = legs.filter { it.amount.minor < 0L && it.kind in OUT_KINDS }.sortedBy { it.postedAt }
-        val ins = legs.filter { it.amount.minor > 0L && it.kind in IN_KINDS }
+        // By currency and sum: a leg is looked for among those of its own sum, not among all.
+        val ins = legs.filter { it.amount.minor > 0L && it.kind in IN_KINDS }.groupBy { it.currency to it.amount.minor }
         for (o in outs) {
             val day = dayOf(o.postedAt, zone)
-            val back = ins
+            val back = ins[o.currency to -o.amount.minor].orEmpty()
                 .filter {
-                    it.id !in used && it.currency == o.currency && it.amount.minor == -o.amount.minor &&
-                        it.accountId != o.accountId &&
-                        (dayOf(it.postedAt, zone) == day || Math.abs(it.postedAt - o.postedAt) <= PAIR_WINDOW_MS)
+                    it.id !in used && it.accountId != o.accountId && (
+                        Math.abs(it.postedAt - o.postedAt) <= PAIR_WINDOW_MS ||
+                            (o.kind == TransactionKind.TRANSFER && it.kind == TransactionKind.TRANSFER && dayOf(it.postedAt, zone) == day)
+                        )
                 }
                 .minByOrNull { Math.abs(it.postedAt - o.postedAt) } ?: continue
             used += o.id

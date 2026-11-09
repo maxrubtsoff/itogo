@@ -68,6 +68,32 @@ class OwnTransfersTest {
         assertEquals(setOf("o", "i2"), r)
     }
 
+    @Test fun friendTransferAndSalarySameDayNotPaired() {
+        // F-59 review: 3000 to a friend and a 3000 salary the same day on another account are not one move.
+        val r = ids(op("o", "tb", -3000, TransactionKind.TRANSFER, ms(10, 9, 0)), op("i", "al", 3000, TransactionKind.INCOME, ms(10, 18, 0)))
+        assertTrue(r.isEmpty())
+    }
+
+    @Test fun sameDayTransferToTransferPairs() {
+        val r = ids(op("o", "tb", -3000, TransactionKind.TRANSFER, ms(10, 9, 0)), op("i", "al", 3000, TransactionKind.TRANSFER, ms(10, 18, 0)))
+        assertEquals(2, r.size)
+    }
+
+    @Test fun unknownIncomingNeverPairsOutOfWindow() {
+        val r = ids(op("o", "tb", -3000, TransactionKind.TRANSFER, ms(10, 9, 0)), op("i", "al", 3000, TransactionKind.UNKNOWN, ms(10, 18, 0)))
+        assertTrue(r.isEmpty())
+    }
+
+    @Test fun incomeInsideWindowPairs() {
+        // «Пополнение» (Alfa writes an incoming transfer so) is a leg only inside the two hours.
+        val r = ids(op("o", "tb", -3000, TransactionKind.TRANSFER, ms(10, 9, 0)), op("i", "al", 3000, TransactionKind.INCOME, ms(10, 9, 30)))
+        assertEquals(2, r.size)
+    }
+
+    @Test fun textMarkedPurchaseIsNotOwn() {
+        assertTrue(ids(op("o", "tb", -500, TransactionKind.EXPENSE), marked = setOf("o")).isEmpty())
+    }
+
     @Test fun textMarkedSingleLeg() {
         assertEquals(setOf("o"), ids(op("o", "tb", -5000, TransactionKind.TRANSFER), marked = setOf("o", "gone")))
     }
@@ -76,5 +102,7 @@ class OwnTransfersTest {
         assertTrue(OwnTransfers.isOwnText(null, "Перевод себе в Альфа-Банк"))
         assertFalse(OwnTransfers.isOwnText(null, "Перевод Ивану И."))
         assertTrue(OwnTransfers.isOwnText("Т-Банк", "между своими счетами"))
+        // A debit «с вашего счёта в …» is a payment, not a move.
+        assertFalse(OwnTransfers.isOwnText(null, "Списание с вашего счёта в Сбере 500 ₽"))
     }
 }
