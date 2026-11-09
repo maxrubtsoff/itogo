@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Карточка трат · переход между месяцами</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0F0E}
+.scr{--bg:#0A0F0E;--pt:#18211F;--pb:#111917;--inset:#0C1211;--fg:#EEF3F0;--muted:#8EA39B;--faint:#56655F;--line:rgba(255,255,255,.08);--brass:#D7A74A;--brass2:#F0C878;--mint:#59E2A6;--U:'Unbounded',sans-serif;--G:'Golos Text',sans-serif;background:var(--bg);color:var(--fg);font-family:var(--G);overflow:hidden;box-sizing:border-box}
+.scr *{box-sizing:border-box}
+.panel{background:linear-gradient(180deg,var(--pt),var(--pb));border:1px solid var(--line);border-radius:20px;overflow:hidden;position:relative}
+.lg{font:600 22px/26px var(--U);letter-spacing:-.2px;font-feature-settings:"tnum"}
+.lg .k{font-size:.7em;opacity:.55}
+.sm{font:600 13px/16px var(--U);font-feature-settings:"tnum";white-space:nowrap}
+.m14{font:500 14px/18px var(--U);font-feature-settings:"tnum";white-space:nowrap}
+.m14 .k{opacity:.75}
+.b16{font:400 16px/22px var(--G)}
+.b12{font:400 12px/16px var(--G);color:var(--muted)}
+.mi{color:var(--mint)}
+.step{font:500 13px/18px var(--G);color:var(--muted);padding:0 4px 12px}
+.step b{color:var(--brass2);font-weight:600}
+.logo{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:700 15px/1 var(--G);flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.13)}
+.bar{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;margin:18px 16px 6px}
+.bar span{display:block;height:100%}
+.srow{display:flex;align-items:center;gap:12px;min-height:58px;padding:6px 16px;background:none;border:0;color:inherit;width:100%;text-align:left;font:inherit}
+.cols{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;padding:16px 16px 0}
+.col{height:86px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;background:none;border:0;padding:0;font:inherit;position:relative}
+.col i{display:block;width:100%;max-width:30px;border-radius:6px 6px 3px 3px}
+.col span{font:400 12px/16px var(--G)}
+.finger{position:absolute;width:40px;height:40px;border-radius:50%;border:2px solid rgba(240,200,120,.85);background:rgba(240,200,120,.18);left:50%;top:34px;transform:translateX(-50%);pointer-events:none}
+.grow{flex:1;min-width:0}
+</style>
+</helmet>
+<div class="scr" style="width:1330px;height:700px;display:flex;gap:80px;padding:24px 0 0 0">
+  <sc-for list="{{frames}}" as="fr" hint-placeholder-count="3">
+    <div style="width:390px;flex:none;padding:0 16px">
+      <div class="step"><b>{{fr.n}}</b> {{fr.cap}}</div>
+      <section class="panel" style="padding:16px 0 4px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:0 16px;{{fr.fade}}">
+          <div><div class="b12">{{fr.label}}</div><div class="lg" style="margin-top:4px">{{fr.total}}</div></div>
+          <div style="text-align:right"><div class="b12">Пришло</div><div class="sm mi" style="margin-top:8px">{{fr.inc}}</div></div>
+        </div>
+        <div class="cols">
+          <sc-for list="{{fr.cols}}" as="c" hint-placeholder-count="6">
+            <button class="col" aria-label="{{c.s}}"><i style="{{c.bar}}"></i><span style="{{c.lab}}">{{c.s}}</span><sc-if value="{{c.finger}}" hint-placeholder-val="{{false}}"><span class="finger" aria-hidden="true"></span></sc-if></button>
+          </sc-for>
+        </div>
+        <div class="bar" style="{{fr.fade}}"><sc-for list="{{fr.segs}}" as="g" hint-placeholder-count="5"><span style="{{g}}"></span></sc-for></div>
+        <div style="{{fr.fade}}">
+          <sc-for list="{{fr.rows}}" as="r" hint-placeholder-count="5">
+            <div class="srow"><span class="logo" style="{{r.logo}}">{{r.l}}</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><span class="b16">{{r.n}}</span><span class="m14">{{r.a}}</span></span><span class="b12" style="display:block;margin-top:2px">{{r.sub}}</span></span></div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1330,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const H = [51, 60, 47, 56, 48, 18], S = ['июн', 'июл', 'авг', 'сен', 'окт', 'ноя'];
+    const cols = (sel, finger) => S.map((s, j) => ({ s, finger: j === finger, bar: 'height:' + H[j] + 'px;background:' + (j === sel ? '#D7A74A' : 'rgba(238,243,240,.14)'), lab: 'color:' + (j === sel ? '#F0C878' : '#8EA39B') }));
+    const L = [['Т-Банк', 'Т', '#FFDD2D', '#14120E'], ['Сбер', 'С', '#21A038', '#FFFFFF'], ['Альфа-Банк', 'А', '#EF3124', '#FFFFFF'], ['ВТБ', 'В', '#3D6FE8', '#FFFFFF'], ['Точка', 'Т', '#8A5CF0', '#FFFFFF']];
+    const rows = (a, subs) => L.map((b, j) => ({ n: b[0], l: b[1], logo: 'background:' + b[2] + ';color:' + b[3], a: a[j], sub: subs[j] }));
+    const segs = (v) => L.map((b, j) => 'flex:' + v[j] + ' 0 0;background:' + b[2]);
+    const nov = { label: 'Потрачено с 1 ноября', total: '18 505,50 ₽', inc: '+95 000 ₽', segs: segs([8420, 5130, 3245, 1120, 590]), rows: rows(['8 420 ₽', '5 130 ₽', '3 245,50 ₽', '1 120 ₽', '590 ₽'], ['14 операций', '9 операций', '6 операций', '2 операции', '1 операция']) };
+    const oct = { label: 'Потрачено в октябре', total: '49 600 ₽', inc: '+142 300 ₽', segs: segs([22600, 13700, 8700, 3000, 1600]), rows: rows(['22 600 ₽', '13 700 ₽', '8 700 ₽', '3 000 ₽', '1 600 ₽'], ['36 операций', '23 операции', '16 операций', '5 операций', '3 операции']) };
+    return {
+      frames: [
+        Object.assign({ n: '1', cap: 'Касание столбика «окт»', fade: '', cols: cols(5, 4) }, nov),
+        Object.assign({ n: '2', cap: 'Подсветка сразу на «окт», цифры сменяются наложением', fade: 'opacity:.35', cols: cols(4, -1) }, oct),
+        Object.assign({ n: '3', cap: 'Октябрь. «Убрать анимации» — сразу этот кадр', fade: '', cols: cols(4, -1) }, oct)
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

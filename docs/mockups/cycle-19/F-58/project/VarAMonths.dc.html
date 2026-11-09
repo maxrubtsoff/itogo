@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Вариант А · шторка месяца</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0F0E}
+.scr{--bg:#0A0F0E;--pt:#18211F;--inset:#0C1211;--fg:#EEF3F0;--muted:#8EA39B;--faint:#56655F;--line:rgba(255,255,255,.08);--brass2:#F0C878;--U:'Unbounded',sans-serif;--G:'Golos Text',sans-serif;background:var(--bg);color:var(--fg);font-family:var(--G);overflow:hidden;position:relative;box-sizing:border-box}
+.scr *{box-sizing:border-box}
+.scrim{position:absolute;inset:0;background:rgba(5,8,7,.55)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--pt);border-radius:28px 28px 0 0;padding:12px 20px 30px;display:flex;flex-direction:column;gap:14px}
+.handle{width:36px;height:4px;border-radius:2px;background:rgba(238,243,240,.25);align-self:center}
+.t18{font:600 18px/22px var(--U);margin:4px 0 0}
+.list{border-radius:16px;background:var(--inset);border:1px solid var(--line);overflow:hidden}
+.sr{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;background:none;border:0;color:inherit;width:100%;text-align:left;font:inherit}
+.sr+.sr{border-top:1px solid var(--line)}
+.ti{font:400 16px/22px var(--G)}
+.su{font:400 12px/16px var(--G);color:var(--muted)}
+.grow{flex:1;min-width:0}
+</style>
+</helmet>
+<div class="scr" style="width:390px;height:844px">
+  <div style="padding:80px 16px;opacity:.5">
+    <div style="height:300px;border-radius:20px;background:#18211F"></div>
+    <div style="height:280px;border-radius:20px;background:#18211F;margin-top:12px"></div>
+  </div>
+  <div class="scrim"></div>
+  <section class="sheet" role="dialog" aria-label="Месяц">
+    <div class="handle"></div>
+    <h2 class="t18">Месяц</h2>
+    <div class="list">
+      <button class="sr" aria-pressed="true"><span class="grow"><span class="ti" style="display:block;color:#F0C878">Ноябрь</span><span class="su">18 505,50 ₽ · идёт</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F0C878" stroke-width="2.2" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></button>
+      <button class="sr"><span class="grow"><span class="ti" style="display:block">Октябрь</span><span class="su">49 600 ₽</span></span></button>
+      <button class="sr"><span class="grow"><span class="ti" style="display:block">Сентябрь</span><span class="su">57 200 ₽</span></span></button>
+      <button class="sr"><span class="grow"><span class="ti" style="display:block">Август</span><span class="su">48 900 ₽</span></span></button>
+      <button class="sr"><span class="grow"><span class="ti" style="display:block">Июль</span><span class="su">61 800 ₽</span></span></button>
+      <button class="sr"><span class="grow"><span class="ti" style="display:block">Июнь</span><span class="su">52 300 ₽</span></span></button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

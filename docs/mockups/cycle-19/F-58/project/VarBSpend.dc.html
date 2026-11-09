@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Вариант Б · экран «Траты»</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0F0E}
+.scr{--bg:#0A0F0E;--pt:#18211F;--pb:#111917;--inset:#0C1211;--fg:#EEF3F0;--muted:#8EA39B;--faint:#56655F;--line:rgba(255,255,255,.08);--brass:#D7A74A;--brass2:#F0C878;--mint:#59E2A6;--pill:rgba(215,167,74,.15);--bline:rgba(215,167,74,.33);--U:'Unbounded',sans-serif;--G:'Golos Text',sans-serif;background:var(--bg);color:var(--fg);font-family:var(--G);overflow:hidden;box-sizing:border-box}
+.scr *{box-sizing:border-box}
+.hdr{height:64px;display:flex;align-items:center;gap:4px;padding:0 8px}
+.ib{width:48px;height:48px;display:grid;place-items:center;background:none;border:0;color:var(--fg);padding:0;text-decoration:none}
+.t18{font:600 18px/22px var(--U);margin:0}
+.panel{background:linear-gradient(180deg,var(--pt),var(--pb));border:1px solid var(--line);border-radius:20px;position:relative;overflow:hidden}
+.lg{font:600 22px/26px var(--U);letter-spacing:-.2px;font-feature-settings:"tnum"}
+.lg .k{font-size:.7em;opacity:.55}
+.sm{font:600 13px/16px var(--U);font-feature-settings:"tnum";white-space:nowrap}
+.m14{font:500 14px/18px var(--U);font-feature-settings:"tnum";white-space:nowrap}
+.sm .k,.m14 .k{opacity:.75}
+.b16{font:400 16px/22px var(--G)}
+.b12{font:400 12px/16px var(--G);color:var(--muted)}
+.mu{color:var(--muted)}.mi{color:var(--mint)}
+.month{display:inline-flex;align-items:center;gap:4px;height:44px;padding:0 4px;border:0;background:none;color:var(--fg);font:600 16px/20px var(--G)}
+.logo{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:700 15px/1 var(--G);flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.13)}
+.srow{display:flex;align-items:center;gap:12px;min-height:58px;padding:6px 16px;background:none;border:0;color:inherit;width:100%;text-align:left;font:inherit}
+.swrow{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 16px;background:none;border:0;border-top:1px solid var(--line);color:inherit;width:100%;text-align:left;font:inherit}
+.sw{width:52px;height:32px;border-radius:16px;background:var(--inset);border:1px solid var(--line);position:relative;flex:none;display:block}
+.sw::after{content:"";position:absolute;left:5px;top:5px;width:20px;height:20px;border-radius:50%;background:var(--muted)}
+.chips{display:flex;gap:8px;padding:20px 16px 0;overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 4px;border-radius:20px;background:var(--inset);border:1px solid var(--line);color:var(--muted);font:500 14px/18px var(--G);white-space:nowrap;flex:none}
+.chip.txt{padding:0 14px}
+.chip.on{background:var(--pill);border-color:var(--bline);color:var(--brass2)}
+.chip .lo{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font:700 12px/1 var(--G)}
+.day{font:400 14px/20px var(--G);color:var(--muted);padding:18px 20px 8px}
+.grp{margin:0 16px}
+.hl{display:flex;align-items:center;gap:14px;min-height:62px;padding:8px 16px}
+.hl+.hl{border-top:1px solid var(--line)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--brass)}
+.grow{flex:1;min-width:0}
+</style>
+</helmet>
+<div class="scr" style="width:390px;height:1400px">
+  <header class="hdr">
+    <a class="ib" href="VarB.dc.html" aria-label="Назад"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></a>
+    <h1 class="t18">Траты</h1>
+  </header>
+  <div style="display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 12px 0 12px;margin-top:4px">
+    <button class="month">Ноябрь <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8EA39B" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <span class="sm mi" style="padding-right:4px">+95 000 ₽ пришло</span>
+  </div>
+
+  <section class="panel" style="margin:8px 16px 0;padding:20px 0 0">
+    <div style="position:relative;width:200px;height:200px;margin:0 auto">
+      <svg width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="Траты по банкам" style="transform:rotate(-90deg)">
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#FFDD2D" stroke-width="18" stroke-dasharray="197 300" stroke-dashoffset="0"></circle>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#21A038" stroke-width="18" stroke-dasharray="118.8 400" stroke-dashoffset="-200.1"></circle>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#EF3124" stroke-width="18" stroke-dasharray="74 400" stroke-dashoffset="-321.9"></circle>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#3D6FE8" stroke-width="18" stroke-dasharray="23.8 420" stroke-dashoffset="-398.9"></circle>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#8A5CF0" stroke-width="18" stroke-dasharray="11.1 430" stroke-dashoffset="-425.7"></circle>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+        <div class="lg" style="font-size:19px;line-height:24px">18 505<span class="k">,50</span> ₽</div>
+        <div class="b12">с 1 ноября</div>
+      </div>
+    </div>
+    <div style="height:10px"></div>
+    <button class="srow"><span class="logo" style="background:#FFDD2D;color:#14120E">Т</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><span class="b16">Т-Банк</span><span class="m14">8 420 ₽</span></span><span class="b12" style="display:block;margin-top:2px">14 операций</span></span></button>
+    <button class="srow"><span class="logo" style="background:#21A038;color:#FFFFFF">С</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><span class="b16">Сбер</span><span class="m14">5 130 ₽</span></span><span class="b12" style="display:block;margin-top:2px">9 операций</span></span></button>
+    <button class="srow"><span class="logo" style="background:#EF3124;color:#FFFFFF">А</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><span class="b16">Альфа-Банк</span><span class="m14">3 245<span class="k">,50</span> ₽</span></span><span class="b12" style="display:block;margin-top:2px">6 операций</span></span></button>
+    <button class="srow"><span class="logo" style="background:#3D6FE8;color:#FFFFFF">В</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><span class="b16">ВТБ</span><span class="m14">1 120 ₽</span></span><span class="b12" style="display:block;margin-top:2px">2 операции</span></span></button>
+    <button class="srow"><span class="logo" style="background:#8A5CF0;color:#FFFFFF">Т</span><span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><span class="b16">Точка</span><span class="m14">590 ₽</span></span><span class="b12" style="display:block;margin-top:2px">1 операция</span></span></button>
+    <button class="swrow" role="switch" aria-checked="false"><span class="grow"><span class="b16" style="display:block">Переводы людям</span><span class="b12" style="display:block;margin-top:2px">2 перевода · 10 000 ₽</span></span><span class="sw" aria-hidden="true"></span></button>
+  </section>
+
+  <div class="chips">
+    <button class="chip txt on" aria-pressed="true">Все</button>
+    <button class="chip"><span class="lo" style="background:#FFDD2D;color:#14120E">Т</span>Т-Банк</button>
+    <button class="chip"><span class="lo" style="background:#21A038;color:#FFFFFF">С</span>Сбер</button>
+    <button class="chip"><span class="lo" style="background:#EF3124;color:#FFFFFF">А</span>Альфа</button>
+  </div>
+  <div class="day">Сегодня</div>
+  <div class="panel grp">
+    <div class="hl"><span class="dot"></span><div class="grow"><div class="b16">Пятёрочка</div><div class="b12">Т-Банк ›</div></div><span class="sm">−1 284<span class="k">,90</span> ₽</span></div>
+    <div class="hl"><span class="dot"></span><div class="grow"><div class="b16">Яндекс Go</div><div class="b12">Сбер ›</div></div><span class="sm">−436 ₽</span></div>
+  </div>
+  <div class="day">Вчера</div>
+  <div class="panel grp">
+    <div class="hl"><span class="dot"></span><div class="grow"><div class="b16">Додо Пицца</div><div class="b12">Альфа-Банк ›</div></div><span class="sm">−1 045 ₽</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
