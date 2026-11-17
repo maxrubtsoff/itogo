@@ -327,7 +327,7 @@ object CapitalEvents {
                     ?.let { FxMath.rubOf(CapitalReconstruction.openingOf(a, transactions), it) } ?: 0L }
             val revalued = cur.valueOf(CapitalPart.CURRENCY) - prev.valueOf(CapitalPart.CURRENCY) - dealt - booked - opened
             if (revalued != 0L) {
-                val reason = reasonOf(prev.date, cur.date, revalued, fxOps, rates)
+                val reason = reasonOf(prev.date, cur.date, revalued, fxOps, rates, accounts, transactions, zone)
                 if (reason.manualMinor != 0L) {
                     val from = lastManual?.takeIf { (it.manualMinor < 0L) != (reason.manualMinor < 0L) }?.date
                     val ev = manualEvent(cur.date, reason, accounts, zone, from)
@@ -402,9 +402,10 @@ object CapitalEvents {
      * gained against their price (a 100 $ bought at 80, valued at the CBR 80,74); the rest is a manual change.
      * Like the history itself, a day before the first known rate takes that first rate.
      */
-    private fun reasonOf(from: LocalDate, to: LocalDate, revalued: Long, fxOps: List<FxOperation>, rates: List<FxRate>): RevaluationReason {
+    private fun reasonOf(from: LocalDate, to: LocalDate, revalued: Long, fxOps: List<FxOperation>, rates: List<FxRate>,
+        accounts: List<Account>, transactions: List<Transaction>, zone: ZoneId): RevaluationReason {
         fun rateOn(currency: String, day: LocalDate) = rateOn(rates, currency, day)
-        val legs = fxOps.map { it.currency }.distinct().mapNotNull { cur ->
+        val dealLegs = fxOps.map { it.currency }.distinct().mapNotNull { cur ->
             val r1 = rateOn(cur, to) ?: return@mapNotNull null
             val qty0 = fxOps.filter { it.currency == cur && !it.date.isAfter(from) }
                 .sumOf { if (it.kind == FxKind.BUY) it.amountMinor else -it.amountMinor }
@@ -431,6 +432,11 @@ object CapitalEvents {
             }
             RevaluationLeg(cur, shownFrom, r1, qty, effect)
         }
+        // Foreign accounts move with the rates too (B-132): one leg per currency, deals and accounts together.
+        val accountLegs = AccountFxEffect.legsOf(accounts, transactions, rates, from, to, zone)
+        val legs = (dealLegs.map { d -> accountLegs.firstOrNull { it.currency == d.currency }
+                ?.let { a -> d.copy(qtyMinor = d.qtyMinor + a.qtyMinor, effectMinor = d.effectMinor + a.effectMinor) } ?: d } +
+            accountLegs.filter { a -> dealLegs.none { it.currency == a.currency } }).filter { it.effectMinor != 0L }
         val rest = revalued - legs.sumOf { it.effectMinor }
         val manual = if (kotlin.math.abs(rest) < maxOf(100L, kotlin.math.abs(revalued) / 100)) 0L else rest
         return RevaluationReason(legs, manual)

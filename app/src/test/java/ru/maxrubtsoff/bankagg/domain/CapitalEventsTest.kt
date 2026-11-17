@@ -607,4 +607,44 @@ class CapitalEventsTest {
         assertTrue(e.none { it.kind == HistoryKind.REVALUATION })
         assertTrue(e.any { it.kind == HistoryKind.ACCOUNT_OPEN })
     }
+
+    // B-132: rates moving a foreign account are a revaluation, not a hand change.
+    private fun eurAccount(minor: Long, checkedAt: Long? = null) =
+        Account("e", BankBrand.SBER, "BSB", Money.ofMinor(minor), "EUR", 0L, checkedAt = checkedAt)
+
+    private fun accountEvents(acc: Account, pts: List<CapitalPoint>, rates: List<FxRate>) =
+        CapitalEvents.build(emptyList(), listOf(acc), emptyList(), emptyList(), null, pts, today, ZoneOffset.UTC, rates)
+
+    @Test fun foreignAccountRateMoveIsRevaluationNotManual() {
+        val list = accountEvents(
+            eurAccount(10_000), listOf(pointFx(d0, 900_000), pointFx(d1, 920_000)),
+            listOf(FxRate("EUR", d0, 90_000_000), FxRate("EUR", d1, 92_000_000))
+        )
+        assertEquals(20_000L, reval(list).amountMinor)
+        assertNull(list.firstOrNull { it.title == manualTitle })
+    }
+
+    @Test fun accountRateEffectIsExactInKopecks() {
+        val r0 = 90_123_456L
+        val r1 = 91_654_321L
+        val qty = 12_345L
+        val v0 = ru.maxrubtsoff.bankagg.domain.model.FxMath.rubOf(qty, r0)
+        val v1 = ru.maxrubtsoff.bankagg.domain.model.FxMath.rubOf(qty, r1)
+        val list = accountEvents(
+            eurAccount(qty), listOf(pointFx(d0, v0), pointFx(d1, v1)),
+            listOf(FxRate("EUR", d0, r0), FxRate("EUR", d1, r1))
+        )
+        assertEquals(v1 - v0, reval(list).amountMinor)
+        assertEquals(0L, reval(list).reason!!.manualMinor)
+        assertNull(list.firstOrNull { it.title == manualTitle })
+    }
+
+    @Test fun realHandChangeOfAccountStaysManual() {
+        val acc = eurAccount(10_000, checkedAt = d1.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() + 1_000)
+        val list = accountEvents(
+            acc, listOf(pointFx(d0, 900_000), pointFx(d1, 1_020_000)),
+            listOf(FxRate("EUR", d0, 90_000_000), FxRate("EUR", d1, 92_000_000))
+        )
+        assertEquals(120_000L, list.single { it.title == manualTitle }.amountMinor)
+    }
 }
