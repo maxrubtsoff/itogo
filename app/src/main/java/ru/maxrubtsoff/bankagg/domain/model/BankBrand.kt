@@ -39,6 +39,9 @@ class BankBrand(
 
     /** Display order: known banks as listed (largest first), the rest after them. */
     val order: Int get() = known.indexOf(this).let { if (it < 0) Int.MAX_VALUE else it }
+
+    /** Built by [placeholder]: the directory had no definition for this key (B-130). */
+    val isPlaceholder: Boolean get() = letters == "?" && title == PLACEHOLDER_TITLE && key != UNKNOWN.key
     val isUser: Boolean get() = key.startsWith(USER_PREFIX)
 
     /** The logo as a shared look (F-33): what the editor edits and the avatar draws. */
@@ -126,7 +129,12 @@ class BankBrand(
         // put on a known bank must not be overwritten by its built-in look (B-49).
         fun fromKey(key: String): BankBrand =
             BankDirectory.find(key) ?: known.firstOrNull { it.key == key } ?: if (key == UNKNOWN.key) UNKNOWN
-            else UNKNOWN.let { BankBrand(key, "Банк", it.primaryColor, letters = "?") }
+            else placeholder(key)
+
+        /** What a key resolves to while nothing is known about it (B-130); never to be stored. */
+        fun placeholder(key: String): BankBrand = BankBrand(key, PLACEHOLDER_TITLE, UNKNOWN.primaryColor, letters = "?")
+
+        private const val PLACEHOLDER_TITLE = "Банк"
 
         /** The known bank with this CBR registration number, if any. */
         fun fromRegNumber(rn: Int): BankBrand? = known.firstOrNull { it.regNumber == rn }
