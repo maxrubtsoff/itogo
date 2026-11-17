@@ -14,7 +14,11 @@ sealed interface SpendFilter {
         fun keep(events: List<HistoryEvent>, f: SpendFilter): List<HistoryEvent> = when (f) {
             All -> events
             is Bank -> events.filter { e -> e.source == f.brand || e.parts.any { it.source == f.brand } }
-            Transfers -> events.filter { e -> e.kind == HistoryKind.TRANSFER || e.parts.any { it.kind == HistoryKind.TRANSFER } }
+            Transfers -> events.filter { e -> isOutTransfer(e) || e.parts.any(::isOutTransfer) }
         }
+
+        /** An outgoing ruble transfer — what the spending card counts as «Переводы людям». */
+        private fun isOutTransfer(e: HistoryEvent) =
+            e.kind == HistoryKind.TRANSFER && (e.amountMinor ?: 0L) < 0L && e.foreign == null
     }
 }

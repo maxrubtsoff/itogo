@@ -27,6 +27,11 @@ class SpendFilterTest {
         assertEquals(listOf(transfer), SpendFilter.keep(all, SpendFilter.Transfers))
     }
 
+    @Test fun transfersSkipsIncomingTransfer() {
+        val incoming = ev("Входящий", HistoryKind.TRANSFER).copy(amountMinor = 500L)
+        assertEquals(listOf(transfer), SpendFilter.keep(listOf(incoming, transfer), SpendFilter.Transfers))
+    }
+
     @Test fun transfersKeepsGroupWithTransferChild() {
         val group = ev("group", HistoryKind.TRANSACTION, parts = listOf(transfer, transfer))
         val spends = ev("spends", HistoryKind.TRANSACTION, parts = listOf(spend, spend))
