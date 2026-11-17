@@ -111,6 +111,7 @@ fun SpendCard(
     onPickMonth: (Int) -> Unit,
     onIncludeTransfers: (Boolean) -> Unit,
     onBank: (BankBrand) -> Unit,
+    onTransfers: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val current = months[selected]
@@ -129,7 +130,7 @@ fun SpendCard(
             selected, onPickMonth
         )
         Crossfade(current, animationSpec = Motion.tween(Motion.NORMAL), label = "spendBanks") { m ->
-            SpendBanks(m, onBank)
+            SpendBanks(m, onBank, onTransfers)
         }
         HorizontalDivider(color = Slitok.Line)
         SwitchRow(
@@ -167,7 +168,7 @@ private fun SpendHead(m: MonthSpending, isNow: Boolean) {
 }
 
 @Composable
-private fun SpendBanks(m: MonthSpending, onBank: (BankBrand) -> Unit) {
+private fun SpendBanks(m: MonthSpending, onBank: (BankBrand) -> Unit, onTransfers: () -> Unit) {
     val fold = remember(m.byBank) { Spending.fold(m.byBank) }
     var open by remember(m.month) { mutableStateOf(false) }
     val accents = m.byBank.map { rememberBankAccent(it.brand) }
@@ -204,7 +205,8 @@ private fun SpendBanks(m: MonthSpending, onBank: (BankBrand) -> Unit) {
                 SummaryRow(
                     tile = { SummaryTile(Icons.Filled.SwapHoriz, Slitok.Muted) },
                     title = "Переводы людям", valueMinor = m.transfersMinor,
-                    line = SummaryLine(RuPlural.transfers(m.transfersCount))
+                    line = SummaryLine(RuPlural.transfers(m.transfersCount)),
+                    onClick = onTransfers, chevron = false
                 )
             }
         }

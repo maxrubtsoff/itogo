@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -57,6 +58,7 @@ import ru.maxrubtsoff.bankagg.ui.common.ChartOverview
 import ru.maxrubtsoff.bankagg.ui.common.Edge
 import ru.maxrubtsoff.bankagg.domain.model.ChartWindow
 import ru.maxrubtsoff.bankagg.ui.common.SpendCard
+import ru.maxrubtsoff.bankagg.ui.common.SummaryTile
 import java.time.YearMonth
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -203,7 +205,7 @@ private fun HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (Histo
     val list = rememberScrollState()
     val collapse = rememberHeroCollapse()
     // A bank picked narrows the list: the hero folds to the strip to give it room (F-58).
-    val bankPicked = u.spending?.bank != null
+    val bankPicked = u.spending?.let { it.bank != null || it.transfersOnly } == true
     LaunchedEffect(bankPicked) { if (bankPicked) collapse.collapseAll() }
     // The finger is still on the chart: the list moves to what touches the span at once (U-67), and the
     // chart stays where it is. A folded month opens first. Each new day takes over from the one before.
@@ -247,31 +249,33 @@ private fun HistoryPage(u: HistoryUi, vm: CapitalHistoryViewModel, onTap: (Histo
     }
 }
 
-/** The card of the month's spending, or — with a bank picked — the header of the list narrowed to it (F-58). */
+/** The card of the month's spending, or — with a bank or the transfers picked — the header of the list narrowed to it (F-58, F-62). */
 @Composable
 private fun SpendSection(s: SpendUi, vm: CapitalHistoryViewModel) {
     val bank = s.bank
-    if (bank == null) {
+    if (bank == null && !s.transfersOnly) {
         SpendCard(
             s.months, s.selected, s.includeTransfers,
             onPickMonth = { vm.setSpendMonth(s.months[it].month) },
             onIncludeTransfers = vm::setIncludeTransfers,
-            onBank = vm::setBank
+            onBank = vm::setBank,
+            onTransfers = vm::setTransfers
         )
         return
     }
-    BackHandler { vm.setBank(null) }
+    BackHandler { vm.clearFilter() }
     val spent = s.bankSpend
     Row(Modifier.fillMaxWidth().padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        BankIcon(bank, 32.dp)
+        if (bank != null) BankIcon(bank, 32.dp) else SummaryTile(Icons.Filled.SwapHoriz, Slitok.Muted)
         Column(Modifier.weight(1f)) {
-            Text(bank.title, style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(bank?.title ?: "Переводы людям", style = MaterialTheme.typography.bodyLarge, color = Slitok.Fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
             MoneyText(
-                if (spent == null) "Трат за месяц нет" else RuPlural.operations(spent.count) + " · " + Money.ofMinor(spent.minor).format() + " трат",
+                if (bank == null) RuPlural.transfers(s.month.transfersCount) + " · " + Money.ofMinor(s.month.transfersMinor).format()
+                else if (spent == null) "Трат за месяц нет" else RuPlural.operations(spent.count) + " · " + Money.ofMinor(spent.minor).format() + " трат",
                 style = MaterialTheme.typography.bodySmall, color = Slitok.Muted
             )
         }
-        SlitokChip("Сбросить", selected = false, onClick = { vm.setBank(null) }, compact = true)
+        SlitokChip("Сбросить", selected = false, onClick = { vm.clearFilter() }, compact = true)
     }
 }
 
