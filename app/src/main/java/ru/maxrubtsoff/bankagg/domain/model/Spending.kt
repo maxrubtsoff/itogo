@@ -71,6 +71,16 @@ object Spending {
         )
     }
 
+    /** [m] with the transfers switch put to [on], without counting the month again (U-81); the same as [month] with that flag. */
+    fun withTransfers(m: MonthSpending, on: Boolean): MonthSpending {
+        val own = if (m.includeTransfers) m.transfersCount else 0
+        return m.copy(
+            totalMinor = m.purchasesMinor + if (on) m.transfersMinor else 0L,
+            count = m.count - own + if (on) m.transfersCount else 0,
+            includeTransfers = on
+        )
+    }
+
     /** The months of the card's columns: [size] ending with the month of [today]. */
     fun window(today: LocalDate, size: Int = MONTHS): List<YearMonth> {
         val last = YearMonth.from(today)

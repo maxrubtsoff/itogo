@@ -112,4 +112,40 @@ class SpendingTest {
         assertFalse(Spending.hasAny(listOf(op("i", tb, 500, TransactionKind.INCOME)), accounts, emptySet()))
         assertTrue(Spending.hasAny(listOf(op("a", tb, -500, ms = at(1, month = 3))), accounts, emptySet()))
     }
+
+    private val mixed = arrayOf(
+        op("a", tb, -1000), op("b", sb, -700), op("p", tb, -3000, TransactionKind.TRANSFER, who = "Иван"),
+        op("q", sb, -200, TransactionKind.TRANSFER, who = "Анна"), op("i", sb, 900, TransactionKind.INCOME)
+    )
+
+    @Test fun withTransfersOnAddsTransfersToTotalAndCount() {
+        val base = month(*mixed)
+        val on = Spending.withTransfers(base, true)
+        assertEquals(base.purchasesMinor + base.transfersMinor, on.totalMinor)
+        assertEquals(base.count + base.transfersCount, on.count)
+        assertTrue(on.includeTransfers)
+    }
+
+    @Test fun withTransfersEqualsMonthWithFlag() {
+        for (on in listOf(true, false)) {
+            assertEquals(month(*mixed, with = on), Spending.withTransfers(month(*mixed, with = false), on))
+            assertEquals(month(*mixed, with = on), Spending.withTransfers(month(*mixed, with = true), on))
+        }
+    }
+
+    @Test fun withTransfersIsIdempotentAndReversible() {
+        val base = month(*mixed)
+        val on = Spending.withTransfers(base, true)
+        assertEquals(on, Spending.withTransfers(on, true))
+        assertEquals(base, Spending.withTransfers(on, false))
+        assertEquals(on, Spending.withTransfers(Spending.withTransfers(on, false), true))
+    }
+
+    @Test fun withTransfersDoesNotTouchBanks() {
+        val base = month(*mixed)
+        val on = Spending.withTransfers(base, true)
+        assertEquals(base.byBank, on.byBank)
+        assertEquals(base.purchasesMinor, on.purchasesMinor)
+        assertEquals(base.incomeMinor, on.incomeMinor)
+    }
 }
