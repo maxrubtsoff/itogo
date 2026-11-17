@@ -640,11 +640,39 @@ class CapitalEventsTest {
     }
 
     @Test fun realHandChangeOfAccountStaysManual() {
+        // Known since d0 (so not an opening), balance named exactly inside the step.
         val acc = eurAccount(10_000, checkedAt = d1.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() + 1_000)
+            .copy(updatedAt = d0.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli())
         val list = accountEvents(
             acc, listOf(pointFx(d0, 900_000), pointFx(d1, 1_020_000)),
             listOf(FxRate("EUR", d0, 90_000_000), FxRate("EUR", d1, 92_000_000))
         )
         assertEquals(120_000L, list.single { it.title == manualTitle }.amountMinor)
+    }
+
+    @Test fun dealsAndAccountsOfOneCurrencyMergeIntoOneLeg() {
+        val acc = Account("u", BankBrand.SBER, "USD", Money.ofMinor(10_000), "USD", d0.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli())
+        val list = CapitalEvents.build(
+            emptyList(), listOf(acc), listOf(buy("USD", d0, 100_000, 9_000_000)), emptyList(), null,
+            listOf(pointFx(d0, 9_900_000), pointFx(d1, 10_120_000)), today, ZoneOffset.UTC,
+            listOf(FxRate("USD", d0, 90_000_000), FxRate("USD", d1, 92_000_000))
+        )
+        val r = reval(list).reason!!
+        assertEquals(1, r.legs.size)
+        assertEquals(220_000L, r.legs[0].effectMinor)
+        assertEquals(0L, r.manualMinor)
+    }
+
+    @Test fun rateMoveOfTransactionInsideStep() {
+        val acc = eurAccount(10_000).copy(updatedAt = d0.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli())
+        val tx = Transaction("t", BankBrand.SBER, "e", Money.ofMinor(5_000), "EUR", TransactionKind.INCOME, null, null,
+            d1.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli())
+        val list = CapitalEvents.build(
+            listOf(tx), listOf(acc), emptyList(), emptyList(), null,
+            listOf(pointFx(d0, 450_000), pointFx(today, 920_000)), today, ZoneOffset.UTC,
+            listOf(FxRate("EUR", d0, 90_000_000), FxRate("EUR", d1, 91_000_000), FxRate("EUR", today, 92_000_000))
+        )
+        assertEquals(15_000L, reval(list).amountMinor)
+        assertNull(list.firstOrNull { it.title == manualTitle })
     }
 }
