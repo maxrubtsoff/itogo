@@ -33,7 +33,7 @@ fun BankIcon(brand: BankBrand, size: Dp = 40.dp) {
     val ownReady = own as? Picture.Ready
     val app = installed
     when {
-        ownReady != null -> PictureFace(ownReady.bitmap, brand.title, CircleShape, ring(size))
+        ownReady != null -> PictureFace(ownReady.bitmap, brand.title, CircleShape, ring(size), backdrop = Color(brand.primaryColor))
         // The own picture is still being read: hold the plain colour, don't flash the app's icon.
         brand.logoFile != null && own is Picture.Loading -> BrandAvatar(brand.decor(), CircleShape, size)
         app != null -> PictureFace(app, brand.title, CircleShape, ring(size))
