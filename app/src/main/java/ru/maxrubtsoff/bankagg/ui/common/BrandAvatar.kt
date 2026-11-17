@@ -127,7 +127,7 @@ fun BrandAvatar(
                 contentScale = ContentScale.Crop,
                 modifier = face.background(Color(decor.colorArgb)).border(1.dp, Slitok.Line, shape)
             )
-            ready != null -> PictureFace(ready.bitmap, contentDescription, shape, face)
+            ready != null -> PictureFace(ready.bitmap, contentDescription, shape, face, backdrop = Color(decor.colorArgb))
             // The file is still being read: the plain colour, no letters flashing in between.
             decor.logoFile != null && picture is Picture.Loading -> Box(face.background(Color(decor.colorArgb)).border(1.dp, Slitok.IconRing, shape))
             else -> Coin(decor, shape, size, face)
@@ -149,14 +149,14 @@ fun BrandAvatar(
 
 /** A real picture (an installed app's icon or the user's own) on a hairline ring, dimmed a touch to sit in the palette. */
 @Composable
-internal fun PictureFace(bitmap: Bitmap, contentDescription: String?, shape: Shape, modifier: Modifier) {
+internal fun PictureFace(bitmap: Bitmap, contentDescription: String?, shape: Shape, modifier: Modifier, backdrop: Color? = null) {
     val image = remember(bitmap) { bitmap.asImageBitmap() }
     Image(
         bitmap = image,
         contentDescription = contentDescription,
         contentScale = ContentScale.Crop,
         colorFilter = ColorFilter.tint(Slitok.IconDim, BlendMode.Darken),
-        modifier = modifier.border(1.dp, Slitok.Line, shape)
+        modifier = (if (backdrop != null) modifier.background(backdrop) else modifier).border(1.dp, Slitok.Line, shape)
     )
 }
 

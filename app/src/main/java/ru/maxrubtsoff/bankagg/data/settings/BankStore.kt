@@ -12,6 +12,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import ru.maxrubtsoff.bankagg.data.local.AppDatabase
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
+import ru.maxrubtsoff.bankagg.domain.model.BankDefinitions
 import ru.maxrubtsoff.bankagg.domain.model.BankDirectory
 import ru.maxrubtsoff.bankagg.domain.model.CbrBanks
 import ru.maxrubtsoff.bankagg.domain.repository.BankRepository
@@ -33,14 +34,16 @@ class BankStore(
     private val prefs = appContext.getSharedPreferences("banks", Context.MODE_PRIVATE)
     private val lock = Mutex()
 
+    // The directory is filled before the list is read: a key resolved while it is
+    // empty would become a placeholder "Банк" (B-130).
+    init {
+        BankDirectory.replace(readDefinitions(), activeKeys = readKeys().toSet())
+    }
+
     private val _mine = MutableStateFlow(readStored() ?: emptyList())
     override val myBanks: Flow<List<BankBrand>> = _mine.asStateFlow()
 
     private var cbr: List<CbrBanks.Entry>? = null
-
-    init {
-        BankDirectory.replace(readDefinitions(), activeKeys = _mine.value.map { it.key }.toSet())
-    }
 
     /** Fills the list once for an install that had banks before F-22. */
     suspend fun migrate() = lock.withLock {
@@ -81,22 +84,19 @@ class BankStore(
     }.also { cbr = it }
 
     private fun write(banks: List<BankBrand>) {
-        // Everything the user may have changed is stored, a known bank included:
-        // its picture and letters would otherwise be lost on the next read (B-49).
-        // BankBrand.equals is by key only, so compare the look itself.
-        val changed = banks.filter { b ->
-            val k = BankBrand.known.firstOrNull { it.key == b.key }
-            k == null || b.logoFile != null || b.letters != k.letters ||
-                b.primaryColor != k.primaryColor || b.textColor != k.textColor || b.title != k.title ||
-                b.packages != k.packages
-        }
-        val defs = (readDefinitions().associateBy { it.key } + changed.associateBy { it.key }).values
+        val defs = BankDefinitions.merge(readDefinitions(), banks, BankBrand.known)
         prefs.edit()
             .putString(KEY_MINE, JSONArray(banks.map { it.key }).toString())
             .putString(KEY_DEFS, JSONArray(defs.map(::toJson)).toString())
             .apply()
-        BankDirectory.replace(defs.toList(), activeKeys = banks.map { it.key }.toSet())
+        BankDirectory.replace(defs, activeKeys = banks.map { it.key }.toSet())
         _mine.value = banks
+    }
+
+    private fun readKeys(): List<String> {
+        val raw = prefs.getString(KEY_MINE, null) ?: return emptyList()
+        val arr = JSONArray(raw)
+        return (0 until arr.length()).map { arr.getString(it) }
     }
 
     private fun readStored(): List<BankBrand>? {
