@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.stateIn
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -53,6 +55,7 @@ import ru.maxrubtsoff.bankagg.domain.model.DaySpan
 import ru.maxrubtsoff.bankagg.domain.model.BankBrand
 import ru.maxrubtsoff.bankagg.domain.model.BankSpend
 import ru.maxrubtsoff.bankagg.domain.model.MonthSpending
+import ru.maxrubtsoff.bankagg.domain.model.SpendFilter
 import ru.maxrubtsoff.bankagg.domain.model.Spending
 
 /** The screen: one page per section, the total first, then each kept part (F-45). */
@@ -79,7 +82,9 @@ data class SpendUi(
     /** The bank the list is filtered by; null — all. */
     val bank: BankBrand?,
     /** What [bank] spent in the chosen month, for the header over the list. */
-    val bankSpend: BankSpend?
+    val bankSpend: BankSpend?,
+    /** The list is narrowed to the transfers to people (F-62). */
+    val transfersOnly: Boolean = false
 ) {
     val month: MonthSpending get() = months[selected]
 }
@@ -130,7 +135,7 @@ class CapitalHistoryViewModel(
     private val _period = MutableStateFlow(HistoryPeriod.MONTH)
     private val _part = MutableStateFlow<CapitalPart?>(null)
     private val _spendMonth = MutableStateFlow<YearMonth?>(null)
-    private val _bank = MutableStateFlow<BankBrand?>(null)
+    private val _filter = MutableStateFlow<SpendFilter>(SpendFilter.All)
     private val _includeTransfers = settings.spendWithTransfers
 
     /** A period — even the same one — shows all of it again (U-77). */
@@ -195,7 +200,13 @@ class CapitalHistoryViewModel(
     fun setIncludeTransfers(on: Boolean) { viewModelScope.launch { settings.setSpendWithTransfers(on) } }
 
     /** Narrows the list to one bank; null — all (F-58). */
-    fun setBank(bank: BankBrand?) { _bank.value = bank }
+    fun setBank(bank: BankBrand?) { _filter.value = if (bank == null) SpendFilter.All else SpendFilter.Bank(bank) }
+
+    /** Narrows the list to the transfers to people (F-62). */
+    fun setTransfers() { _filter.value = SpendFilter.Transfers }
+
+    /** Back to the card: the list is not narrowed. */
+    fun clearFilter() { _filter.value = SpendFilter.All }
 
     private val inputs: Flow<Inputs> = combine(
         history.observeDays(), ledger.observeTransactions(Int.MAX_VALUE), ledger.observeAccounts(), fx.observeAll(), deposits.observeAll()
@@ -205,25 +216,25 @@ class CapitalHistoryViewModel(
         .combine(rates.observeAll()) { i, r -> i.copy(rates = r) }
         .combine(ownMarks.observe()) { i, m -> i.copy(ownMarks = m) }
 
-    /** What the data alone gives: the heavy part, worked out once per change of data, not per touch of a chip or a window. */
-    private class Base(
-        val i: Inputs, val day: LocalDate, val all: List<HistoryEvent>, val spend: List<MonthSpending>?, val transfers: Boolean
-    )
+    /** What the data alone gives: the heavy part, worked out once per change of data, not per touch of a chip, a window or the transfers switch. */
+    private class Base(val i: Inputs, val day: LocalDate, val all: List<HistoryEvent>, val spend: List<MonthSpending>?)
 
-    private val base: Flow<Base> = combine(inputs, today.date, _includeTransfers) { i, day, transfers ->
+    private val base: Flow<Base> = combine(inputs, today.date) { i, day ->
         val zone = java.time.ZoneId.systemDefault()
         val own = OwnTransfers.ids(i.tx, i.accounts, i.ownMarks, zone)
         val all = CapitalEvents.build(i.tx, i.accounts, i.ops, i.deps, i.cash, i.days, day, rates = i.rates, cashChanges = i.cashChanges, ownIds = own)
+        // The switch is applied later (Spending.withTransfers), so the months are counted without it.
         val spend = if (Spending.hasAny(i.tx, i.accounts, own)) {
-            Spending.window(day).map { Spending.month(i.tx, i.accounts, own, it, transfers, zone) }
+            Spending.window(day).map { Spending.month(i.tx, i.accounts, own, it, false, zone) }
         } else null
-        Base(i, day, all, spend, transfers)
-    }
+        Base(i, day, all, spend)
+    }.flowOn(Dispatchers.Default)
 
-    /** What the person chose on the screen: window, month of the card, bank. */
-    private val picks = combine(_window, _spendMonth, _bank) { w, m, b -> Picks(w, m, b) }
+    /** What the person chose on the screen: window, filter of the list. */
+    private val picks = combine(_window, _filter) { w, f -> Picks(w, f) }
 
-    val state: StateFlow<HistoryScreenUi?> = combine(base, settings.features, _period, _part, picks) { base, features, period, part, pick ->
+    /** The pages without the spending card: no month and no switch in them, so those do not rebuild them. */
+    private val built: Flow<HistoryScreenUi> = combine(base, settings.features, _period, _part, picks) { base, features, period, part, pick ->
         val i = base.i
         val day = base.day
         val kept = CapitalPart.entries.filter { it in features.capitalParts }
@@ -238,10 +249,9 @@ class CapitalHistoryViewModel(
             }
             val visible = ChartWindow.visible(full, window)
             val allShown = CapitalEvents.within(all, window?.from ?: CapitalHistory.startOf(period, i.days, day), p, window?.to)
-            val spending = if (p == CapitalPart.ACCOUNTS) spendUi(base, pick) else null
-            val bank = spending?.bank
-            // F-58: the list narrows to one bank; the chart and its dots stay.
-            val shown = if (bank == null) allShown else allShown.filter { e -> e.source == bank || e.parts.any { it.source == bank } }
+            // F-58, F-62: on the «Счета» page the list narrows to one bank or to transfers; the chart and its dots stay.
+            val filter = if (p == CapitalPart.ACCOUNTS && base.spend != null) pick.filter else SpendFilter.All
+            val shown = SpendFilter.keep(allShown, filter)
             // The chart: days inside a narrow window, weeks in a wide one (U-77).
             val drawn = ChartWindow.drawn(visible)
             HistoryUi(
@@ -251,17 +261,26 @@ class CapitalHistoryViewModel(
                 marks = ChartMarks.of(drawn, allShown, p, CapitalHistory.average(CapitalHistory.series(i.days, period, day, CapitalPart.ACCOUNTS))),
                 days = if (long) emptyList() else HistoryRows.days(shown, p),
                 months = if (long) HistoryRows.months(CapitalEvents.byMonth(shown, i.days, p), p, day) else emptyList(),
-                spending = spending, window = window, overview = ChartWindow.drawn(full), bounds = whole
+                spending = null, window = window, overview = ChartWindow.drawn(full), bounds = whole
             )
         }
         HistoryScreenUi(period, part, kept, day, pages, i.deps.map { it.id }.toSet(), features.showCaptureLog)
+    }.flowOn(Dispatchers.Default)
+
+    /** Light: puts the card of the month onto the «Счета» page; the month and the switch only touch this. */
+    val state: StateFlow<HistoryScreenUi?> = combine(built, base, _spendMonth, _filter, _includeTransfers) { ui, base, month, filter, transfers ->
+        val spending = spendUi(base, month, filter, transfers)
+        ui.copy(pages = ui.pages.map { if (it.part == CapitalPart.ACCOUNTS) it.copy(spending = spending) else it })
     }.stateIn<HistoryScreenUi?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private fun spendUi(base: Base, pick: Picks): SpendUi? {
-        val months = base.spend ?: return null
-        val selected = months.indexOfFirst { it.month == pick.month }.takeIf { it >= 0 } ?: months.lastIndex
-        val bank = pick.bank
-        return SpendUi(months, selected, base.transfers, bank, bank?.let { b -> months[selected].byBank.firstOrNull { it.brand == b } })
+    private fun spendUi(base: Base, month: YearMonth?, filter: SpendFilter, transfers: Boolean): SpendUi? {
+        val months = (base.spend ?: return null).map { Spending.withTransfers(it, transfers) }
+        val selected = months.indexOfFirst { it.month == month }.takeIf { it >= 0 } ?: months.lastIndex
+        val bank = (filter as? SpendFilter.Bank)?.brand
+        return SpendUi(
+            months, selected, transfers, bank, bank?.let { b -> months[selected].byBank.firstOrNull { it.brand == b } },
+            transfersOnly = filter == SpendFilter.Transfers
+        )
     }
 
     /** The sheet of an operation (F-51): everything it shows besides the line. */
@@ -328,5 +347,5 @@ class CapitalHistoryViewModel(
         val ownMarks: Set<String>
     )
 
-    private data class Picks(val window: DaySpan?, val month: YearMonth?, val bank: BankBrand?)
+    private data class Picks(val window: DaySpan?, val filter: SpendFilter)
 }

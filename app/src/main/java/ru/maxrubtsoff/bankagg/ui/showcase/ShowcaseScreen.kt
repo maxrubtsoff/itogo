@@ -428,7 +428,7 @@ private fun SpendCardDemo() {
             banks.sumOf { it.count }, banks, withTransfers
         )
     }
-    SpendCard(months, picked, withTransfers, onPickMonth = { picked = it }, onIncludeTransfers = { withTransfers = it }, onBank = {})
+    SpendCard(months, picked, withTransfers, onPickMonth = { picked = it }, onIncludeTransfers = { withTransfers = it }, onBank = {}, onTransfers = {})
 }
 
 @Composable
